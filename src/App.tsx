@@ -4,21 +4,21 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, X, FileText, Calendar, FileCode, ArrowRight, Award, HelpCircle, AlertCircle, Heart 
+  Search, X, FileText, Calendar, FileCode, ArrowRight, AlertCircle 
 } from 'lucide-react';
 
-import Header from './components/layout/Header';
-import Footer from './components/layout/Footer';
-import Home from './components/home/Home';
-import About from './components/home/About';
-import News from './components/news/News';
-import Activities from './components/activity/Activities';
-import Gallery from './components/gallery/Gallery';
-import Documents from './components/documents/Documents';
-import Contact from './components/contact/Contact';
-import CMS from './components/admin/CMS';
+import Layout from './pages/Layout';
+import HomePage from './pages/HomePage';
+import AboutPage from './pages/AboutPage';
+import NewsPage from './pages/NewsPage';
+import ActivitiesPage from './pages/ActivitiesPage';
+import GalleryPage from './pages/GalleryPage';
+import DocumentsPage from './pages/DocumentsPage';
+import ContactPage from './pages/ContactPage';
+import AdminPage from './pages/AdminPage';
 
 import { newsService } from './services/newsService';
 import { activityService } from './services/activityService';
@@ -29,8 +29,31 @@ import { storage } from './services/storage/localStorage';
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission, LeaderProfile } from './types';
 
 export default function App() {
-  // --- View state ---
-  const [currentView, setCurrentView] = useState<string>('home');
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // --- View state derived from Route Path ---
+  const getActiveView = (pathname: string): string => {
+    if (pathname === '/') return 'home';
+    if (pathname === '/gioi-thieu') return 'about';
+    if (pathname === '/tin-tuc') return 'news';
+    if (pathname === '/hoat-dong') return 'activities';
+    if (pathname === '/thu-vien') return 'gallery';
+    if (pathname === '/van-ban') return 'documents';
+    if (pathname === '/lien-he') return 'contact';
+    if (pathname === '/quan-tri') return 'cms';
+    return 'home';
+  };
+  const currentView = getActiveView(location.pathname);
+
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
 
@@ -89,10 +112,10 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
 
-  // --- Scroll to Top Helper ---
+  // --- Scroll to Top Helper on Route Change ---
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentView]);
+  }, [location.pathname]);
 
   // --- Dark Mode Sync with Class ---
   useEffect(() => {
@@ -173,15 +196,26 @@ export default function App() {
     setContacts(prev => [newSubmission, ...prev]);
   };
 
-  // --- Navigation routers ---
+  // --- Navigation routers mapping ---
+  const handleNavigate = (viewId: string) => {
+    if (viewId === 'home') navigate('/');
+    else if (viewId === 'about') navigate('/gioi-thieu');
+    else if (viewId === 'news') navigate('/tin-tuc');
+    else if (viewId === 'activities') navigate('/hoat-dong');
+    else if (viewId === 'gallery') navigate('/thu-vien');
+    else if (viewId === 'documents') navigate('/van-ban');
+    else if (viewId === 'contact') navigate('/lien-he');
+    else if (viewId === 'cms') navigate('/quan-tri');
+  };
+
   const handleSelectNewsItem = (item: NewsItem) => {
     setSelectedNews(item);
-    setCurrentView('news');
+    navigate('/tin-tuc');
   };
 
   const handleSelectActivityItem = (item: ActivityItem) => {
     setSelectedActivity(item);
-    setCurrentView('activities');
+    navigate('/hoat-dong');
   };
 
   // --- Global search engine matches ---
@@ -201,117 +235,71 @@ export default function App() {
     setGlobalSearchTerm('');
     if (view === 'news') {
       setSelectedNews(item);
+      navigate('/tin-tuc');
     } else if (view === 'activities') {
       setSelectedActivity(item);
+      navigate('/hoat-dong');
+    } else {
+      handleNavigate(view);
     }
-    setCurrentView(view);
+  };
+
+  const contextValue = {
+    news,
+    activities,
+    photos,
+    documents,
+    contacts,
+    leaders,
+    schoolName,
+    setSchoolName,
+    schoolSlogan,
+    setSchoolSlogan,
+    isAdmin,
+    setIsAdmin,
+    selectedNews,
+    setSelectedNews,
+    selectedActivity,
+    setSelectedActivity,
+    handleIncrementNewsViews,
+    handleRegisterActivityParticipation,
+    handleSubmitContactForm,
+    handleResetDefaults,
+    handleNavigate,
+    handleSelectNewsItem,
+    handleSelectActivityItem,
+    achievements: aboutService.getAchievements()
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300 relative">
-      
-      {/* 1. Header Navigation Bar */}
-      <Header
-        currentView={currentView}
-        setCurrentView={setCurrentView}
-        isDarkMode={isDarkMode}
-        toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-        isAdmin={isAdmin}
-        setIsAdmin={setIsAdmin}
-        onOpenSearch={() => setIsSearchOpen(true)}
-        schoolName={schoolName}
-      />
+    <>
+      <Routes>
+        <Route element={
+          <Layout
+            currentView={currentView}
+            onNavigate={handleNavigate}
+            isDarkMode={isDarkMode}
+            toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+            isAdmin={isAdmin}
+            setIsAdmin={setIsAdmin}
+            onOpenSearch={() => setIsSearchOpen(true)}
+            schoolName={schoolName}
+            onSubmitContactForm={handleSubmitContactForm}
+            contextValue={contextValue}
+          />
+        }>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/gioi-thieu" element={<AboutPage />} />
+          <Route path="/tin-tuc" element={<NewsPage />} />
+          <Route path="/hoat-dong" element={<ActivitiesPage />} />
+          <Route path="/thu-vien" element={<GalleryPage />} />
+          <Route path="/van-ban" element={<DocumentsPage />} />
+          <Route path="/lien-he" element={<ContactPage />} />
+          <Route path="/quan-tri" element={<AdminPage />} />
+        </Route>
+      </Routes>
 
-      {/* 2. Main Page Render Stage with Page Transition Animations */}
-      <main className="flex-grow">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentView}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-          >
-            {currentView === 'home' && (
-              <Home
-                news={news}
-                activities={activities}
-                photos={photos}
-                onNavigate={setCurrentView}
-                onSelectNews={handleSelectNewsItem}
-                onSelectActivity={handleSelectActivityItem}
-              />
-            )}
-
-            {currentView === 'about' && (
-              <About 
-                leaders={leaders}
-                achievements={aboutService.getAchievements()}
-              />
-            )}
-
-            {currentView === 'news' && (
-              <News
-                news={news}
-                selectedItem={selectedNews}
-                onSelectItem={setSelectedNews}
-                onIncrementViews={handleIncrementNewsViews}
-              />
-            )}
-
-            {currentView === 'activities' && (
-              <Activities
-                activities={activities}
-                selectedItem={selectedActivity}
-                onSelectItem={setSelectedActivity}
-                onRegisterParticipation={handleRegisterActivityParticipation}
-              />
-            )}
-
-            {currentView === 'gallery' && (
-              <Gallery photos={photos} />
-            )}
-
-            {currentView === 'documents' && (
-              <Documents documents={documents} />
-            )}
-
-            {currentView === 'contact' && (
-              <Contact onSubmitContact={handleSubmitContactForm} />
-            )}
-
-            {currentView === 'cms' && (
-              <CMS
-                isAdmin={isAdmin}
-                setIsAdmin={setIsAdmin}
-                schoolName={schoolName}
-                setSchoolName={setSchoolName}
-                schoolSlogan={schoolSlogan}
-                setSchoolSlogan={setSchoolSlogan}
-                news={news}
-                setNews={setNews}
-                activities={activities}
-                setActivities={setActivities}
-                photos={photos}
-                setPhotos={setPhotos}
-                documents={documents}
-                setDocuments={setDocuments}
-                contacts={contacts}
-                setContacts={setContacts}
-                onResetDefaults={handleResetDefaults}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </main>
-
-      {/* 3. Footer Section */}
-      <Footer
-        onNavigate={setCurrentView}
-        onSubmitSuggestion={handleSubmitContactForm}
-      />
-
-      {/* 4. Global Search Overlay Popup Modal */}
+      {/* Global Search Overlay Popup Modal */}
       <AnimatePresence>
         {isSearchOpen && (
           <div className="fixed inset-0 z-50 overflow-y-auto" id="global-search-modal">
@@ -452,7 +440,6 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
-
-    </div>
+    </>
   );
 }
