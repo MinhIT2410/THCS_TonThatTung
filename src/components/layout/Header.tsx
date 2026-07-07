@@ -6,7 +6,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, Sun, Moon, ShieldAlert, Award, FileText, Settings, Search } from 'lucide-react';
-import { SCHOOL_NAME } from '../../data';
 
 interface HeaderProps {
   currentView: string;

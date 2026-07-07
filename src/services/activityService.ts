@@ -31,6 +31,14 @@ export const activityService = {
   },
 
   /**
+   * Get a single activity by ID
+   */
+  getById(id: string): ActivityItem | undefined {
+    const list = this.getAll();
+    return list.find(item => item.id === id);
+  },
+
+  /**
    * Save all activities
    */
   saveAll(activities: ActivityItem[]): void {

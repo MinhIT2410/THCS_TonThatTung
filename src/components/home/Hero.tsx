@@ -6,7 +6,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Award, Users, ShieldCheck, Heart, ArrowRight } from 'lucide-react';
-import { SCHOOL_NAME, SCHOOL_SLOGAN } from '../../data';
+import { aboutService } from '../../services/aboutService';
 
 interface HeroProps {
   onNavigate: (viewId: string) => void;
@@ -75,7 +75,7 @@ export default function Hero({ onNavigate }: HeroProps) {
               >
                 Chào mừng bạn đến với <br />
                 <span className="bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-400 bg-clip-text text-transparent drop-shadow-sm">
-                  {SCHOOL_NAME}
+                  {aboutService.getSchoolName()}
                 </span>
               </motion.h1>
 
@@ -83,7 +83,7 @@ export default function Hero({ onNavigate }: HeroProps) {
                 variants={itemVariants}
                 className="font-sans text-lg text-blue-100 max-w-2xl font-medium leading-relaxed"
               >
-                "{SCHOOL_SLOGAN}"
+                "{aboutService.getSchoolSlogan()}"
               </motion.p>
 
               <motion.p 

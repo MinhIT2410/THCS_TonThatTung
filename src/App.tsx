@@ -20,9 +20,11 @@ import Documents from './components/documents/Documents';
 import Contact from './components/contact/Contact';
 import CMS from './components/admin/CMS';
 
-import { 
-  defaultLeaders, defaultNews, defaultActivities, defaultDocuments, defaultPhotos, defaultAchievements 
-} from './data';
+import { newsService } from './services/newsService';
+import { activityService } from './services/activityService';
+import { documentService } from './services/documentService';
+import { galleryService } from './services/galleryService';
+import { aboutService } from './services/aboutService';
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission, LeaderProfile } from './types';
 
 export default function App() {
@@ -40,37 +42,37 @@ export default function App() {
   // --- Core Persistent State ---
   const [schoolName, setSchoolName] = useState<string>(() => {
     const saved = localStorage.getItem('schoolName');
-    return (!saved || saved === "Liên đội THCS Chu Văn An") ? "Liên Đội THCS Tôn Thất Tùng" : saved;
+    return (!saved || saved === "Liên đội THCS Chu Văn An") ? aboutService.getSchoolName() : saved;
   });
   
   const [schoolSlogan, setSchoolSlogan] = useState<string>(() => {
     const saved = localStorage.getItem('schoolSlogan');
-    return (!saved || saved === "Thiếu nhi Chu Văn An - Chăm ngoan, học tốt, tiếp bước cha anh") ? "Thiếu nhi Tôn Thất Tùng - Chăm ngoan, học tốt, tiếp bước cha anh" : saved;
+    return (!saved || saved === "Thiếu nhi Chu Văn An - Chăm ngoan, học tốt, tiếp bước cha anh") ? aboutService.getSchoolSlogan() : saved;
   });
 
   const [leaders, setLeaders] = useState<LeaderProfile[]>(() => {
     const saved = localStorage.getItem('leaders');
-    return saved ? JSON.parse(saved) : defaultLeaders;
+    return saved ? JSON.parse(saved) : aboutService.getAll();
   });
 
   const [news, setNews] = useState<NewsItem[]>(() => {
     const saved = localStorage.getItem('news');
-    return saved ? JSON.parse(saved) : defaultNews;
+    return saved ? JSON.parse(saved) : newsService.getAll();
   });
 
   const [activities, setActivities] = useState<ActivityItem[]>(() => {
     const saved = localStorage.getItem('activities');
-    return saved ? JSON.parse(saved) : defaultActivities;
+    return saved ? JSON.parse(saved) : activityService.getAll();
   });
 
   const [photos, setPhotos] = useState<PhotoItem[]>(() => {
     const saved = localStorage.getItem('photos');
-    return saved ? JSON.parse(saved) : defaultPhotos;
+    return saved ? JSON.parse(saved) : galleryService.getAll();
   });
 
   const [documents, setDocuments] = useState<DocumentItem[]>(() => {
     const saved = localStorage.getItem('documents');
-    return saved ? JSON.parse(saved) : defaultDocuments;
+    return saved ? JSON.parse(saved) : documentService.getAll();
   });
 
   const [contacts, setContacts] = useState<ContactSubmission[]>(() => {
@@ -141,13 +143,13 @@ export default function App() {
 
   // --- Reset database to default seed data ---
   const handleResetDefaults = () => {
-    setSchoolName("Liên Đội THCS Tôn Thất Tùng");
-    setSchoolSlogan("Thiếu nhi Tôn Thất Tùng - Chăm ngoan, học tốt, tiếp bước cha anh");
-    setLeaders(defaultLeaders);
-    setNews(defaultNews);
-    setActivities(defaultActivities);
-    setPhotos(defaultPhotos);
-    setDocuments(defaultDocuments);
+    setSchoolName(aboutService.getSchoolName());
+    setSchoolSlogan(aboutService.getSchoolSlogan());
+    setLeaders(aboutService.getAll());
+    setNews(newsService.getAll());
+    setActivities(activityService.getAll());
+    setPhotos(galleryService.getAll());
+    setDocuments(documentService.getAll());
     setContacts([]);
   };
 
@@ -243,7 +245,7 @@ export default function App() {
             {currentView === 'about' && (
               <About 
                 leaders={leaders}
-                achievements={defaultAchievements}
+                achievements={aboutService.getAchievements()}
               />
             )}
 

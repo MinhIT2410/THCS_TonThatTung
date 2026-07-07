@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Award, Mail, Phone, MapPin, Send, Facebook, Youtube, ExternalLink, ShieldCheck } from 'lucide-react';
-import { SCHOOL_NAME, SCHOOL_SLOGAN } from '../../data';
+import { aboutService } from '../../services/aboutService';
 import { ContactSubmission } from '../../types';
 
 interface FooterProps {
@@ -63,7 +63,7 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
             </div>
             
             <p className="text-xs text-slate-400 italic font-medium leading-relaxed">
-              "{SCHOOL_SLOGAN}"
+              "{aboutService.getSchoolSlogan()}"
             </p>
 
             <div className="space-y-2.5 pt-2 text-xs">
@@ -195,7 +195,7 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
 
         {/* Bottom copyright info */}
         <div className="mt-12 border-t border-slate-800 pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 font-medium">
-          <p>© 2026 {SCHOOL_NAME}. Tất cả quyền được bảo lưu.</p>
+          <p>© 2026 {aboutService.getSchoolName()}. Tất cả quyền được bảo lưu.</p>
           <div className="flex items-center space-x-4 mt-3 md:mt-0">
             <span className="hover:text-slate-300 transition-colors">Điều khoản</span>
             <span>•</span>
