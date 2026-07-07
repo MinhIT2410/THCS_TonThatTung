@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, Sun, Moon, ShieldAlert, Award, FileText, Settings, Search } from 'lucide-react';
+import { NAV_MENU } from '../../config/menu';
 
 interface HeaderProps {
   currentView: string;
@@ -30,15 +31,10 @@ export default function Header({
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navItems = [
-    { id: 'home', label: 'Trang chủ' },
-    { id: 'about', label: 'Giới thiệu' },
-    { id: 'news', label: 'Tin tức' },
-    { id: 'activities', label: 'Hoạt động' },
-    { id: 'gallery', label: 'Thư viện ảnh' },
-    { id: 'documents', label: 'Văn bản' },
-    { id: 'contact', label: 'Liên hệ' }
-  ];
+  const navItems = NAV_MENU.filter(item => item.showInNavbar).map(item => ({
+    id: item.id,
+    label: item.title
+  }));
 
   const handleNavClick = (viewId: string) => {
     setCurrentView(viewId);

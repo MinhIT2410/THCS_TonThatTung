@@ -8,6 +8,8 @@ import { motion } from 'motion/react';
 import { Award, Mail, Phone, MapPin, Send, Facebook, Youtube, ExternalLink, ShieldCheck } from 'lucide-react';
 import { aboutService } from '../../services/aboutService';
 import { ContactSubmission } from '../../types';
+import { SITE_CONFIG } from '../../config/site';
+import { NAV_MENU } from '../../config/menu';
 
 interface FooterProps {
   onNavigate: (viewId: string) => void;
@@ -57,7 +59,7 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
                   Liên Đội THCS
                 </span>
                 <span className="block font-sans text-xs font-semibold text-red-500 mt-1">
-                  Tôn Thất Tùng
+                  {SITE_CONFIG.unionName.replace("Liên Đội THCS", "").trim()}
                 </span>
               </div>
             </div>
@@ -69,15 +71,15 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
             <div className="space-y-2.5 pt-2 text-xs">
               <div className="flex items-start space-x-2.5">
                 <MapPin className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                <span>số 3 đường D2, phường Tân Sơn Nhì, thành phố Hồ Chí Minh</span>
+                <span>{SITE_CONFIG.address}</span>
               </div>
               <div className="flex items-center space-x-2.5">
                 <Phone className="h-4 w-4 text-blue-400 shrink-0" />
-                <span>028.3845.2410 - 098.334.2410</span>
+                <span>{SITE_CONFIG.phone}</span>
               </div>
               <div className="flex items-center space-x-2.5">
                 <Mail className="h-4 w-4 text-blue-400 shrink-0" />
-                <span>liendoitonthattung.hcm@gmail.com</span>
+                <span>{SITE_CONFIG.email}</span>
               </div>
             </div>
 
@@ -119,19 +121,17 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
               Danh mục chính
             </h3>
             <ul className="space-y-2 text-xs">
-              {[
-                { id: 'about', label: 'Giới thiệu Liên đội' },
-                { id: 'news', label: 'Tin tức & Hoạt động' },
-                { id: 'gallery', label: 'Thư viện ảnh Đội' },
-                { id: 'documents', label: 'Văn bản - Hướng dẫn' },
-                { id: 'contact', label: 'Liên hệ - Hỏi đáp' }
-              ].map((link) => (
+              {NAV_MENU.filter(item => item.id !== 'home').map((link) => (
                 <li key={link.id}>
                   <button
                     onClick={() => onNavigate(link.id)}
                     className="hover:text-blue-400 hover:translate-x-1.5 transition-all duration-200 text-left block"
                   >
-                    {link.label}
+                    {link.id === 'about' ? 'Giới thiệu Liên đội' :
+                     link.id === 'news' ? 'Tin tức & Hoạt động' :
+                     link.id === 'gallery' ? 'Thư viện ảnh Đội' :
+                     link.id === 'documents' ? 'Văn bản - Hướng dẫn' :
+                     link.id === 'contact' ? 'Liên hệ - Hỏi đáp' : link.title}
                   </button>
                 </li>
               ))}
@@ -195,7 +195,7 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
 
         {/* Bottom copyright info */}
         <div className="mt-12 border-t border-slate-800 pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 font-medium">
-          <p>© 2026 {aboutService.getSchoolName()}. Tất cả quyền được bảo lưu.</p>
+          <p>© {SITE_CONFIG.currentYear} {aboutService.getSchoolName()}. Tất cả quyền được bảo lưu.</p>
           <div className="flex items-center space-x-4 mt-3 md:mt-0">
             <span className="hover:text-slate-300 transition-colors">Điều khoản</span>
             <span>•</span>

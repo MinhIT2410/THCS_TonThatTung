@@ -6,10 +6,7 @@
 import { LeaderProfile, AchievementItem } from '../types';
 import { SCHOOL_NAME, SCHOOL_SLOGAN, defaultLeaders, defaultAchievements } from '../data/about';
 import { storage } from './storage/localStorage';
-
-const LEADERS_STORAGE_KEY = 'leaders';
-const SCHOOL_NAME_KEY = 'schoolName';
-const SCHOOL_SLOGAN_KEY = 'schoolSlogan';
+import { STORAGE_KEYS } from '../config/storageKeys';
 
 /**
  * Service to manage School Profile, Leaders, and Achievements
@@ -19,7 +16,7 @@ export const aboutService = {
    * Get all leader profiles
    */
   getAll(): LeaderProfile[] {
-    const saved = storage.get<LeaderProfile[]>(LEADERS_STORAGE_KEY);
+    const saved = storage.get<LeaderProfile[]>(STORAGE_KEYS.LEADERS);
     return saved !== null ? saved : defaultLeaders;
   },
 
@@ -27,7 +24,7 @@ export const aboutService = {
    * Save all leader profiles to storage
    */
   saveAll(leaders: LeaderProfile[]): void {
-    storage.set<LeaderProfile[]>(LEADERS_STORAGE_KEY, leaders);
+    storage.set<LeaderProfile[]>(STORAGE_KEYS.LEADERS, leaders);
   },
 
   /**
@@ -80,7 +77,7 @@ export const aboutService = {
    * Get the school name
    */
   getSchoolName(): string {
-    const saved = storage.get<string>(SCHOOL_NAME_KEY);
+    const saved = storage.get<string>(STORAGE_KEYS.SCHOOL_NAME);
     return saved !== null ? saved : SCHOOL_NAME;
   },
 
@@ -88,7 +85,7 @@ export const aboutService = {
    * Get the school slogan
    */
   getSchoolSlogan(): string {
-    const saved = storage.get<string>(SCHOOL_SLOGAN_KEY);
+    const saved = storage.get<string>(STORAGE_KEYS.SCHOOL_SLOGAN);
     return saved !== null ? saved : SCHOOL_SLOGAN;
   },
 

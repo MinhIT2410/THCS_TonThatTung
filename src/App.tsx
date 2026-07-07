@@ -10,6 +10,9 @@ import {
   Search, X, FileText, Calendar, FileCode, ArrowRight, AlertCircle 
 } from 'lucide-react';
 
+import { ROUTES } from './config/routes';
+import { STORAGE_KEYS } from './config/storageKeys';
+
 import Layout from './pages/Layout';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
@@ -42,14 +45,14 @@ function AppContent() {
 
   // --- View state derived from Route Path ---
   const getActiveView = (pathname: string): string => {
-    if (pathname === '/') return 'home';
-    if (pathname === '/gioi-thieu') return 'about';
-    if (pathname === '/tin-tuc') return 'news';
-    if (pathname === '/hoat-dong') return 'activities';
-    if (pathname === '/thu-vien') return 'gallery';
-    if (pathname === '/van-ban') return 'documents';
-    if (pathname === '/lien-he') return 'contact';
-    if (pathname === '/quan-tri') return 'cms';
+    if (pathname === ROUTES.HOME) return 'home';
+    if (pathname === ROUTES.ABOUT) return 'about';
+    if (pathname === ROUTES.NEWS) return 'news';
+    if (pathname === ROUTES.ACTIVITIES) return 'activities';
+    if (pathname === ROUTES.GALLERY) return 'gallery';
+    if (pathname === ROUTES.DOCUMENTS) return 'documents';
+    if (pathname === ROUTES.CONTACT) return 'contact';
+    if (pathname === ROUTES.ADMIN) return 'cms';
     return 'home';
   };
   const currentView = getActiveView(location.pathname);
@@ -59,48 +62,48 @@ function AppContent() {
 
   // --- Dark Mode State ---
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = storage.get<string>('theme');
+    const saved = storage.get<string>(STORAGE_KEYS.THEME);
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
 
   // --- Core Persistent State ---
   const [schoolName, setSchoolName] = useState<string>(() => {
-    const saved = storage.get<string>('schoolName');
+    const saved = storage.get<string>(STORAGE_KEYS.SCHOOL_NAME);
     return (!saved || saved === "Liên đội THCS Chu Văn An") ? aboutService.getSchoolName() : saved;
   });
   
   const [schoolSlogan, setSchoolSlogan] = useState<string>(() => {
-    const saved = storage.get<string>('schoolSlogan');
+    const saved = storage.get<string>(STORAGE_KEYS.SCHOOL_SLOGAN);
     return (!saved || saved === "Thiếu nhi Chu Văn An - Chăm ngoan, học tốt, tiếp bước cha anh") ? aboutService.getSchoolSlogan() : saved;
   });
 
   const [leaders, setLeaders] = useState<LeaderProfile[]>(() => {
-    const saved = storage.get<LeaderProfile[]>('leaders');
+    const saved = storage.get<LeaderProfile[]>(STORAGE_KEYS.LEADERS);
     return saved !== null ? saved : aboutService.getAll();
   });
 
   const [news, setNews] = useState<NewsItem[]>(() => {
-    const saved = storage.get<NewsItem[]>('news');
+    const saved = storage.get<NewsItem[]>(STORAGE_KEYS.NEWS);
     return saved !== null ? saved : newsService.getAll();
   });
 
   const [activities, setActivities] = useState<ActivityItem[]>(() => {
-    const saved = storage.get<ActivityItem[]>('activities');
+    const saved = storage.get<ActivityItem[]>(STORAGE_KEYS.ACTIVITIES);
     return saved !== null ? saved : activityService.getAll();
   });
 
   const [photos, setPhotos] = useState<PhotoItem[]>(() => {
-    const saved = storage.get<PhotoItem[]>('photos');
+    const saved = storage.get<PhotoItem[]>(STORAGE_KEYS.PHOTOS);
     return saved !== null ? saved : galleryService.getAll();
   });
 
   const [documents, setDocuments] = useState<DocumentItem[]>(() => {
-    const saved = storage.get<DocumentItem[]>('documents');
+    const saved = storage.get<DocumentItem[]>(STORAGE_KEYS.DOCUMENTS);
     return saved !== null ? saved : documentService.getAll();
   });
 
   const [contacts, setContacts] = useState<ContactSubmission[]>(() => {
-    const saved = storage.get<ContactSubmission[]>('contacts');
+    const saved = storage.get<ContactSubmission[]>(STORAGE_KEYS.CONTACTS);
     return saved !== null ? saved : [];
   });
 
@@ -121,44 +124,44 @@ function AppContent() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      storage.set<string>('theme', 'dark');
+      storage.set<string>(STORAGE_KEYS.THEME, 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      storage.set<string>('theme', 'light');
+      storage.set<string>(STORAGE_KEYS.THEME, 'light');
     }
   }, [isDarkMode]);
 
   // --- Persist Core Data changes to Local Storage ---
   useEffect(() => {
-    storage.set<string>('schoolName', schoolName);
+    storage.set<string>(STORAGE_KEYS.SCHOOL_NAME, schoolName);
   }, [schoolName]);
 
   useEffect(() => {
-    storage.set<string>('schoolSlogan', schoolSlogan);
+    storage.set<string>(STORAGE_KEYS.SCHOOL_SLOGAN, schoolSlogan);
   }, [schoolSlogan]);
 
   useEffect(() => {
-    storage.set<LeaderProfile[]>('leaders', leaders);
+    storage.set<LeaderProfile[]>(STORAGE_KEYS.LEADERS, leaders);
   }, [leaders]);
 
   useEffect(() => {
-    storage.set<NewsItem[]>('news', news);
+    storage.set<NewsItem[]>(STORAGE_KEYS.NEWS, news);
   }, [news]);
 
   useEffect(() => {
-    storage.set<ActivityItem[]>('activities', activities);
+    storage.set<ActivityItem[]>(STORAGE_KEYS.ACTIVITIES, activities);
   }, [activities]);
 
   useEffect(() => {
-    storage.set<PhotoItem[]>('photos', photos);
+    storage.set<PhotoItem[]>(STORAGE_KEYS.PHOTOS, photos);
   }, [photos]);
 
   useEffect(() => {
-    storage.set<DocumentItem[]>('documents', documents);
+    storage.set<DocumentItem[]>(STORAGE_KEYS.DOCUMENTS, documents);
   }, [documents]);
 
   useEffect(() => {
-    storage.set<ContactSubmission[]>('contacts', contacts);
+    storage.set<ContactSubmission[]>(STORAGE_KEYS.CONTACTS, contacts);
   }, [contacts]);
 
   useEffect(() => {
@@ -198,24 +201,24 @@ function AppContent() {
 
   // --- Navigation routers mapping ---
   const handleNavigate = (viewId: string) => {
-    if (viewId === 'home') navigate('/');
-    else if (viewId === 'about') navigate('/gioi-thieu');
-    else if (viewId === 'news') navigate('/tin-tuc');
-    else if (viewId === 'activities') navigate('/hoat-dong');
-    else if (viewId === 'gallery') navigate('/thu-vien');
-    else if (viewId === 'documents') navigate('/van-ban');
-    else if (viewId === 'contact') navigate('/lien-he');
-    else if (viewId === 'cms') navigate('/quan-tri');
+    if (viewId === 'home') navigate(ROUTES.HOME);
+    else if (viewId === 'about') navigate(ROUTES.ABOUT);
+    else if (viewId === 'news') navigate(ROUTES.NEWS);
+    else if (viewId === 'activities') navigate(ROUTES.ACTIVITIES);
+    else if (viewId === 'gallery') navigate(ROUTES.GALLERY);
+    else if (viewId === 'documents') navigate(ROUTES.DOCUMENTS);
+    else if (viewId === 'contact') navigate(ROUTES.CONTACT);
+    else if (viewId === 'cms') navigate(ROUTES.ADMIN);
   };
 
   const handleSelectNewsItem = (item: NewsItem) => {
     setSelectedNews(item);
-    navigate('/tin-tuc');
+    navigate(ROUTES.NEWS);
   };
 
   const handleSelectActivityItem = (item: ActivityItem) => {
     setSelectedActivity(item);
-    navigate('/hoat-dong');
+    navigate(ROUTES.ACTIVITIES);
   };
 
   // --- Global search engine matches ---
@@ -235,10 +238,10 @@ function AppContent() {
     setGlobalSearchTerm('');
     if (view === 'news') {
       setSelectedNews(item);
-      navigate('/tin-tuc');
+      navigate(ROUTES.NEWS);
     } else if (view === 'activities') {
       setSelectedActivity(item);
-      navigate('/hoat-dong');
+      navigate(ROUTES.ACTIVITIES);
     } else {
       handleNavigate(view);
     }
@@ -288,14 +291,14 @@ function AppContent() {
             contextValue={contextValue}
           />
         }>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/gioi-thieu" element={<AboutPage />} />
-          <Route path="/tin-tuc" element={<NewsPage />} />
-          <Route path="/hoat-dong" element={<ActivitiesPage />} />
-          <Route path="/thu-vien" element={<GalleryPage />} />
-          <Route path="/van-ban" element={<DocumentsPage />} />
-          <Route path="/lien-he" element={<ContactPage />} />
-          <Route path="/quan-tri" element={<AdminPage />} />
+          <Route path={ROUTES.HOME} element={<HomePage />} />
+          <Route path={ROUTES.ABOUT} element={<AboutPage />} />
+          <Route path={ROUTES.NEWS} element={<NewsPage />} />
+          <Route path={ROUTES.ACTIVITIES} element={<ActivitiesPage />} />
+          <Route path={ROUTES.GALLERY} element={<GalleryPage />} />
+          <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
+          <Route path={ROUTES.CONTACT} element={<ContactPage />} />
+          <Route path={ROUTES.ADMIN} element={<AdminPage />} />
         </Route>
       </Routes>
 

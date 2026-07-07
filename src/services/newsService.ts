@@ -6,8 +6,7 @@
 import { NewsItem } from '../types';
 import { defaultNews } from '../data/news';
 import { storage } from './storage/localStorage';
-
-const STORAGE_KEY = 'news';
+import { STORAGE_KEYS } from '../config/storageKeys';
 
 /**
  * Service to manage News data with local storage persistence
@@ -17,7 +16,7 @@ export const newsService = {
    * Get all news items
    */
   getAll(): NewsItem[] {
-    const saved = storage.get<NewsItem[]>(STORAGE_KEY);
+    const saved = storage.get<NewsItem[]>(STORAGE_KEYS.NEWS);
     return saved !== null ? saved : defaultNews;
   },
 
@@ -25,7 +24,7 @@ export const newsService = {
    * Save all news items to storage
    */
   saveAll(news: NewsItem[]): void {
-    storage.set<NewsItem[]>(STORAGE_KEY, news);
+    storage.set<NewsItem[]>(STORAGE_KEYS.NEWS, news);
   },
 
   /**

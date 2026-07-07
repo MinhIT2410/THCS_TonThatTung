@@ -6,8 +6,7 @@
 import { DocumentItem } from '../types';
 import { defaultDocuments } from '../data/documents';
 import { storage } from './storage/localStorage';
-
-const STORAGE_KEY = 'documents';
+import { STORAGE_KEYS } from '../config/storageKeys';
 
 /**
  * Service to manage Document data with local storage persistence
@@ -17,7 +16,7 @@ export const documentService = {
    * Get all document items
    */
   getAll(): DocumentItem[] {
-    const saved = storage.get<DocumentItem[]>(STORAGE_KEY);
+    const saved = storage.get<DocumentItem[]>(STORAGE_KEYS.DOCUMENTS);
     return saved !== null ? saved : defaultDocuments;
   },
 
@@ -25,7 +24,7 @@ export const documentService = {
    * Save all document items to storage
    */
   saveAll(documents: DocumentItem[]): void {
-    storage.set<DocumentItem[]>(STORAGE_KEY, documents);
+    storage.set<DocumentItem[]>(STORAGE_KEYS.DOCUMENTS, documents);
   },
 
   /**

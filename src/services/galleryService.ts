@@ -6,8 +6,7 @@
 import { PhotoItem } from '../types';
 import { defaultPhotos } from '../data/gallery';
 import { storage } from './storage/localStorage';
-
-const STORAGE_KEY = 'photos';
+import { STORAGE_KEYS } from '../config/storageKeys';
 
 /**
  * Service to manage Gallery (Photo) data with local storage persistence
@@ -17,7 +16,7 @@ export const galleryService = {
    * Get all photo items
    */
   getAll(): PhotoItem[] {
-    const saved = storage.get<PhotoItem[]>(STORAGE_KEY);
+    const saved = storage.get<PhotoItem[]>(STORAGE_KEYS.PHOTOS);
     return saved !== null ? saved : defaultPhotos;
   },
 
@@ -25,7 +24,7 @@ export const galleryService = {
    * Save all photo items to storage
    */
   saveAll(photos: PhotoItem[]): void {
-    storage.set<PhotoItem[]>(STORAGE_KEY, photos);
+    storage.set<PhotoItem[]>(STORAGE_KEYS.PHOTOS, photos);
   },
 
   /**
