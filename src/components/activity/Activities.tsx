@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Calendar, Users, CheckCircle, ArrowRight, X, User, BookOpen, Clock, Heart, Award } from 'lucide-react';
-import { ActivityItem } from '../types';
+import { ActivityItem } from '../../types';
 
 interface ActivitiesProps {
   activities: ActivityItem[];

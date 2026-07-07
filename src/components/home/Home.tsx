@@ -6,7 +6,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Award, ArrowRight, Eye, Calendar, Sparkles, BookOpen, Volume2, Landmark } from 'lucide-react';
-import { NewsItem, ActivityItem, PhotoItem } from '../types';
+import { NewsItem, ActivityItem, PhotoItem } from '../../types';
 import Hero from './Hero';
 
 interface HomeProps {

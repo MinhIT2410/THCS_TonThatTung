@@ -9,16 +9,16 @@ import {
   Search, X, FileText, Calendar, FileCode, ArrowRight, Award, HelpCircle, AlertCircle, Heart 
 } from 'lucide-react';
 
-import Header from './components/Header';
-import Footer from './components/Footer';
-import Home from './components/Home';
-import About from './components/About';
-import News from './components/News';
-import Activities from './components/Activities';
-import Gallery from './components/Gallery';
-import Documents from './components/Documents';
-import Contact from './components/Contact';
-import CMS from './components/CMS';
+import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
+import Home from './components/home/Home';
+import About from './components/home/About';
+import News from './components/news/News';
+import Activities from './components/activity/Activities';
+import Gallery from './components/gallery/Gallery';
+import Documents from './components/documents/Documents';
+import Contact from './components/contact/Contact';
+import CMS from './components/admin/CMS';
 
 import { 
   defaultLeaders, defaultNews, defaultActivities, defaultDocuments, defaultPhotos, defaultAchievements 

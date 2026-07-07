@@ -6,7 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FileText, Search, Download, Calendar, FolderOpen, ArrowRight, CheckCircle, Sparkles, Building, AlertCircle } from 'lucide-react';
-import { DocumentItem } from '../types';
+import { DocumentItem } from '../../types';
 
 interface DocumentsProps {
   documents: DocumentItem[];

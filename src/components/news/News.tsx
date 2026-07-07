@@ -6,7 +6,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Calendar, Eye, ArrowRight, BookOpen, AlertCircle, X, Sparkles, Share2, ThumbsUp } from 'lucide-react';
-import { NewsItem } from '../types';
+import { NewsItem } from '../../types';
 
 interface NewsProps {
   news: NewsItem[];

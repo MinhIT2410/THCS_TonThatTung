@@ -6,7 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Image, X, ChevronLeft, ChevronRight, Play, Pause, Download, Calendar, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
-import { PhotoItem } from '../types';
+import { PhotoItem } from '../../types';
 
 interface GalleryProps {
   photos: PhotoItem[];

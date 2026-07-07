@@ -9,7 +9,7 @@ import {
   Settings, Lock, Key, CheckCircle, Trash2, Edit, Plus, FolderSync, 
   MessageSquare, FileText, Calendar, Image as ImageIcon, FileCode, Check, Eye, X, RefreshCw
 } from 'lucide-react';
-import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission } from '../types';
+import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission } from '../../types';
 
 interface CMSProps {
   isAdmin: boolean;

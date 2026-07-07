@@ -6,8 +6,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Users, Award, Shield, Sparkles, BookOpen, Heart, Landmark, Mail } from 'lucide-react';
-import { LeaderProfile, AchievementItem } from '../types';
-import { SCHOOL_NAME } from '../data/defaultData';
+import { LeaderProfile, AchievementItem } from '../../types';
+import { SCHOOL_NAME } from '../../data/defaultData';
 
 interface AboutProps {
   leaders: LeaderProfile[];

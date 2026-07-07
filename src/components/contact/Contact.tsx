@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle, ChevronDown, ChevronUp, Clock, ShieldAlert } from 'lucide-react';
-import { ContactSubmission } from '../types';
+import { ContactSubmission } from '../../types';
 
 interface ContactProps {
   onSubmitContact: (submission: Omit<ContactSubmission, 'id' | 'date' | 'status'>) => void;

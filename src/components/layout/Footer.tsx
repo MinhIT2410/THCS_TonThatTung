@@ -6,8 +6,8 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Award, Mail, Phone, MapPin, Send, Facebook, Youtube, ExternalLink, ShieldCheck } from 'lucide-react';
-import { SCHOOL_NAME, SCHOOL_SLOGAN } from '../data/defaultData';
-import { ContactSubmission } from '../types';
+import { SCHOOL_NAME, SCHOOL_SLOGAN } from '../../data/defaultData';
+import { ContactSubmission } from '../../types';
 
 interface FooterProps {
   onNavigate: (viewId: string) => void;
