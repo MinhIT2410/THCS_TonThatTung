@@ -25,6 +25,7 @@ import { activityService } from './services/activityService';
 import { documentService } from './services/documentService';
 import { galleryService } from './services/galleryService';
 import { aboutService } from './services/aboutService';
+import { storage } from './services/storage/localStorage';
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission, LeaderProfile } from './types';
 
 export default function App() {
@@ -35,49 +36,49 @@ export default function App() {
 
   // --- Dark Mode State ---
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('theme');
+    const saved = storage.get<string>('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
 
   // --- Core Persistent State ---
   const [schoolName, setSchoolName] = useState<string>(() => {
-    const saved = localStorage.getItem('schoolName');
+    const saved = storage.get<string>('schoolName');
     return (!saved || saved === "Liên đội THCS Chu Văn An") ? aboutService.getSchoolName() : saved;
   });
   
   const [schoolSlogan, setSchoolSlogan] = useState<string>(() => {
-    const saved = localStorage.getItem('schoolSlogan');
+    const saved = storage.get<string>('schoolSlogan');
     return (!saved || saved === "Thiếu nhi Chu Văn An - Chăm ngoan, học tốt, tiếp bước cha anh") ? aboutService.getSchoolSlogan() : saved;
   });
 
   const [leaders, setLeaders] = useState<LeaderProfile[]>(() => {
-    const saved = localStorage.getItem('leaders');
-    return saved ? JSON.parse(saved) : aboutService.getAll();
+    const saved = storage.get<LeaderProfile[]>('leaders');
+    return saved !== null ? saved : aboutService.getAll();
   });
 
   const [news, setNews] = useState<NewsItem[]>(() => {
-    const saved = localStorage.getItem('news');
-    return saved ? JSON.parse(saved) : newsService.getAll();
+    const saved = storage.get<NewsItem[]>('news');
+    return saved !== null ? saved : newsService.getAll();
   });
 
   const [activities, setActivities] = useState<ActivityItem[]>(() => {
-    const saved = localStorage.getItem('activities');
-    return saved ? JSON.parse(saved) : activityService.getAll();
+    const saved = storage.get<ActivityItem[]>('activities');
+    return saved !== null ? saved : activityService.getAll();
   });
 
   const [photos, setPhotos] = useState<PhotoItem[]>(() => {
-    const saved = localStorage.getItem('photos');
-    return saved ? JSON.parse(saved) : galleryService.getAll();
+    const saved = storage.get<PhotoItem[]>('photos');
+    return saved !== null ? saved : galleryService.getAll();
   });
 
   const [documents, setDocuments] = useState<DocumentItem[]>(() => {
-    const saved = localStorage.getItem('documents');
-    return saved ? JSON.parse(saved) : documentService.getAll();
+    const saved = storage.get<DocumentItem[]>('documents');
+    return saved !== null ? saved : documentService.getAll();
   });
 
   const [contacts, setContacts] = useState<ContactSubmission[]>(() => {
-    const saved = localStorage.getItem('contacts');
-    return saved ? JSON.parse(saved) : [];
+    const saved = storage.get<ContactSubmission[]>('contacts');
+    return saved !== null ? saved : [];
   });
 
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
@@ -97,44 +98,44 @@ export default function App() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      storage.set<string>('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      storage.set<string>('theme', 'light');
     }
   }, [isDarkMode]);
 
   // --- Persist Core Data changes to Local Storage ---
   useEffect(() => {
-    localStorage.setItem('schoolName', schoolName);
+    storage.set<string>('schoolName', schoolName);
   }, [schoolName]);
 
   useEffect(() => {
-    localStorage.setItem('schoolSlogan', schoolSlogan);
+    storage.set<string>('schoolSlogan', schoolSlogan);
   }, [schoolSlogan]);
 
   useEffect(() => {
-    localStorage.setItem('leaders', JSON.stringify(leaders));
+    storage.set<LeaderProfile[]>('leaders', leaders);
   }, [leaders]);
 
   useEffect(() => {
-    localStorage.setItem('news', JSON.stringify(news));
+    storage.set<NewsItem[]>('news', news);
   }, [news]);
 
   useEffect(() => {
-    localStorage.setItem('activities', JSON.stringify(activities));
+    storage.set<ActivityItem[]>('activities', activities);
   }, [activities]);
 
   useEffect(() => {
-    localStorage.setItem('photos', JSON.stringify(photos));
+    storage.set<PhotoItem[]>('photos', photos);
   }, [photos]);
 
   useEffect(() => {
-    localStorage.setItem('documents', JSON.stringify(documents));
+    storage.set<DocumentItem[]>('documents', documents);
   }, [documents]);
 
   useEffect(() => {
-    localStorage.setItem('contacts', JSON.stringify(contacts));
+    storage.set<ContactSubmission[]>('contacts', contacts);
   }, [contacts]);
 
   useEffect(() => {

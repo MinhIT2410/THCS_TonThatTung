@@ -5,6 +5,7 @@
 
 import { NewsItem } from '../types';
 import { defaultNews } from '../data/news';
+import { storage } from './storage/localStorage';
 
 const STORAGE_KEY = 'news';
 
@@ -16,15 +17,15 @@ export const newsService = {
    * Get all news items
    */
   getAll(): NewsItem[] {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : defaultNews;
+    const saved = storage.get<NewsItem[]>(STORAGE_KEY);
+    return saved !== null ? saved : defaultNews;
   },
 
   /**
    * Save all news items to storage
    */
   saveAll(news: NewsItem[]): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(news));
+    storage.set<NewsItem[]>(STORAGE_KEY, news);
   },
 
   /**

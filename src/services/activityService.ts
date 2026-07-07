@@ -5,6 +5,7 @@
 
 import { ActivityItem } from '../types';
 import { defaultActivities } from '../data/activities';
+import { storage } from './storage/localStorage';
 
 const STORAGE_KEY = 'activities';
 const REGISTRATION_KEY = 'activity_registrations';
@@ -26,8 +27,8 @@ export const activityService = {
    * Get all activities
    */
   getAll(): ActivityItem[] {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : defaultActivities;
+    const saved = storage.get<ActivityItem[]>(STORAGE_KEY);
+    return saved !== null ? saved : defaultActivities;
   },
 
   /**
@@ -42,7 +43,7 @@ export const activityService = {
    * Save all activities
    */
   saveAll(activities: ActivityItem[]): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+    storage.set<ActivityItem[]>(STORAGE_KEY, activities);
   },
 
   /**
@@ -60,7 +61,7 @@ export const activityService = {
       date: new Date().toISOString().split('T')[0]
     };
     registrations.push(newReg);
-    localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrations));
+    storage.set<ActivityRegistration[]>(REGISTRATION_KEY, registrations);
 
     // 2. Increment participant count on the activity itself
     const activities = this.getAll();
@@ -77,8 +78,8 @@ export const activityService = {
    * Get list of all registrations
    */
   getRegistrations(): ActivityRegistration[] {
-    const saved = localStorage.getItem(REGISTRATION_KEY);
-    return saved ? JSON.parse(saved) : [];
+    const saved = storage.get<ActivityRegistration[]>(REGISTRATION_KEY);
+    return saved !== null ? saved : [];
   },
 
   /**
