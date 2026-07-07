@@ -4,7 +4,7 @@
  */
 
 import { ActivityItem } from '../types';
-import { defaultActivities } from '../data';
+import { defaultActivities } from '../data/activities';
 
 const STORAGE_KEY = 'activities';
 const REGISTRATION_KEY = 'activity_registrations';

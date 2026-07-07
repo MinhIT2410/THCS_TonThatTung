@@ -4,7 +4,7 @@
  */
 
 import { LeaderProfile, AchievementItem } from '../types';
-import { SCHOOL_NAME, SCHOOL_SLOGAN, defaultLeaders, defaultAchievements } from '../data';
+import { SCHOOL_NAME, SCHOOL_SLOGAN, defaultLeaders, defaultAchievements } from '../data/about';
 
 /**
  * Service to manage School Profile, Leaders, and Achievements

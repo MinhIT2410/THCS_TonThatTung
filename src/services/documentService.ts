@@ -4,7 +4,7 @@
  */
 
 import { DocumentItem } from '../types';
-import { defaultDocuments } from '../data';
+import { defaultDocuments } from '../data/documents';
 
 /**
  * Service to manage Document data

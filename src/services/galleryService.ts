@@ -4,7 +4,7 @@
  */
 
 import { PhotoItem } from '../types';
-import { defaultPhotos } from '../data';
+import { defaultPhotos } from '../data/gallery';
 
 /**
  * Service to manage Gallery (Photo) data

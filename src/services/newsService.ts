@@ -4,7 +4,7 @@
  */
 
 import { NewsItem } from '../types';
-import { defaultNews } from '../data';
+import { defaultNews } from '../data/news';
 
 const STORAGE_KEY = 'news';
 
