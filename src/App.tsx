@@ -22,7 +22,7 @@ import CMS from './components/admin/CMS';
 
 import { 
   defaultLeaders, defaultNews, defaultActivities, defaultDocuments, defaultPhotos, defaultAchievements 
-} from './data/defaultData';
+} from './data';
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission, LeaderProfile } from './types';
 
 export default function App() {

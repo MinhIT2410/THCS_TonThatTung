@@ -6,7 +6,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Award, Users, ShieldCheck, Heart, ArrowRight } from 'lucide-react';
-import { SCHOOL_NAME, SCHOOL_SLOGAN } from '../../data/defaultData';
+import { SCHOOL_NAME, SCHOOL_SLOGAN } from '../../data';
 
 interface HeroProps {
   onNavigate: (viewId: string) => void;

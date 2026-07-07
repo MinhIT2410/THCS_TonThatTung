@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Award, Mail, Phone, MapPin, Send, Facebook, Youtube, ExternalLink, ShieldCheck } from 'lucide-react';
-import { SCHOOL_NAME, SCHOOL_SLOGAN } from '../../data/defaultData';
+import { SCHOOL_NAME, SCHOOL_SLOGAN } from '../../data';
 import { ContactSubmission } from '../../types';
 
 interface FooterProps {
