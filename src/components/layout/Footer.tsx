@@ -5,11 +5,12 @@
 
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Award, Mail, Phone, MapPin, Send, Facebook, Youtube, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Award, Mail, Phone, MapPin, Send, Facebook, Youtube, ExternalLink, ShieldCheck, MessageSquare } from 'lucide-react';
 import { aboutService } from '../../services/aboutService';
 import { ContactSubmission } from '../../types';
 import { SITE_CONFIG } from '../../config/site';
 import { NAV_MENU } from '../../config/menu';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 interface FooterProps {
   onNavigate: (viewId: string) => void;
@@ -20,6 +21,7 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const { siteSettings } = useSiteSettings();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,65 +46,86 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
       
       {/* Top Banner Accent */}
       <div className="h-1.5 w-full bg-gradient-to-r from-blue-600 via-blue-500 to-red-600" />
-
+ 
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12">
           
           {/* Column 1: School Identity */}
           <div className="lg:col-span-4 space-y-4">
             <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onNavigate('home')}>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-red-600 shadow-lg">
-                <Award className="h-6 w-6 text-white" />
-              </div>
+              {siteSettings.logo_url ? (
+                <img 
+                  src={siteSettings.logo_url} 
+                  alt="Logo" 
+                  className="h-11 w-11 object-contain rounded-2xl bg-white p-0.5 shadow-lg"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-red-600 shadow-lg">
+                  <Award className="h-6 w-6 text-white" />
+                </div>
+              )}
               <div>
-                <span className="block font-display text-base font-bold tracking-tight text-white uppercase leading-none">
-                  Liên Đội THCS
-                </span>
-                <span className="block font-sans text-xs font-semibold text-red-500 mt-1">
-                  {SITE_CONFIG.unionName.replace("Liên Đội THCS", "").trim()}
+                <span className="block font-display text-sm font-bold tracking-tight text-white uppercase leading-normal">
+                  {siteSettings.footer_title || "LIÊN ĐỘI TRƯỜNG THCS TÔN THẤT TÙNG"}
                 </span>
               </div>
             </div>
             
             <p className="text-xs text-slate-400 italic font-medium leading-relaxed">
-              "{aboutService.getSchoolSlogan()}"
+              "{siteSettings.footer_description || siteSettings.slogan || "Học tập tốt, Lao động tốt"}"
             </p>
 
             <div className="space-y-2.5 pt-2 text-xs">
               <div className="flex items-start space-x-2.5">
                 <MapPin className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                <span>{SITE_CONFIG.address}</span>
+                <span>{siteSettings.address || "Chưa có địa chỉ"}</span>
               </div>
               <div className="flex items-center space-x-2.5">
                 <Phone className="h-4 w-4 text-blue-400 shrink-0" />
-                <span>{SITE_CONFIG.phone}</span>
+                <span>{siteSettings.phone || "Chưa có số điện thoại"}</span>
               </div>
               <div className="flex items-center space-x-2.5">
                 <Mail className="h-4 w-4 text-blue-400 shrink-0" />
-                <span>{SITE_CONFIG.email}</span>
+                <span>{siteSettings.email || "Chưa có email"}</span>
               </div>
             </div>
 
             {/* Social icons */}
             <div className="flex items-center space-x-3 pt-4">
-              <a 
-                href="https://facebook.com" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all text-slate-400 shadow-md"
-                title="Facebook Liên đội"
-              >
-                <Facebook className="h-4 w-4" />
-              </a>
-              <a 
-                href="https://youtube.com" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all text-slate-400 shadow-md"
-                title="Kênh phát thanh Măng non Youtube"
-              >
-                <Youtube className="h-4 w-4" />
-              </a>
+              {siteSettings.facebook_url && (
+                <a 
+                  href={siteSettings.facebook_url} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all text-slate-400 shadow-md"
+                  title="Facebook Liên đội"
+                >
+                  <Facebook className="h-4 w-4" />
+                </a>
+              )}
+              {siteSettings.youtube_url && (
+                <a 
+                  href={siteSettings.youtube_url} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all text-slate-400 shadow-md"
+                  title="Kênh phát thanh Măng non Youtube"
+                >
+                  <Youtube className="h-4 w-4" />
+                </a>
+              )}
+              {siteSettings.zalo_url && (
+                <a 
+                  href={siteSettings.zalo_url} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all text-slate-400 shadow-md"
+                  title="Zalo Liên đội"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                </a>
+              )}
               <a 
                 href="https://thieunhi.vietnam.vn" 
                 target="_blank" 
@@ -144,7 +167,7 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
               Hòm thư góp ý Liên đội
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Mọi ý kiến đóng góp, hiến kế hoạt động Đội hoặc chia sẻ tâm tư, em hãy gửi trực tiếp về Ban chỉ huy Liên đội:
+              {siteSettings.contact_intro || "Mọi ý kiến đóng góp, hiến kế hoạt động Đội hoặc chia sẻ tâm tư, em hãy gửi trực tiếp về Ban chỉ huy Liên đội:"}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -195,7 +218,7 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
 
         {/* Bottom copyright info */}
         <div className="mt-12 border-t border-slate-800 pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 font-medium">
-          <p>© {SITE_CONFIG.currentYear} {aboutService.getSchoolName()}. Tất cả quyền được bảo lưu.</p>
+          <p>© {SITE_CONFIG.currentYear} {siteSettings.school_name || "Trường THCS Tôn Thất Tùng"}. Tất cả quyền được bảo lưu.</p>
           <div className="flex items-center space-x-4 mt-3 md:mt-0">
             <span className="hover:text-slate-300 transition-colors">Điều khoản</span>
             <span>•</span>

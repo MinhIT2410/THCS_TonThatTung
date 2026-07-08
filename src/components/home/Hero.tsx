@@ -7,12 +7,14 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Award, Users, ShieldCheck, Heart, ArrowRight } from 'lucide-react';
 import { aboutService } from '../../services/aboutService';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 interface HeroProps {
   onNavigate: (viewId: string) => void;
 }
 
 export default function Hero({ onNavigate }: HeroProps) {
+  const { siteSettings } = useSiteSettings();
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -45,10 +47,18 @@ export default function Hero({ onNavigate }: HeroProps) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Sleek Blue/Indigo Gradient Main Hero Card */}
-        <div className="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white rounded-[2rem] p-6 sm:p-10 md:p-12 shadow-2xl relative overflow-hidden">
+        <div 
+          className="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white rounded-[2rem] p-6 sm:p-10 md:p-12 shadow-2xl relative overflow-hidden bg-cover bg-center"
+          style={siteSettings.home_hero_background_url ? { backgroundImage: `url(${siteSettings.home_hero_background_url})` } : {}}
+        >
           {/* Decorative Background Glows */}
           <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-red-500/20 blur-3xl pointer-events-none" />
           <div className="absolute top-1/2 -left-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl pointer-events-none" />
+
+          {/* Dark Overlay for customized hero backgrounds */}
+          {siteSettings.home_hero_background_url && (
+            <div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] pointer-events-none" />
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10">
             
@@ -73,24 +83,28 @@ export default function Hero({ onNavigate }: HeroProps) {
                 variants={itemVariants}
                 className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl leading-tight"
               >
-                Chào mừng bạn đến với <br />
-                <span className="bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-400 bg-clip-text text-transparent drop-shadow-sm">
-                  {aboutService.getSchoolName()}
-                </span>
+                {siteSettings.home_hero_title || (
+                  <>
+                    Chào mừng bạn đến với <br />
+                    <span className="bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-400 bg-clip-text text-transparent drop-shadow-sm">
+                      {siteSettings.school_name || aboutService.getSchoolName()}
+                    </span>
+                  </>
+                )}
               </motion.h1>
 
               <motion.p 
                 variants={itemVariants}
                 className="font-sans text-lg text-blue-100 max-w-2xl font-medium leading-relaxed"
               >
-                "{aboutService.getSchoolSlogan()}"
+                {siteSettings.home_hero_subtitle ? `"${siteSettings.home_hero_subtitle}"` : `"${siteSettings.slogan || aboutService.getSchoolSlogan()}"`}
               </motion.p>
 
               <motion.p 
                 variants={itemVariants}
                 className="font-sans text-sm text-slate-300 max-w-xl leading-relaxed"
               >
-                Nơi nuôi dưỡng lý tưởng cách mạng, bồi dưỡng kỹ năng toàn diện, rèn luyện phẩm chất Đội viên tài năng, sẵn sàng tiếp bước xây dựng Tổ quốc xã hội chủ nghĩa tươi đẹp.
+                {siteSettings.home_hero_description || "Nơi nuôi dưỡng lý tưởng cách mạng, bồi dưỡng kỹ năng toàn diện, rèn luyện phẩm chất Đội viên tài năng, sẵn sàng tiếp bước xây dựng Tổ quốc xã hội chủ nghĩa tươi đẹp."}
               </motion.p>
 
               <motion.div 
@@ -98,11 +112,24 @@ export default function Hero({ onNavigate }: HeroProps) {
                 className="flex flex-wrap gap-4 pt-4"
               >
                 <button
-                  onClick={() => onNavigate('activities')}
+                  onClick={() => {
+                    const url = siteSettings.home_hero_button_url || '/activities';
+                    if (url.includes('activities') || url.includes('hoat-dong')) {
+                      onNavigate('activities');
+                    } else if (url.includes('news') || url.includes('tin-tuc')) {
+                      onNavigate('news');
+                    } else if (url.includes('about') || url.includes('gioi-thieu')) {
+                      onNavigate('about');
+                    } else if (url.includes('contact') || url.includes('lien-he')) {
+                      onNavigate('contact');
+                    } else {
+                      onNavigate('activities');
+                    }
+                  }}
                   id="hero-primary-btn"
                   className="group flex items-center space-x-2 rounded-xl bg-red-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-600/35 hover:bg-red-700 active:scale-[0.98] transition-all duration-200 cursor-pointer"
                 >
-                  <span>Xem hoạt động nổi bật</span>
+                  <span>{siteSettings.home_hero_button_text || "Xem hoạt động nổi bật"}</span>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </button>
                 

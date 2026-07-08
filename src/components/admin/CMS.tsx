@@ -27,6 +27,7 @@ import { MultiImageUploadField } from './MultiImageUploadField';
 import { documentService } from '../../services/documentService';
 import { DocumentCategory, CmsDocument, CmsDocumentWithCategory, CmsDocumentInput } from '../../types/document';
 import { DocumentUploadField } from './DocumentUploadField';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 interface CMSProps {
   schoolName: string;
@@ -69,6 +70,16 @@ export default function CMS({
 }: CMSProps) {
   const { profile, primaryRole, user } = useAuth();
   const userId = user?.id || '';
+
+  const { siteSettings, updateSettings } = useSiteSettings();
+  const [settingsFormData, setSettingsFormData] = useState(siteSettings);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  useEffect(() => {
+    if (siteSettings) {
+      setSettingsFormData(siteSettings);
+    }
+  }, [siteSettings]);
 
   // Supabase states
   const [dbPosts, setDbPosts] = useState<CmsPostWithCategory[]>([]);
@@ -366,9 +377,25 @@ export default function CMS({
   };
 
   // 2. School Info Configuration Form
-  const saveSchoolSettings = (e: React.FormEvent) => {
+  const saveSchoolSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    triggerAlert('Đã cập nhật cấu hình thông tin Liên đội thành công!');
+    setIsSavingSettings(true);
+    try {
+      const { success, error } = await updateSettings(settingsFormData);
+      if (success) {
+        triggerAlert('Cập nhật cấu hình thông tin hệ thống thành công!');
+        // Keep parent prop states in sync for any legacy components using them
+        setSchoolName(settingsFormData.school_name || '');
+        setSchoolSlogan(settingsFormData.slogan || '');
+      } else {
+        triggerAlert('Lỗi: ' + (error?.message || 'Không thể lưu cấu hình.'));
+      }
+    } catch (err: any) {
+      console.error('Error saving settings:', err);
+      triggerAlert('Lỗi: ' + (err.message || 'Có lỗi xảy ra.'));
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   // 3. News CRUD handlers
@@ -1302,37 +1329,271 @@ export default function CMS({
 
           {/* TAB 7: GENERAL SETTINGS */}
           {activeTab === 'settings' && (
-            <div className="space-y-6 fade-in">
-              <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Cấu hình chung thông tin trường</h2>
-              
-              <form onSubmit={saveSchoolSettings} className="space-y-4 rounded-2xl border border-slate-200 p-6 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
-                <div className="space-y-1.5">
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">Tên Liên Đội:</label>
-                  <input
-                    type="text"
-                    value={schoolName}
-                    onChange={(e) => setSchoolName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs text-slate-800 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white font-extrabold"
-                  />
+            <div className="space-y-6 fade-in text-slate-800 dark:text-slate-100 text-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Cấu hình thông tin Liên đội & Website</h2>
+                  <p className="text-slate-500 text-xs mt-1">Quản lý toàn bộ thông tin chung, Header, Footer, Trang chủ Hero và phần liên hệ của trường qua Supabase.</p>
                 </div>
+              </div>
 
-                <div className="space-y-1.5">
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">Slogan hành động chính thức:</label>
-                  <input
-                    type="text"
-                    value={schoolSlogan}
-                    onChange={(e) => setSchoolSlogan(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs text-slate-800 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white italic"
-                  />
+              {!settingsFormData ? (
+                <div className="flex flex-col items-center justify-center p-12 border border-slate-200 dark:border-slate-800 rounded-3xl bg-white dark:bg-slate-900">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+                  <p className="text-slate-500 font-medium text-xs">Đang tải cấu hình site_settings...</p>
                 </div>
+              ) : (
+                <form onSubmit={saveSchoolSettings} className="space-y-8">
+                  {/* Section 1: Brand & Names */}
+                  <div className="rounded-3xl border border-slate-200/80 p-6 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
+                    <h3 className="font-display font-bold text-sm text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">1. Thông tin Tên thương hiệu & Slogan</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Tên Website (site_name):</label>
+                        <input
+                          type="text"
+                          required
+                          value={settingsFormData.site_name || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, site_name: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Tên Trường (school_name):</label>
+                        <input
+                          type="text"
+                          required
+                          value={settingsFormData.school_name || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, school_name: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold">Slogan Hành động chính thức (slogan):</label>
+                      <input
+                        type="text"
+                        value={settingsFormData.slogan || ''}
+                        onChange={(e) => setSettingsFormData({ ...settingsFormData, slogan: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+                      />
+                    </div>
+                  </div>
 
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl shadow-md"
-                >
-                  Xác nhận lưu thay đổi
-                </button>
-              </form>
+                  {/* Section 2: Branding Logos */}
+                  <div className="rounded-3xl border border-slate-200/80 p-6 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
+                    <h3 className="font-display font-bold text-sm text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">2. Hình ảnh Nhận diện Logo & Favicon</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <ImageUploadField
+                        label="Đường dẫn Logo Trường (logo_url):"
+                        value={settingsFormData.logo_url || ''}
+                        onChange={(url) => setSettingsFormData({ ...settingsFormData, logo_url: url })}
+                        folder="branding"
+                        placeholder="Chọn ảnh hoặc nhập URL logo trường..."
+                      />
+                      <ImageUploadField
+                        label="Đường dẫn Favicon Trang (favicon_url):"
+                        value={settingsFormData.favicon_url || ''}
+                        onChange={(url) => setSettingsFormData({ ...settingsFormData, favicon_url: url })}
+                        folder="branding"
+                        placeholder="Chọn ảnh hoặc nhập URL favicon..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 3: Contact & Address details */}
+                  <div className="rounded-3xl border border-slate-200/80 p-6 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
+                    <h3 className="font-display font-bold text-sm text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">3. Thông tin Liên hệ & Địa chỉ văn phòng</h3>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold">Địa chỉ chi tiết (address):</label>
+                      <input
+                        type="text"
+                        value={settingsFormData.address || ''}
+                        onChange={(e) => setSettingsFormData({ ...settingsFormData, address: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Số điện thoại (phone):</label>
+                        <input
+                          type="text"
+                          value={settingsFormData.phone || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, phone: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Email liên lạc (email):</label>
+                        <input
+                          type="email"
+                          value={settingsFormData.email || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, email: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold">Lời dẫn/Hướng dẫn góp ý Liên đội (contact_intro):</label>
+                      <textarea
+                        rows={3}
+                        value={settingsFormData.contact_intro || ''}
+                        onChange={(e) => setSettingsFormData({ ...settingsFormData, contact_intro: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none resize-none text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold">Đường dẫn Bản đồ nhúng (Google Maps map_url):</label>
+                      <input
+                        type="text"
+                        value={settingsFormData.map_url || ''}
+                        onChange={(e) => setSettingsFormData({ ...settingsFormData, map_url: e.target.value })}
+                        placeholder="Nhập link src của iframe Google Maps..."
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 4: Social Media accounts */}
+                  <div className="rounded-3xl border border-slate-200/80 p-6 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
+                    <h3 className="font-display font-bold text-sm text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">4. Tài khoản Mạng xã hội</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Link Facebook chính thức:</label>
+                        <input
+                          type="text"
+                          value={settingsFormData.facebook_url || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, facebook_url: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Kênh Youtube chính thức:</label>
+                        <input
+                          type="text"
+                          value={settingsFormData.youtube_url || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, youtube_url: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Link nhóm Zalo (zalo_url):</label>
+                        <input
+                          type="text"
+                          value={settingsFormData.zalo_url || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, zalo_url: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 5: Footer configs */}
+                  <div className="rounded-3xl border border-slate-200/80 p-6 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
+                    <h3 className="font-display font-bold text-sm text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">5. Cấu hình tiêu đề & nội dung chân trang (Footer)</h3>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold">Tiêu đề Footer (footer_title):</label>
+                      <input
+                        type="text"
+                        value={settingsFormData.footer_title || ''}
+                        onChange={(e) => setSettingsFormData({ ...settingsFormData, footer_title: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold">Mô tả tóm tắt chân trang (footer_description):</label>
+                      <textarea
+                        rows={2}
+                        value={settingsFormData.footer_description || ''}
+                        onChange={(e) => setSettingsFormData({ ...settingsFormData, footer_description: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none resize-none text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 6: Homepage Hero custom settings */}
+                  <div className="rounded-3xl border border-slate-200/80 p-6 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
+                    <h3 className="font-display font-bold text-sm text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">6. Cấu hình Banner Trang chủ (Hero Section)</h3>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold">Tiêu đề Banner Trang chủ (home_hero_title):</label>
+                      <textarea
+                        rows={2}
+                        value={settingsFormData.home_hero_title || ''}
+                        onChange={(e) => setSettingsFormData({ ...settingsFormData, home_hero_title: e.target.value })}
+                        placeholder="Để trống sẽ dùng tiêu đề chào mừng mặc định..."
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none resize-none text-xs"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Tiêu đề phụ khẩu hiệu (home_hero_subtitle):</label>
+                        <input
+                          type="text"
+                          value={settingsFormData.home_hero_subtitle || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, home_hero_subtitle: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Lời kêu gọi trên nút CTA (home_hero_button_text):</label>
+                        <input
+                          type="text"
+                          value={settingsFormData.home_hero_button_text || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, home_hero_button_text: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block font-bold">Đường dẫn liên kết khi nhấn nút CTA (home_hero_button_url):</label>
+                        <input
+                          type="text"
+                          value={settingsFormData.home_hero_button_url || ''}
+                          onChange={(e) => setSettingsFormData({ ...settingsFormData, home_hero_button_url: e.target.value })}
+                          placeholder="Ví dụ: /activities"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        {/* We use ImageUploadField to easily upload backgrounds to hero! */}
+                        <ImageUploadField
+                          label="Đường dẫn ảnh nền đầu trang (home_hero_background_url):"
+                          value={settingsFormData.home_hero_background_url || ''}
+                          onChange={(url) => setSettingsFormData({ ...settingsFormData, home_hero_background_url: url })}
+                          folder="branding"
+                          placeholder="Chọn hình ảnh hoặc nhập link ảnh nền..."
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block font-bold">Mô tả chi tiết banner trang chủ (home_hero_description):</label>
+                      <textarea
+                        rows={3}
+                        value={settingsFormData.home_hero_description || ''}
+                        onChange={(e) => setSettingsFormData({ ...settingsFormData, home_hero_description: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none resize-none font-sans text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submission row */}
+                  <div className="flex items-center justify-end space-x-3 border-t border-slate-200 dark:border-slate-800 pt-6">
+                    <button
+                      type="submit"
+                      disabled={isSavingSettings}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold px-6 py-3.5 rounded-2xl shadow-lg flex items-center space-x-2 transition-all cursor-pointer text-xs active:scale-95"
+                    >
+                      {isSavingSettings ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4" />
+                      )}
+                      <span>Lưu cấu hình hệ thống</span>
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           )}
 

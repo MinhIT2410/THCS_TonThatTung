@@ -1,0 +1,29 @@
+export interface SiteSettings {
+  id: number;
+  site_name: string | null;
+  school_name: string | null;
+  slogan: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  facebook_url: string | null;
+  youtube_url: string | null;
+  zalo_url: string | null;
+  map_url: string | null;
+  footer_title: string | null;
+  footer_description: string | null;
+  contact_intro: string | null;
+  home_hero_title: string | null;
+  home_hero_subtitle: string | null;
+  home_hero_description: string | null;
+  home_hero_background_url: string | null;
+  home_hero_button_text: string | null;
+  home_hero_button_url: string | null;
+  updated_by: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type SiteSettingsInput = Omit<SiteSettings, 'id' | 'created_at' | 'updated_at'>;

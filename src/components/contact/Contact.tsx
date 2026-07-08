@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle, ChevronDown, ChevronUp, Clock, ShieldAlert } from 'lucide-react';
 import { ContactSubmission } from '../../types';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 interface ContactProps {
   onSubmitContact: (submission: Omit<ContactSubmission, 'id' | 'date' | 'status'>) => void;
@@ -19,6 +20,7 @@ interface FaqItem {
 }
 
 export default function Contact({ onSubmitContact }: ContactProps) {
+  const { siteSettings } = useSiteSettings();
   // Form states
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -94,7 +96,7 @@ export default function Contact({ onSubmitContact }: ContactProps) {
           Liên Hệ Ban Chỉ Huy
         </h1>
         <p className="font-sans text-sm text-slate-500 dark:text-slate-400">
-          Hãy gửi thắc mắc, hiến kế hoạt động Đội hoặc báo cáo sự cố để Liên đội hỗ trợ em nhanh nhất.
+          {siteSettings.contact_intro || "Hãy gửi thắc mắc, hiến kế hoạt động Đội hoặc báo cáo sự cố để Liên đội hỗ trợ em nhanh nhất."}
         </p>
       </div>
 
@@ -211,15 +213,15 @@ export default function Contact({ onSubmitContact }: ContactProps) {
             <div className="space-y-3 font-sans text-xs text-slate-600 dark:text-slate-400 font-medium">
               <div className="flex items-start space-x-3">
                 <MapPin className="h-4.5 w-4.5 text-red-500 shrink-0 mt-0.5" />
-                <span>Phòng truyền thống Đội - Tầng 1 Nhà A, Trường THCS Tôn Thất Tùng, số 3 đường D2, phường Tân Sơn Nhì, thành phố Hồ Chí Minh</span>
+                <span>{siteSettings.address || "Phòng truyền thống Đội - Tầng 1 Nhà A, Trường THCS Tôn Thất Tùng, số 3 đường D2, phường Tân Sơn Nhì, thành phố Hồ Chí Minh"}</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-4.5 w-4.5 text-blue-500 shrink-0" />
-                <span>028.3845.2410 (Văn phòng)</span>
+                <span>{siteSettings.phone || "028.3845.2410 (Văn phòng)"}</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="h-4.5 w-4.5 text-blue-500 shrink-0" />
-                <span>liendoitonthattung.hcm@gmail.com</span>
+                <span>{siteSettings.email || "liendoitonthattung.hcm@gmail.com"}</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Clock className="h-4.5 w-4.5 text-yellow-500 shrink-0" />
@@ -274,41 +276,54 @@ export default function Contact({ onSubmitContact }: ContactProps) {
 
       </div>
 
-      {/* Styled Interactive SVG Map Mockup to make the layout extremely visual and complete */}
+      {/* Google Map Section */}
       <section className="space-y-4">
         <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">Bản Đồ Chỉ Đường Đến Trường</h3>
-        <div className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 h-80 relative flex items-center justify-center">
-          {/* SVG Map Illustration */}
-          <svg className="absolute inset-0 w-full h-full opacity-20 dark:opacity-10" viewBox="0 0 800 400" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 50h700v300H50z" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="5 5" />
-            <path d="M100 0v400M300 0v400M500 0v400M700 0v400M0 100h800M0 250h800" stroke="currentColor" strokeWidth="1" />
-            <circle cx="400" cy="200" r="150" stroke="currentColor" strokeWidth="2" strokeDasharray="10 5" />
-          </svg>
-
-          {/* Mock Map UI details */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4 z-10">
-            <div className="relative">
-              <div className="absolute -top-3 -left-3 h-14 w-14 animate-ping rounded-full bg-red-400 opacity-40" />
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-700 to-red-600 text-white shadow-xl relative">
-                <MapPin className="h-6 w-6" />
-              </div>
-            </div>
-            
-            <div className="space-y-1 max-w-sm">
-              <h4 className="font-display font-bold text-slate-950 dark:text-white text-sm">Trường THCS Tôn Thất Tùng</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400">số 3 đường D2, phường Tân Sơn Nhì, thành phố Hồ Chí Minh</p>
-            </div>
-
-            <a 
-              href="https://maps.google.com" 
-              target="_blank" 
-              rel="noreferrer"
-              className="rounded-xl bg-blue-600 text-white px-5 py-2 text-xs font-bold hover:bg-blue-700 shadow-md transition-colors"
-            >
-              Mở bản đồ Google Maps
-            </a>
+        {siteSettings.map_url ? (
+          <div className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 h-80 relative">
+            <iframe 
+              src={siteSettings.map_url} 
+              className="w-full h-full border-0" 
+              allowFullScreen={true} 
+              loading="lazy" 
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Bản đồ đường đi"
+            />
           </div>
-        </div>
+        ) : (
+          <div className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 h-80 relative flex items-center justify-center">
+            {/* SVG Map Illustration */}
+            <svg className="absolute inset-0 w-full h-full opacity-20 dark:opacity-10" viewBox="0 0 800 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M50 50h700v300H50z" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="5 5" />
+              <path d="M100 0v400M300 0v400M500 0v400M700 0v400M0 100h800M0 250h800" stroke="currentColor" strokeWidth="1" />
+              <circle cx="400" cy="200" r="150" stroke="currentColor" strokeWidth="2" strokeDasharray="10 5" />
+            </svg>
+
+            {/* Mock Map UI details */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4 z-10">
+              <div className="relative">
+                <div className="absolute -top-3 -left-3 h-14 w-14 animate-ping rounded-full bg-red-400 opacity-40" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-700 to-red-600 text-white shadow-xl relative">
+                  <MapPin className="h-6 w-6" />
+                </div>
+              </div>
+              
+              <div className="space-y-1 max-w-sm">
+                <h4 className="font-display font-bold text-slate-950 dark:text-white text-sm">{siteSettings.school_name || "Trường THCS Tôn Thất Tùng"}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{siteSettings.address || "số 3 đường D2, phường Tân Sơn Nhì, thành phố Hồ Chí Minh"}</p>
+              </div>
+
+              <a 
+                href="https://maps.google.com" 
+                target="_blank" 
+                rel="noreferrer"
+                className="rounded-xl bg-blue-600 text-white px-5 py-2 text-xs font-bold hover:bg-blue-700 shadow-md transition-colors"
+              >
+                Mở bản đồ Google Maps
+              </a>
+            </div>
+          </div>
+        )}
       </section>
 
     </div>

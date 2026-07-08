@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, Sun, Moon, ShieldAlert, Award, FileText, Settings, Search } from 'lucide-react';
 import { NAV_MENU } from '../../config/menu';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 interface HeaderProps {
   currentView: string;
@@ -28,6 +29,7 @@ export default function Header({
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, isAdminUser } = useAuth();
+  const { siteSettings } = useSiteSettings();
 
   const navItems = NAV_MENU.filter(item => item.showInNavbar).map(item => ({
     id: item.id,
@@ -48,19 +50,28 @@ export default function Header({
           onClick={() => handleNavClick('home')}
           id="header-brand"
         >
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-red-600 shadow-md shadow-red-500/20">
-            <span className="-mt-1 text-yellow-300 font-extrabold text-xl select-none">★</span>
-            <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500"></span>
-            </span>
-          </div>
+          {siteSettings.logo_url ? (
+            <img 
+              src={siteSettings.logo_url} 
+              alt="Logo" 
+              className="h-10 w-10 object-contain rounded-full bg-white p-0.5 shadow-md"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-red-600 shadow-md shadow-red-500/20">
+              <span className="-mt-1 text-yellow-300 font-extrabold text-xl select-none">★</span>
+              <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500"></span>
+              </span>
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="font-bold text-blue-800 dark:text-blue-400 leading-none tracking-tight uppercase text-sm sm:text-base">
-              {schoolName}
+              {siteSettings.site_name || schoolName}
             </span>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-widest leading-none mt-1">
-              {schoolName.toLowerCase().startsWith('liên đội') ? schoolName.replace(/liên đội/i, 'Trường') : `Trường ${schoolName}`}
+              {siteSettings.school_name || (schoolName.toLowerCase().startsWith('liên đội') ? schoolName.replace(/liên đội/i, 'Trường') : `Trường ${schoolName}`)}
             </span>
           </div>
         </div>
