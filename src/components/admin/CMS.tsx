@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Settings, Lock, Key, CheckCircle, Trash2, Edit, Plus, FolderSync, 
@@ -12,6 +12,8 @@ import {
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission } from '../../types';
 import { LogoutButton } from '../auth/LogoutButton';
 import { useAuth } from '../../contexts/AuthContext';
+import { cmsService } from '../../services/cmsService';
+import { CmsCategory, CmsPost, CmsPostWithCategory, CmsPostInput, CmsPostStatus } from '../../types/cms';
 
 interface CMSProps {
   schoolName: string;
@@ -52,7 +54,37 @@ export default function CMS({
   setContacts,
   onResetDefaults
 }: CMSProps) {
-  const { profile, primaryRole } = useAuth();
+  const { profile, primaryRole, user } = useAuth();
+  const userId = user?.id || '';
+
+  // Supabase states
+  const [dbPosts, setDbPosts] = useState<CmsPostWithCategory[]>([]);
+  const [dbCategories, setDbCategories] = useState<CmsCategory[]>([]);
+  const [isLoadingDb, setIsLoadingDb] = useState<boolean>(true);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [editingDbPost, setEditingDbPost] = useState<(Partial<CmsPostInput> & { id?: number; activeTabContext?: 'news' | 'activities' }) | null>(null);
+
+  const fetchDbData = async () => {
+    setIsLoadingDb(true);
+    setDbError(null);
+    try {
+      const [cats, posts] = await Promise.all([
+        cmsService.getCategories(),
+        cmsService.getAdminPosts()
+      ]);
+      setDbCategories(cats);
+      setDbPosts(posts);
+    } catch (err) {
+      console.error('Error fetching Supabase data:', err);
+      setDbError('Có lỗi xảy ra khi tải dữ liệu từ Supabase.');
+    } finally {
+      setIsLoadingDb(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDbData();
+  }, []);
 
   // CMS state values
   const [activeTab, setActiveTab] = useState<CMSTab>('dashboard');
@@ -69,6 +101,65 @@ export default function CMS({
   const triggerAlert = (msg: string) => {
     setCmsAlert(msg);
     setTimeout(() => setCmsAlert(''), 3000);
+  };
+
+  const handleSaveDbPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDbPost || !editingDbPost.title || !editingDbPost.content || !editingDbPost.category_id) {
+      triggerAlert('Vui lòng điền đầy đủ các thông tin bắt buộc.');
+      return;
+    }
+
+    setIsLoadingDb(true);
+    try {
+      const input: CmsPostInput = {
+        category_id: Number(editingDbPost.category_id),
+        title: editingDbPost.title,
+        excerpt: editingDbPost.excerpt || '',
+        content: editingDbPost.content,
+        cover_image_url: editingDbPost.cover_image_url || '',
+        status: editingDbPost.status || 'DRAFT',
+        is_featured: !!editingDbPost.is_featured,
+        published_at: editingDbPost.published_at || null,
+        slug: editingDbPost.slug || undefined
+      };
+
+      if (editingDbPost.id) {
+        // Update existing post
+        const { error } = await cmsService.updatePost(editingDbPost.id, input, userId);
+        if (error) throw error;
+        triggerAlert('Cập nhật bài viết thành công!');
+      } else {
+        // Create new post
+        const { error } = await cmsService.createPost(input, userId);
+        if (error) throw error;
+        triggerAlert('Tạo bài viết mới thành công!');
+      }
+      setEditingDbPost(null);
+      await fetchDbData();
+    } catch (err: any) {
+      console.error('Error saving post:', err);
+      triggerAlert('Có lỗi xảy ra: ' + (err.message || 'Lỗi không định danh'));
+    } finally {
+      setIsLoadingDb(false);
+    }
+  };
+
+  const handleDeleteDbPost = async (id: number) => {
+    if (!confirm('Em có chắc chắn muốn xóa bài viết này không?')) return;
+
+    setIsLoadingDb(true);
+    try {
+      const { error } = await cmsService.deletePost(id);
+      if (error) throw error;
+      triggerAlert('Đã xóa bài viết thành công!');
+      await fetchDbData();
+    } catch (err: any) {
+      console.error('Error deleting post:', err);
+      triggerAlert('Có lỗi xảy ra khi xóa bài viết.');
+    } finally {
+      setIsLoadingDb(false);
+    }
   };
 
   // 2. School Info Configuration Form
@@ -428,47 +519,96 @@ export default function CMS({
           {activeTab === 'news' && (
             <div className="space-y-6 fade-in">
               <div className="flex items-center justify-between">
-                <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Danh sách tin tức măng non</h2>
+                <div>
+                  <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Danh sách tin tức măng non</h2>
+                  <p className="text-[11px] text-slate-500">Dữ liệu kết nối trực tiếp với Supabase</p>
+                </div>
                 <button
-                  onClick={() => setEditingNews({})}
-                  className="flex items-center space-x-1.5 bg-blue-600 text-white font-bold px-4 py-2.5 rounded-xl shadow-md"
+                  onClick={() => {
+                    const tinTucCat = dbCategories.find(c => c.slug === 'tin-tuc');
+                    setEditingDbPost({
+                      category_id: tinTucCat?.id || (dbCategories[0]?.id ?? 0),
+                      status: 'DRAFT',
+                      title: '',
+                      content: '',
+                      cover_image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80',
+                      excerpt: '',
+                      is_featured: false,
+                      activeTabContext: 'news'
+                    });
+                  }}
+                  className="flex items-center space-x-1.5 bg-blue-600 text-white font-bold px-4 py-2.5 rounded-xl shadow-md hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="h-4.5 w-4.5" />
                   <span>Viết tin bài mới</span>
                 </button>
               </div>
 
-              {/* News items list table */}
-              <div className="border border-slate-200 rounded-2xl bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden shadow-sm">
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {news.map((item) => (
-                    <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50">
-                      <div className="flex items-center space-x-3.5">
-                        <img src={item.image} className="h-10 w-16 object-cover rounded-md" referrerPolicy="no-referrer" />
-                        <div>
-                          <span className="block font-bold text-slate-900 dark:text-white line-clamp-1">{item.title}</span>
-                          <span className="text-[10px] text-slate-400">{item.date} • {item.category} • {item.views} lượt xem</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setEditingNews(item)}
-                          className="p-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-100"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteNews(item.id)}
-                          className="p-2 border border-slate-200 text-red-500 rounded-lg hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              {isLoadingDb ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 font-bold text-slate-600 dark:text-slate-400">Đang tải tin tức từ hệ thống...</span>
                 </div>
-              </div>
+              ) : dbError ? (
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 p-4 rounded-xl text-red-600 dark:text-red-400">
+                  {dbError}
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-2xl bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden shadow-sm">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {dbPosts
+                      .filter((item) => item.categories?.slug === 'tin-tuc')
+                      .map((item) => (
+                        <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                          <div className="flex items-center space-x-3.5">
+                            <img src={item.cover_image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80'} className="h-10 w-16 object-cover rounded-md" referrerPolicy="no-referrer" />
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <span className="block font-bold text-slate-900 dark:text-white line-clamp-1">{item.title}</span>
+                                {item.is_featured && (
+                                  <span className="bg-amber-100 text-amber-700 text-[9px] font-extrabold px-1.5 py-0.5 rounded-sm uppercase tracking-wide">Nổi bật</span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400">
+                                {new Date(item.created_at).toLocaleDateString('vi-VN')} • Chuyên mục: {item.categories?.name || 'Tin tức'} • <span className={`font-bold ${item.status === 'PUBLISHED' ? 'text-emerald-600' : 'text-amber-600'}`}>{item.status}</span>
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => setEditingDbPost({
+                                id: item.id,
+                                category_id: item.category_id,
+                                title: item.title,
+                                excerpt: item.excerpt,
+                                content: item.content,
+                                cover_image_url: item.cover_image_url,
+                                status: item.status,
+                                is_featured: item.is_featured,
+                                published_at: item.published_at,
+                                slug: item.slug,
+                                activeTabContext: 'news'
+                              })}
+                              className="p-2 border border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDbPost(item.id)}
+                              className="p-2 border border-slate-200 text-red-500 dark:border-slate-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    {dbPosts.filter((item) => item.categories?.slug === 'tin-tuc').length === 0 && (
+                      <p className="p-8 text-center text-slate-400 italic">Chưa có bài viết tin tức nào được tạo.</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -476,46 +616,96 @@ export default function CMS({
           {activeTab === 'activities' && (
             <div className="space-y-6 fade-in">
               <div className="flex items-center justify-between">
-                <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Sửa đổi kế hoạch thi đua</h2>
+                <div>
+                  <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Sửa đổi kế hoạch thi đua</h2>
+                  <p className="text-[11px] text-slate-500">Dữ liệu kết nối trực tiếp với Supabase</p>
+                </div>
                 <button
-                  onClick={() => setEditingActivity({})}
-                  className="flex items-center space-x-1.5 bg-blue-600 text-white font-bold px-4 py-2.5 rounded-xl"
+                  onClick={() => {
+                    const hoatDongCat = dbCategories.find(c => c.slug === 'hoat-dong');
+                    setEditingDbPost({
+                      category_id: hoatDongCat?.id || (dbCategories[0]?.id ?? 0),
+                      status: 'DRAFT',
+                      title: '',
+                      content: '',
+                      cover_image_url: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&auto=format&fit=crop&q=80',
+                      excerpt: '',
+                      is_featured: false,
+                      activeTabContext: 'activities'
+                    });
+                  }}
+                  className="flex items-center space-x-1.5 bg-blue-600 text-white font-bold px-4 py-2.5 rounded-xl shadow-md hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="h-4.5 w-4.5" />
                   <span>Phát động phong trào</span>
                 </button>
               </div>
 
-              <div className="border border-slate-200 rounded-2xl bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {activities.map((act) => (
-                    <div key={act.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50">
-                      <div className="flex items-center space-x-3.5">
-                        <img src={act.image} className="h-10 w-16 object-cover rounded-md" referrerPolicy="no-referrer" />
-                        <div>
-                          <span className="block font-bold text-slate-900 dark:text-white line-clamp-1">{act.title}</span>
-                          <span className="text-[10px] text-slate-400">{act.date} • Trạng thái: {act.status}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setEditingActivity(act)}
-                          className="p-2 border border-slate-200 text-slate-600 rounded-lg"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteActivity(act.id)}
-                          className="p-2 border border-slate-200 text-red-500 rounded-lg"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              {isLoadingDb ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 font-bold text-slate-600 dark:text-slate-400">Đang tải phong trào từ hệ thống...</span>
                 </div>
-              </div>
+              ) : dbError ? (
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 p-4 rounded-xl text-red-600 dark:text-red-400">
+                  {dbError}
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-2xl bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden shadow-sm">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {dbPosts
+                      .filter((item) => item.categories?.slug === 'hoat-dong')
+                      .map((act) => (
+                        <div key={act.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                          <div className="flex items-center space-x-3.5">
+                            <img src={act.cover_image_url || 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&auto=format&fit=crop&q=80'} className="h-10 w-16 object-cover rounded-md" referrerPolicy="no-referrer" />
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <span className="block font-bold text-slate-900 dark:text-white line-clamp-1">{act.title}</span>
+                                {act.is_featured && (
+                                  <span className="bg-amber-100 text-amber-700 text-[9px] font-extrabold px-1.5 py-0.5 rounded-sm uppercase tracking-wide">Nổi bật</span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400">
+                                {new Date(act.created_at).toLocaleDateString('vi-VN')} • Chuyên mục: {act.categories?.name || 'Hoạt động'} • <span className={`font-bold ${act.status === 'PUBLISHED' ? 'text-emerald-600' : 'text-amber-600'}`}>{act.status}</span>
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => setEditingDbPost({
+                                id: act.id,
+                                category_id: act.category_id,
+                                title: act.title,
+                                excerpt: act.excerpt,
+                                content: act.content,
+                                cover_image_url: act.cover_image_url,
+                                status: act.status,
+                                is_featured: act.is_featured,
+                                published_at: act.published_at,
+                                slug: act.slug,
+                                activeTabContext: 'activities'
+                              })}
+                              className="p-2 border border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDbPost(act.id)}
+                              className="p-2 border border-slate-200 text-red-500 dark:border-slate-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    {dbPosts.filter((item) => item.categories?.slug === 'hoat-dong').length === 0 && (
+                      <p className="p-8 text-center text-slate-400 italic">Chưa có kế hoạch hoạt động nào được tạo.</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -645,223 +835,129 @@ export default function CMS({
 
       </div>
 
-      {/* MODAL EDIT NEWS */}
-      {editingNews !== null && (
+      {/* MODAL EDIT SUPABASE POST */}
+      {editingDbPost !== null && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setEditingNews(null)} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setEditingDbPost(null)} />
           <div className="flex min-h-full items-center justify-center p-4">
             <motion.form 
-              onSubmit={handleSaveNews}
+              onSubmit={handleSaveDbPost}
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="relative w-full max-w-xl bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-2xl space-y-4"
+              className="relative w-full max-w-xl bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl space-y-4 text-slate-800 dark:text-slate-200"
             >
               <h3 className="font-display font-bold text-base border-b border-slate-100 pb-2 dark:border-slate-800 text-slate-900 dark:text-white">
-                {editingNews.id ? 'Cập nhật tin bài viết' : 'Đăng bài viết mới'}
+                {editingDbPost.id ? 'Cập nhật bài viết' : 'Đăng bài viết mới'} (Supabase)
               </h3>
 
-              <div className="space-y-3 font-sans">
+              <div className="space-y-3 font-sans text-xs">
                 <div className="space-y-1">
-                  <label className="font-bold">Tiêu đề bài viết:</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Tiêu đề bài viết:</label>
                   <input
                     type="text"
                     required
-                    value={editingNews.title || ''}
-                    onChange={(e) => setEditingNews({ ...editingNews, title: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="font-bold">Chuyên mục:</label>
-                    <select
-                      value={editingNews.category || 'Sự kiện'}
-                      onChange={(e) => setEditingNews({ ...editingNews, category: e.target.value as any })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="Sự kiện">Sự kiện</option>
-                      <option value="Học tập">Học tập</option>
-                      <option value="Rèn luyện">Rèn luyện</option>
-                      <option value="Gương sáng">Gương sáng</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1 flex items-center pt-6">
-                    <label className="flex items-center space-x-2 font-bold cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={editingNews.featured || false}
-                        onChange={(e) => setEditingNews({ ...editingNews, featured: e.target.checked })}
-                        className="h-4 w-4"
-                      />
-                      <span>Đặt làm Tin nổi bật</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold">Đường dẫn ảnh bìa (URL):</label>
-                  <input
-                    type="text"
-                    value={editingNews.image || ''}
-                    onChange={(e) => setEditingNews({ ...editingNews, image: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold">Tóm tắt ngắn bài viết:</label>
-                  <textarea
-                    rows={2}
-                    value={editingNews.summary || ''}
-                    onChange={(e) => setEditingNews({ ...editingNews, summary: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none resize-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold">Nội dung chi tiết bài viết:</label>
-                  <textarea
-                    required
-                    rows={5}
-                    value={editingNews.content || ''}
-                    onChange={(e) => setEditingNews({ ...editingNews, content: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 flex items-center justify-end space-x-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setEditingNews(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                >
-                  Hủy bỏ
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white font-bold px-5 py-2 rounded-xl shadow-md"
-                >
-                  Lưu bài viết
-                </button>
-              </div>
-            </motion.form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL EDIT ACTIVITY */}
-      {editingActivity !== null && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setEditingActivity(null)} />
-          <div className="flex min-h-full items-center justify-center p-4">
-            <motion.form 
-              onSubmit={handleSaveActivity}
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="relative w-full max-w-xl bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-2xl space-y-4"
-            >
-              <h3 className="font-display font-bold text-base border-b border-slate-100 pb-2 dark:border-slate-800 text-slate-900 dark:text-white">
-                {editingActivity.id ? 'Sửa phong trào thi đua' : 'Phát động phong trào Đội mới'}
-              </h3>
-
-              <div className="space-y-3 font-sans">
-                <div className="space-y-1">
-                  <label className="font-bold">Tên phong trào hoạt động:</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingActivity.title || ''}
-                    onChange={(e) => setEditingActivity({ ...editingActivity, title: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="font-bold">Trạng thái:</label>
-                    <select
-                      value={editingActivity.status || 'ongoing'}
-                      onChange={(e) => setEditingActivity({ ...editingActivity, status: e.target.value as any })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none"
-                    >
-                      <option value="ongoing">Đang diễn ra</option>
-                      <option value="upcoming">Sắp mở đăng ký</option>
-                      <option value="completed">Đã hoàn thành</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">Hạn tham gia / Thời gian:</label>
-                    <input
-                      type="text"
-                      placeholder="Ví dụ: 10/11 - 25/12"
-                      value={editingActivity.date || ''}
-                      onChange={(e) => setEditingActivity({ ...editingActivity, date: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold">Đường dẫn ảnh bìa (URL):</label>
-                  <input
-                    type="text"
-                    value={editingActivity.image || ''}
-                    onChange={(e) => setEditingActivity({ ...editingActivity, image: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold">Mô tả khái quát kế hoạch:</label>
-                  <textarea
-                    required
-                    rows={3}
-                    value={editingActivity.description || ''}
-                    onChange={(e) => setEditingActivity({ ...editingActivity, description: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white dark:bg-slate-950 text-xs focus:outline-none resize-none"
+                    placeholder="Nhập tiêu đề bài viết..."
+                    value={editingDbPost.title || ''}
+                    onChange={(e) => setEditingDbPost({ ...editingDbPost, title: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="font-bold">Yêu cầu tham dự:</label>
-                    <textarea
-                      rows={2}
-                      value={editingActivity.requirements || ''}
-                      onChange={(e) => setEditingActivity({ ...editingActivity, requirements: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white dark:bg-slate-950 text-xs focus:outline-none resize-none"
-                    />
+                    <label className="font-bold text-slate-700 dark:text-slate-300">Chuyên mục:</label>
+                    <select
+                      value={editingDbPost.category_id || ''}
+                      onChange={(e) => setEditingDbPost({ ...editingDbPost, category_id: Number(e.target.value) })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="" disabled>-- Chọn chuyên mục --</option>
+                      {dbCategories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold">Quyền lợi / Ghi nhận Đội:</label>
-                    <textarea
-                      rows={2}
-                      value={editingActivity.benefits || ''}
-                      onChange={(e) => setEditingActivity({ ...editingActivity, benefits: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white dark:bg-slate-950 text-xs focus:outline-none resize-none"
-                    />
+                    <label className="font-bold text-slate-700 dark:text-slate-300">Trạng thái xuất bản:</label>
+                    <select
+                      value={editingDbPost.status || 'DRAFT'}
+                      onChange={(e) => setEditingDbPost({ ...editingDbPost, status: e.target.value as CmsPostStatus })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="DRAFT">Nháp (DRAFT)</option>
+                      <option value="PUBLISHED">Xuất bản công khai (PUBLISHED)</option>
+                    </select>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-1 flex items-center">
+                    <label className="flex items-center space-x-2 font-bold cursor-pointer text-slate-700 dark:text-slate-300 select-none">
+                      <input
+                        type="checkbox"
+                        checked={editingDbPost.is_featured || false}
+                        onChange={(e) => setEditingDbPost({ ...editingDbPost, is_featured: e.target.checked })}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Đánh dấu bài viết nổi bật</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Đường dẫn ảnh bìa (URL):</label>
+                  <input
+                    type="text"
+                    placeholder="Nhập link hình ảnh (ví dụ: https://images.unsplash.com/...)"
+                    value={editingDbPost.cover_image_url || ''}
+                    onChange={(e) => setEditingDbPost({ ...editingDbPost, cover_image_url: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Tóm tắt ngắn (Excerpt):</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Viết một đoạn tóm tắt ngắn cho bài viết..."
+                    value={editingDbPost.excerpt || ''}
+                    onChange={(e) => setEditingDbPost({ ...editingDbPost, excerpt: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Nội dung chi tiết bài viết (Hỗ trợ Markdown):</label>
+                  <textarea
+                    required
+                    rows={8}
+                    placeholder="Nhập nội dung chi tiết bài viết..."
+                    value={editingDbPost.content || ''}
+                    onChange={(e) => setEditingDbPost({ ...editingDbPost, content: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none font-sans"
+                  />
                 </div>
               </div>
 
               <div className="pt-4 flex items-center justify-end space-x-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setEditingActivity(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  disabled={isLoadingDb}
+                  onClick={() => setEditingDbPost(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white font-bold px-5 py-2 rounded-xl shadow-md"
+                  disabled={isLoadingDb}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-md flex items-center space-x-1"
                 >
-                  Lưu kế hoạch
+                  {isLoadingDb && (
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white mr-1"></div>
+                  )}
+                  <span>Lưu bài viết</span>
                 </button>
               </div>
             </motion.form>
