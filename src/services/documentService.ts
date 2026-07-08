@@ -232,7 +232,10 @@ export const documentService = {
         is_featured: !!input.is_featured,
         published_at: publishedAt,
         created_by: userId,
-        updated_by: userId
+        updated_by: userId,
+        document_number: input.document_number || null,
+        issuing_unit: input.issuing_unit || null,
+        issued_date: input.issued_date || null
       })
       .select()
       .single();

@@ -522,7 +522,10 @@ export default function CMS({
         status: editingDbDoc.status || 'DRAFT',
         is_featured: !!editingDbDoc.is_featured,
         slug: editingDbDoc.slug || undefined,
-        published_at: editingDbDoc.published_at || null
+        published_at: editingDbDoc.published_at || null,
+        document_number: editingDbDoc.document_number || null,
+        issuing_unit: editingDbDoc.issuing_unit || null,
+        issued_date: editingDbDoc.issued_date || null
       };
 
       if (editingDbDoc.id) {
@@ -1176,7 +1179,10 @@ export default function CMS({
                     file_type: '',
                     file_size: 0,
                     status: 'DRAFT',
-                    is_featured: false
+                    is_featured: false,
+                    document_number: '',
+                    issuing_unit: '',
+                    issued_date: ''
                   })}
                   className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs transition-all"
                 >
@@ -1709,6 +1715,40 @@ export default function CMS({
                     placeholder="Ví dụ: Kế hoạch tổ chức Hội thi Nghi thức Đội..."
                     value={editingDbDoc.title || ''}
                     onChange={(e) => setEditingDbDoc({ ...editingDbDoc, title: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="font-bold">Số ký hiệu văn bản:</label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: 12/KH-LĐ"
+                      value={editingDbDoc.document_number || ''}
+                      onChange={(e) => setEditingDbDoc({ ...editingDbDoc, document_number: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold">Ngày ban hành:</label>
+                    <input
+                      type="date"
+                      value={editingDbDoc.issued_date || ''}
+                      onChange={(e) => setEditingDbDoc({ ...editingDbDoc, issued_date: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold">Đơn vị ban hành:</label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: Ban Chỉ huy Liên đội"
+                    value={editingDbDoc.issuing_unit || ''}
+                    onChange={(e) => setEditingDbDoc({ ...editingDbDoc, issuing_unit: e.target.value })}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 focus:outline-none focus:border-blue-500"
                   />
                 </div>

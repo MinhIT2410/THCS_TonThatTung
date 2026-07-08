@@ -32,16 +32,6 @@ export default function DocumentsPage() {
     fetchDocs();
   }, []);
 
-  const generateDocumentCode = (doc: CmsDocumentWithCategory): string => {
-    const categorySlug = doc.category?.slug || 'tai-lieu';
-    const prefix = categorySlug === 'nghi-quyet' ? 'NQ' :
-                   categorySlug === 'ke-hoach' ? 'KH' :
-                   categorySlug === 'dieu-le' ? 'ĐL' : 'HD';
-    const idStr = String(doc.id).padStart(2, '0');
-    const year = new Date(doc.created_at || new Date()).getFullYear();
-    return `${idStr}/${prefix}-LĐ${year}`;
-  };
-
   const formattedDocuments: DocumentItem[] = dbDocuments.map((doc) => {
     // Determine category display name
     const categoryName = doc.category?.name || 'Tài liệu';
@@ -51,13 +41,30 @@ export default function DocumentsPage() {
       ? `${(doc.file_size / (1024 * 1024)).toFixed(2)} MB`
       : 'Không rõ';
 
+    // Format issued date: use issued_date first (DD/MM/YYYY), fallback to published_at/created_at, or '—'
+    let displayDate = '—';
+    if (doc.issued_date) {
+      try {
+        const parts = doc.issued_date.split('-');
+        if (parts.length === 3) {
+          displayDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        } else {
+          displayDate = new Date(doc.issued_date).toLocaleDateString('vi-VN');
+        }
+      } catch (err) {
+        displayDate = doc.issued_date;
+      }
+    } else if (doc.published_at || doc.created_at) {
+      displayDate = new Date(doc.published_at || doc.created_at).toLocaleDateString('vi-VN');
+    }
+
     return {
       id: `supabase-${doc.id}`,
-      code: generateDocumentCode(doc),
+      code: doc.document_number || '—',
       title: doc.title,
       category: categoryName as any,
-      date: new Date(doc.published_at || doc.created_at).toLocaleDateString('vi-VN'),
-      issuingBody: 'Ban Chỉ huy Liên đội',
+      date: displayDate,
+      issuingBody: doc.issuing_unit || '—',
       fileUrl: doc.file_url,
       fileSize: sizeInMB,
       fileType: doc.file_type,

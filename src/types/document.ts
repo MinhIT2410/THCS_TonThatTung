@@ -33,6 +33,9 @@ export interface CmsDocument {
   updated_by: string | null;
   created_at: string;
   updated_at: string;
+  document_number: string | null;
+  issuing_unit: string | null;
+  issued_date: string | null;
 }
 
 export interface CmsDocumentWithCategory extends CmsDocument {
@@ -51,4 +54,7 @@ export interface CmsDocumentInput {
   status: CmsDocumentStatus;
   is_featured: boolean;
   published_at?: string | null;
+  document_number?: string | null;
+  issuing_unit?: string | null;
+  issued_date?: string | null;
 }
