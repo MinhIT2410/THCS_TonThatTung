@@ -27,7 +27,7 @@ export default function Header({
   schoolName
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdminUser } = useAuth();
 
   const navItems = NAV_MENU.filter(item => item.showInNavbar).map(item => ({
     id: item.id,
@@ -129,7 +129,9 @@ export default function Header({
             }`}
           >
             <Settings className={`h-4 w-4 ${currentView === 'cms' ? 'animate-spin' : ''}`} />
-            <span className="hidden lg:inline">{isAuthenticated ? 'Quản trị' : 'Quản lý'}</span>
+            <span className="hidden lg:inline">
+              {isAuthenticated ? (isAdminUser ? 'Quản trị' : 'Tài khoản') : 'Quản lý'}
+            </span>
           </button>
 
           {/* Mobile menu button */}
@@ -183,7 +185,9 @@ export default function Header({
                   }`}
                 >
                   <Settings className="h-5 w-5" />
-                  <span>{isAuthenticated ? 'Mở trang quản trị' : 'Vào Chế độ quản trị'}</span>
+                  <span>
+                    {isAuthenticated ? (isAdminUser ? 'Mở trang quản trị' : 'Mở trang tài khoản') : 'Vào Chế độ quản trị'}
+                  </span>
                 </button>
               </div>
             </div>

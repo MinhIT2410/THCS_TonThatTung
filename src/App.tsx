@@ -290,7 +290,7 @@ function AppContent() {
           <Route path={ROUTES.CONTACT} element={<ContactPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.ADMIN} element={
-            <ProtectedRoute>
+            <ProtectedRoute requireAdmin>
               <AdminPage />
             </ProtectedRoute>
           } />

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission } from '../../types';
 import { LogoutButton } from '../auth/LogoutButton';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface CMSProps {
   schoolName: string;
@@ -51,6 +52,8 @@ export default function CMS({
   setContacts,
   onResetDefaults
 }: CMSProps) {
+  const { profile, primaryRole } = useAuth();
+
   // CMS state values
   const [activeTab, setActiveTab] = useState<CMSTab>('dashboard');
 
@@ -243,7 +246,10 @@ export default function CMS({
           </div>
           <div>
             <h1 className="font-display font-extrabold text-2xl text-slate-900 dark:text-white leading-tight">Hệ Thống CMS Quản Trị</h1>
-            <p className="text-slate-500 dark:text-slate-400">Chào mừng admin Liên đội. Tại đây em có thể sửa bài, duyệt góp ý, cập nhật thông tin chính chủ.</p>
+            <div className="mt-1 text-slate-500 dark:text-slate-400 font-semibold space-y-0.5">
+              <p>Xin chào, <span className="text-blue-600 dark:text-blue-400 font-bold">{profile?.full_name || 'Quản trị viên'}</span></p>
+              <p>Vai trò: <span className="text-red-500 dark:text-red-400 font-bold">{primaryRole?.name || primaryRole?.code || 'Quản trị hệ thống'}</span></p>
+            </div>
           </div>
         </div>
 
