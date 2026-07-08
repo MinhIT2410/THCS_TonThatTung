@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Settings, Lock, Key, CheckCircle, Trash2, Edit, Plus, FolderSync, 
-  MessageSquare, FileText, Calendar, Image as ImageIcon, FileCode, Check, Eye, X, RefreshCw
+  MessageSquare, FileText, Calendar, Image as ImageIcon, FileCode, Check, Eye, X, RefreshCw, Loader2
 } from 'lucide-react';
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission } from '../../types';
 import { LogoutButton } from '../auth/LogoutButton';
@@ -24,6 +24,9 @@ import {
 } from '../../types/gallery';
 import { ImageUploadField } from './ImageUploadField';
 import { MultiImageUploadField } from './MultiImageUploadField';
+import { documentService } from '../../services/documentService';
+import { DocumentCategory, CmsDocument, CmsDocumentWithCategory, CmsDocumentInput } from '../../types/document';
+import { DocumentUploadField } from './DocumentUploadField';
 
 interface CMSProps {
   schoolName: string;
@@ -95,6 +98,7 @@ export default function CMS({
   useEffect(() => {
     fetchDbData();
     fetchAlbumsData();
+    fetchDocumentsData();
   }, []);
 
   // Supabase Gallery States
@@ -142,6 +146,31 @@ export default function CMS({
       setDbAlbumImages([]);
     }
   }, [selectedAlbumId]);
+
+  // Supabase Document States
+  const [dbDocuments, setDbDocuments] = useState<CmsDocumentWithCategory[]>([]);
+  const [dbDocCategories, setDbDocCategories] = useState<DocumentCategory[]>([]);
+  const [isLoadingDocs, setIsLoadingDocs] = useState<boolean>(true);
+  const [docsError, setDocsError] = useState<string | null>(null);
+  const [editingDbDoc, setEditingDbDoc] = useState<(Partial<CmsDocumentInput> & { id?: number }) | null>(null);
+
+  const fetchDocumentsData = async () => {
+    setIsLoadingDocs(true);
+    setDocsError(null);
+    try {
+      const [categories, documentsList] = await Promise.all([
+        documentService.getDocumentCategories(),
+        documentService.getAdminDocuments()
+      ]);
+      setDbDocCategories(categories);
+      setDbDocuments(documentsList);
+    } catch (err) {
+      console.error('Error fetching documents/categories:', err);
+      setDocsError('Có lỗi xảy ra khi tải danh sách văn bản và danh mục.');
+    } finally {
+      setIsLoadingDocs(false);
+    }
+  };
 
   const handleSaveAlbum = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -469,6 +498,68 @@ export default function CMS({
     if (confirm('Hủy bỏ tài liệu hướng dẫn này?')) {
       setDocuments(prev => prev.filter(d => d.id !== id));
       triggerAlert('Đã xóa văn bản lưu trữ!');
+    }
+  };
+
+  // Supabase Documents CRUD handlers
+  const handleSaveDbDoc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDbDoc || !editingDbDoc.title || !editingDbDoc.category_id || !editingDbDoc.file_url) {
+      triggerAlert('Vui lòng điền đầy đủ các thông tin bắt buộc và tải lên tệp tin.');
+      return;
+    }
+
+    setIsLoadingDocs(true);
+    try {
+      const input: CmsDocumentInput = {
+        category_id: Number(editingDbDoc.category_id),
+        title: editingDbDoc.title,
+        description: editingDbDoc.description || '',
+        file_url: editingDbDoc.file_url,
+        file_name: editingDbDoc.file_name || 'tai-lieu',
+        file_type: editingDbDoc.file_type || 'application/octet-stream',
+        file_size: editingDbDoc.file_size || 0,
+        status: editingDbDoc.status || 'DRAFT',
+        is_featured: !!editingDbDoc.is_featured,
+        slug: editingDbDoc.slug || undefined,
+        published_at: editingDbDoc.published_at || null
+      };
+
+      if (editingDbDoc.id) {
+        // Update existing document
+        const { error } = await documentService.updateDocument(editingDbDoc.id, input, userId);
+        if (error) throw error;
+        triggerAlert('Cập nhật văn bản thành công!');
+      } else {
+        // Create new document
+        const { error } = await documentService.createDocument(input, userId);
+        if (error) throw error;
+        triggerAlert('Đăng tải văn bản mới thành công!');
+      }
+      setEditingDbDoc(null);
+      await fetchDocumentsData();
+    } catch (err: any) {
+      console.error('Error saving document:', err);
+      triggerAlert('Lỗi: ' + (err.message || 'Không thể lưu văn bản.'));
+    } finally {
+      setIsLoadingDocs(false);
+    }
+  };
+
+  const handleDeleteDbDoc = async (id: number) => {
+    if (!confirm('Em có chắc chắn muốn xóa văn bản này khỏi hệ thống?')) return;
+
+    setIsLoadingDocs(true);
+    try {
+      const { error } = await documentService.deleteDocument(id);
+      if (error) throw error;
+      triggerAlert('Đã xóa văn bản thành công!');
+      await fetchDocumentsData();
+    } catch (err: any) {
+      console.error('Error deleting document:', err);
+      triggerAlert('Lỗi: ' + (err.message || 'Không thể xóa văn bản.'));
+    } finally {
+      setIsLoadingDocs(false);
     }
   };
 
@@ -1069,46 +1160,137 @@ export default function CMS({
 
           {/* TAB 6: DOCUMENTS PLAN CMS */}
           {activeTab === 'documents' && (
-            <div className="space-y-6 fade-in">
+            <div className="space-y-6 fade-in text-xs font-sans">
               <div className="flex items-center justify-between">
-                <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Quản lý kho văn bản chỉ đạo</h2>
+                <div>
+                  <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Quản lý kho văn bản chỉ đạo</h2>
+                  <p className="text-[10px] text-slate-500">Quản lý các tài liệu, quyết định, hướng dẫn và kế hoạch trên hệ thống</p>
+                </div>
                 <button
-                  onClick={() => setEditingDoc({})}
-                  className="flex items-center space-x-1.5 bg-blue-600 text-white font-bold px-4 py-2.5 rounded-xl"
+                  onClick={() => setEditingDbDoc({
+                    category_id: dbDocCategories[0]?.id || 0,
+                    title: '',
+                    description: '',
+                    file_url: '',
+                    file_name: '',
+                    file_type: '',
+                    file_size: 0,
+                    status: 'DRAFT',
+                    is_featured: false
+                  })}
+                  className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs text-xs transition-all"
                 >
-                  <Plus className="h-4.5 w-4.5" />
+                  <Plus className="h-4 w-4" />
                   <span>Đăng tải văn bản</span>
                 </button>
               </div>
 
-              <div className="border border-slate-200 rounded-2xl bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="p-4 flex items-center justify-between">
-                      <div>
-                        <span className="font-mono font-bold text-red-600 text-xs">{doc.code}</span>
-                        <h4 className="font-bold text-slate-900 dark:text-white mt-0.5">{doc.title}</h4>
-                        <span className="text-[10px] text-slate-400">{doc.category} • Nơi ban hành: {doc.issuingBody}</span>
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => setEditingDoc(doc)}
-                          className="p-2 border border-slate-200 text-slate-600 rounded-lg"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteDoc(doc.id)}
-                          className="p-2 border border-slate-200 text-red-500 rounded-lg"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              {isLoadingDocs ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin h-6 w-6 text-blue-600" />
+                  <span className="ml-3 font-bold text-slate-500">Đang tải danh sách văn bản...</span>
                 </div>
-              </div>
+              ) : (
+                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+                          <th className="px-4 py-3">Tiêu đề / Tên văn bản</th>
+                          <th className="px-4 py-3">Danh mục</th>
+                          <th className="px-4 py-3">Trạng thái</th>
+                          <th className="px-4 py-3">Tài liệu đính kèm</th>
+                          <th className="px-4 py-3">Ngày tạo</th>
+                          <th className="px-4 py-3 text-right">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                        {dbDocuments.map((doc) => (
+                          <tr key={doc.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors">
+                            <td className="px-4 py-3.5">
+                              <div className="font-bold text-slate-900 dark:text-white line-clamp-2 max-w-sm" title={doc.title}>
+                                {doc.title}
+                              </div>
+                              <div className="flex items-center space-x-2 mt-1">
+                                {doc.is_featured && (
+                                  <span className="bg-amber-500 text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-sm uppercase">
+                                    Nổi bật
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5 font-semibold text-slate-600 dark:text-slate-400">
+                              {doc.category?.name || <span className="text-slate-400 italic">Không rõ</span>}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              {doc.status === 'PUBLISHED' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400">
+                                  Đã xuất bản
+                                </span>
+                              ) : doc.status === 'DRAFT' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400">
+                                  Bản nháp
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400">
+                                  Lưu trữ
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <div className="flex items-center space-x-1.5 max-w-xs">
+                                <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+                                <div className="min-w-0">
+                                  <a 
+                                    href={doc.file_url} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="font-bold text-blue-600 dark:text-blue-400 hover:underline truncate block"
+                                    title={doc.file_name}
+                                  >
+                                    {doc.file_name}
+                                  </a>
+                                  {doc.file_size > 0 && (
+                                    <span className="text-[9px] text-slate-400 font-medium block">
+                                      {(doc.file_size / (1024 * 1024)).toFixed(2)} MB
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5 text-slate-500 font-medium">
+                              {new Date(doc.created_at).toLocaleDateString('vi-VN')}
+                            </td>
+                            <td className="px-4 py-3.5 text-right space-x-1 whitespace-nowrap">
+                              <button
+                                onClick={() => setEditingDbDoc(doc)}
+                                className="p-1.5 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                title="Chỉnh sửa"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDbDoc(doc.id)}
+                                className="p-1.5 border border-slate-200 dark:border-slate-800 text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                                title="Xóa"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {dbDocuments.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="py-12 text-center text-slate-400 italic">
+                              Chưa có văn bản nào trong danh sách. Hãy thêm văn bản mới!
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1504,98 +1686,122 @@ export default function CMS({
       )}
 
       {/* MODAL EDIT DOCUMENT */}
-      {editingDoc !== null && (
+      {editingDbDoc !== null && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setEditingDoc(null)} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setEditingDbDoc(null)} />
           <div className="flex min-h-full items-center justify-center p-4">
             <motion.form 
-              onSubmit={handleSaveDoc}
+              onSubmit={handleSaveDbDoc}
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="relative w-full max-w-md bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-2xl space-y-4"
+              className="relative w-full max-w-lg bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl space-y-4 text-slate-900 dark:text-white"
             >
-              <h3 className="font-display font-bold text-base border-b border-slate-100 pb-2 dark:border-slate-800 text-slate-900 dark:text-white">
-                {editingDoc.id ? 'Sửa văn bản chỉ đạo' : 'Xuất bản văn bản mới'}
+              <h3 className="font-display font-bold text-base border-b border-slate-100 pb-2 dark:border-slate-800">
+                {editingDbDoc.id ? 'Sửa văn bản chỉ đạo' : 'Đăng tải văn bản mới'}
               </h3>
 
-              <div className="space-y-3 font-sans">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="font-bold">Số hiệu văn bản:</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ví dụ: 05/QĐ-LĐ"
-                      value={editingDoc.code || ''}
-                      onChange={(e) => setEditingDoc({ ...editingDoc, code: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold">Thể loại văn bản:</label>
-                    <select
-                      value={editingDoc.category || 'Kế hoạch'}
-                      onChange={(e) => setEditingDoc({ ...editingDoc, category: e.target.value as any })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none"
-                    >
-                      <option value="Nghị quyết">Nghị quyết</option>
-                      <option value="Kế hoạch">Kế hoạch</option>
-                      <option value="Điều lệ">Điều lệ</option>
-                      <option value="Hướng dẫn">Hướng dẫn</option>
-                    </select>
-                  </div>
-                </div>
-
+              <div className="space-y-3 font-sans text-xs">
                 <div className="space-y-1">
-                  <label className="font-bold">Tên văn bản cụ thể:</label>
+                  <label className="font-bold">Tên / Tiêu đề văn bản cụ thể:</label>
                   <input
                     type="text"
                     required
-                    value={editingDoc.title || ''}
-                    onChange={(e) => setEditingDoc({ ...editingDoc, title: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none"
+                    placeholder="Ví dụ: Kế hoạch tổ chức Hội thi Nghi thức Đội..."
+                    value={editingDbDoc.title || ''}
+                    onChange={(e) => setEditingDbDoc({ ...editingDbDoc, title: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="font-bold">Nơi ban hành:</label>
-                    <input
-                      type="text"
-                      placeholder="Ví dụ: Ban Chỉ huy Liên đội"
-                      value={editingDoc.issuingBody || ''}
-                      onChange={(e) => setEditingDoc({ ...editingDoc, issuingBody: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none"
-                    />
+                    <label className="font-bold">Danh mục:</label>
+                    <select
+                      value={editingDbDoc.category_id || ''}
+                      onChange={(e) => setEditingDbDoc({ ...editingDbDoc, category_id: Number(e.target.value) })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 focus:outline-none"
+                    >
+                      {dbDocCategories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold">Dung lượng tệp tải lên:</label>
-                    <input
-                      type="text"
-                      placeholder="Ví dụ: 1.2 MB"
-                      value={editingDoc.fileSize || ''}
-                      onChange={(e) => setEditingDoc({ ...editingDoc, fileSize: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none"
-                    />
+                    <label className="font-bold">Trạng thái:</label>
+                    <select
+                      value={editingDbDoc.status || 'DRAFT'}
+                      onChange={(e) => setEditingDbDoc({ ...editingDbDoc, status: e.target.value as any })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 focus:outline-none"
+                    >
+                      <option value="DRAFT">Bản nháp (Draft)</option>
+                      <option value="PUBLISHED">Xuất bản (Published)</option>
+                      <option value="ARCHIVED">Lưu trữ (Archived)</option>
+                    </select>
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold">Mô tả tóm tắt văn bản:</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Nhập mô tả tóm tắt nội dung chính hoặc ý nghĩa của văn bản..."
+                    value={editingDbDoc.description || ''}
+                    onChange={(e) => setEditingDbDoc({ ...editingDbDoc, description: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 bg-white dark:bg-slate-950 focus:outline-none focus:border-blue-500 resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <DocumentUploadField
+                    label="Tài liệu tải lên (PDF, Word, Excel, PowerPoint tối đa 20MB):"
+                    value={editingDbDoc.file_url || ''}
+                    fileName={editingDbDoc.file_name || ''}
+                    fileType={editingDbDoc.file_type || ''}
+                    fileSize={editingDbDoc.file_size || 0}
+                    onChange={(data) => setEditingDbDoc({
+                      ...editingDbDoc,
+                      file_url: data.file_url,
+                      file_name: data.file_name,
+                      file_type: data.file_type,
+                      file_size: data.file_size,
+                    })}
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="doc-is-featured"
+                    checked={editingDbDoc.is_featured || false}
+                    onChange={(e) => setEditingDbDoc({ ...editingDbDoc, is_featured: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="doc-is-featured" className="font-bold cursor-pointer select-none text-slate-700 dark:text-slate-300">
+                    Đánh dấu là tài liệu nổi bật (Ghim lên trang đầu)
+                  </label>
                 </div>
               </div>
 
               <div className="pt-4 flex items-center justify-end space-x-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setEditingDoc(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  onClick={() => setEditingDbDoc(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white font-bold px-5 py-2 rounded-xl shadow-md"
+                  disabled={isLoadingDocs}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold px-5 py-2 rounded-xl shadow-md flex items-center space-x-1"
                 >
-                  Xuất bản
+                  {isLoadingDocs && (
+                    <Loader2 className="animate-spin h-3.5 w-3.5 mr-1" />
+                  )}
+                  <span>{editingDbDoc.id ? 'Cập nhật' : 'Đăng tải'}</span>
                 </button>
               </div>
             </motion.form>

@@ -114,8 +114,90 @@ export async function deleteImageByUrl(url: string): Promise<void> {
   }
 }
 
+export const DOCUMENT_STORAGE_BUCKET = 'school-document';
+
+/**
+ * Kiểm tra file tài liệu hợp lệ: định dạng (pdf, doc, docx, xls, xlsx, ppt, pptx) và dung lượng (<20MB)
+ */
+export function validateDocumentFile(file: File): string | null {
+  const allowedTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  ];
+
+  if (!allowedTypes.includes(file.type)) {
+    return 'Định dạng tệp không hợp lệ. Chỉ chấp nhận các file PDF, Word (DOC/DOCX), Excel (XLS/XLSX), hoặc PowerPoint (PPT/PPTX).';
+  }
+
+  const maxSizeInBytes = 20 * 1024 * 1024; // 20MB
+  if (file.size > maxSizeInBytes) {
+    return 'Dung lượng tệp vượt quá giới hạn cho phép (Tối đa 20MB).';
+  }
+
+  return null;
+}
+
+/**
+ * Upload tài liệu lên Supabase Storage và trả về thông tin file
+ */
+export async function uploadDocument(file: File, folder: string = 'documents'): Promise<{
+  url: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+}> {
+  const validationError = validateDocumentFile(file);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  const currentYear = new Date().getFullYear();
+  const folderPath = `${folder}/${currentYear}`;
+  const safeName = getSafeFileName(file.name);
+  const path = `${folderPath}/${safeName}`;
+
+  try {
+    const { error } = await supabase.storage
+      .from(DOCUMENT_STORAGE_BUCKET)
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Supabase document upload error:', error);
+      throw new Error(`Tải tài liệu lên Supabase thất bại: ${error.message}`);
+    }
+
+    const { data } = supabase.storage
+      .from(DOCUMENT_STORAGE_BUCKET)
+      .getPublicUrl(path);
+
+    if (!data || !data.publicUrl) {
+      throw new Error('Không thể lấy public URL cho tài liệu vừa upload.');
+    }
+
+    return {
+      url: data.publicUrl,
+      fileName: file.name,
+      fileType: file.type || 'application/octet-stream',
+      fileSize: file.size,
+    };
+  } catch (err: any) {
+    console.error('Error during uploadDocument:', err);
+    throw new Error(err.message || 'Có lỗi xảy ra khi tải tài liệu lên hệ thống.');
+  }
+}
+
 export const storageService = {
   validateImageFile,
   uploadImage,
   deleteImageByUrl,
+  validateDocumentFile,
+  uploadDocument,
 };
