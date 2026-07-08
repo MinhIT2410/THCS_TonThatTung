@@ -1000,23 +1000,8 @@ export default function CMS({
                           {dbAlbums.find(a => a.id === selectedAlbumId)?.title || ''}
                         </span>
                       </h2>
-                      <p className="text-[10px] text-slate-500">Thêm, sửa, xóa các ảnh thuộc album đang chọn</p>
+                      <p className="text-[10px] text-slate-500">Tải lên và quản lý các ảnh thuộc album đang chọn</p>
                     </div>
-                    <button
-                      onClick={() => setEditingAlbumImage({
-                        album_id: Number(selectedAlbumId),
-                        image_url: '',
-                        title: '',
-                        description: '',
-                        alt_text: '',
-                        sort_order: 0,
-                        is_featured: false
-                      })}
-                      className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl shadow-md transition-colors w-fit text-xs"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Thêm ảnh mới</span>
-                    </button>
                   </div>
 
                   <MultiImageUploadField
