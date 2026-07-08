@@ -23,6 +23,7 @@ import {
   GalleryImageInput 
 } from '../../types/gallery';
 import { ImageUploadField } from './ImageUploadField';
+import { MultiImageUploadField } from './MultiImageUploadField';
 
 interface CMSProps {
   schoolName: string;
@@ -1017,6 +1018,11 @@ export default function CMS({
                       <span>Thêm ảnh mới</span>
                     </button>
                   </div>
+
+                  <MultiImageUploadField
+                    albumId={Number(selectedAlbumId)}
+                    onUploaded={() => fetchAlbumImagesData(Number(selectedAlbumId))}
+                  />
 
                   {isLoadingImages ? (
                     <div className="flex items-center justify-center py-8">
