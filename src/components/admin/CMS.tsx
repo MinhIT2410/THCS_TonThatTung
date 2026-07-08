@@ -14,6 +14,14 @@ import { LogoutButton } from '../auth/LogoutButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { cmsService } from '../../services/cmsService';
 import { CmsCategory, CmsPost, CmsPostWithCategory, CmsPostInput, CmsPostStatus } from '../../types/cms';
+import { galleryService } from '../../services/galleryService';
+import { 
+  GalleryAlbum, 
+  GalleryImage, 
+  GalleryAlbumStatus, 
+  GalleryAlbumInput, 
+  GalleryImageInput 
+} from '../../types/gallery';
 
 interface CMSProps {
   schoolName: string;
@@ -84,7 +92,171 @@ export default function CMS({
 
   useEffect(() => {
     fetchDbData();
+    fetchAlbumsData();
   }, []);
+
+  // Supabase Gallery States
+  const [dbAlbums, setDbAlbums] = useState<GalleryAlbum[]>([]);
+  const [selectedAlbumId, setSelectedAlbumId] = useState<number | ''>('');
+  const [dbAlbumImages, setDbAlbumImages] = useState<GalleryImage[]>([]);
+  const [isLoadingAlbums, setIsLoadingAlbums] = useState<boolean>(false);
+  const [isLoadingImages, setIsLoadingImages] = useState<boolean>(false);
+  const [editingAlbum, setEditingAlbum] = useState<(Partial<GalleryAlbumInput> & { id?: number }) | null>(null);
+  const [editingAlbumImage, setEditingAlbumImage] = useState<(Partial<GalleryImageInput> & { id?: number }) | null>(null);
+
+  const fetchAlbumsData = async () => {
+    setIsLoadingAlbums(true);
+    try {
+      const albumsList = await galleryService.getAdminAlbums();
+      setDbAlbums(albumsList);
+      if (albumsList.length > 0 && selectedAlbumId === '') {
+        setSelectedAlbumId(albumsList[0].id);
+      }
+    } catch (err) {
+      console.error('Error fetching albums:', err);
+      triggerAlert('Có lỗi xảy ra khi tải danh sách album.');
+    } finally {
+      setIsLoadingAlbums(false);
+    }
+  };
+
+  const fetchAlbumImagesData = async (albumId: number) => {
+    setIsLoadingImages(true);
+    try {
+      const imagesList = await galleryService.getImagesByAlbum(albumId);
+      setDbAlbumImages(imagesList);
+    } catch (err) {
+      console.error('Error fetching images for album:', err);
+      triggerAlert('Có lỗi xảy ra khi tải danh sách ảnh của album.');
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedAlbumId !== '') {
+      fetchAlbumImagesData(Number(selectedAlbumId));
+    } else {
+      setDbAlbumImages([]);
+    }
+  }, [selectedAlbumId]);
+
+  const handleSaveAlbum = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAlbum || !editingAlbum.title) {
+      triggerAlert('Vui lòng nhập tiêu đề album.');
+      return;
+    }
+
+    setIsLoadingAlbums(true);
+    try {
+      const input: GalleryAlbumInput = {
+        title: editingAlbum.title,
+        slug: editingAlbum.slug || undefined,
+        description: editingAlbum.description || '',
+        cover_image_url: editingAlbum.cover_image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80',
+        sort_order: editingAlbum.sort_order ?? 0,
+        is_featured: !!editingAlbum.is_featured,
+        status: editingAlbum.status || 'DRAFT'
+      };
+
+      if (editingAlbum.id) {
+        const { error } = await galleryService.updateAlbum(editingAlbum.id, input, userId);
+        if (error) throw error;
+        triggerAlert('Cập nhật album thành công!');
+      } else {
+        const { error } = await galleryService.createAlbum(input, userId);
+        if (error) throw error;
+        triggerAlert('Tạo album mới thành công!');
+      }
+      setEditingAlbum(null);
+      await fetchAlbumsData();
+    } catch (err: any) {
+      console.error('Error saving album:', err);
+      triggerAlert('Có lỗi xảy ra khi lưu album: ' + (err.message || 'Lỗi không định danh'));
+    } finally {
+      setIsLoadingAlbums(false);
+    }
+  };
+
+  const handleDeleteAlbum = async (id: number) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa album này không? Toàn bộ ảnh thuộc album này cũng sẽ bị xóa.')) return;
+
+    setIsLoadingAlbums(true);
+    try {
+      const { error } = await galleryService.deleteAlbum(id);
+      if (error) throw error;
+      triggerAlert('Đã xóa album thành công!');
+      if (selectedAlbumId === id) {
+        setSelectedAlbumId('');
+      }
+      await fetchAlbumsData();
+    } catch (err: any) {
+      console.error('Error deleting album:', err);
+      triggerAlert('Có lỗi xảy ra khi xóa album.');
+    } finally {
+      setIsLoadingAlbums(false);
+    }
+  };
+
+  const handleSaveAlbumImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAlbumImage || !editingAlbumImage.image_url) {
+      triggerAlert('Vui lòng nhập đường dẫn hình ảnh.');
+      return;
+    }
+    if (!selectedAlbumId) {
+      triggerAlert('Vui lòng chọn một album để quản lý ảnh.');
+      return;
+    }
+
+    setIsLoadingImages(true);
+    try {
+      const input: GalleryImageInput = {
+        album_id: Number(selectedAlbumId),
+        title: editingAlbumImage.title || '',
+        description: editingAlbumImage.description || '',
+        image_url: editingAlbumImage.image_url,
+        alt_text: editingAlbumImage.alt_text || '',
+        sort_order: editingAlbumImage.sort_order ?? 0,
+        is_featured: !!editingAlbumImage.is_featured
+      };
+
+      if (editingAlbumImage.id) {
+        const { error } = await galleryService.updateImage(editingAlbumImage.id, input, userId);
+        if (error) throw error;
+        triggerAlert('Cập nhật ảnh thành công!');
+      } else {
+        const { error } = await galleryService.createImage(input, userId);
+        if (error) throw error;
+        triggerAlert('Thêm ảnh mới thành công!');
+      }
+      setEditingAlbumImage(null);
+      await fetchAlbumImagesData(Number(selectedAlbumId));
+    } catch (err: any) {
+      console.error('Error saving image:', err);
+      triggerAlert('Có lỗi xảy ra khi lưu ảnh: ' + (err.message || 'Lỗi không định danh'));
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
+
+  const handleDeleteAlbumImage = async (id: number) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa ảnh này không?')) return;
+
+    setIsLoadingImages(true);
+    try {
+      const { error } = await galleryService.deleteImage(id);
+      if (error) throw error;
+      triggerAlert('Đã xóa ảnh thành công!');
+      await fetchAlbumImagesData(Number(selectedAlbumId));
+    } catch (err: any) {
+      console.error('Error deleting image:', err);
+      triggerAlert('Có lỗi xảy ra khi xóa ảnh.');
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
 
   // CMS state values
   const [activeTab, setActiveTab] = useState<CMSTab>('dashboard');
@@ -711,42 +883,195 @@ export default function CMS({
 
           {/* TAB 5: GALLERY CONTENT CMS */}
           {activeTab === 'photos' && (
-            <div className="space-y-6 fade-in">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Sửa thư viện ảnh Đội</h2>
-                <button
-                  onClick={() => setEditingPhoto({})}
-                  className="flex items-center space-x-1.5 bg-blue-600 text-white font-bold px-4 py-2.5 rounded-xl"
-                >
-                  <Plus className="h-4.5 w-4.5" />
-                  <span>Đăng ảnh mới</span>
-                </button>
+            <div className="space-y-8 fade-in text-xs">
+              {/* ALBUM MANAGEMENT SECTION */}
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+                  <div>
+                    <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Danh sách Album Thư viện ảnh</h2>
+                    <p className="text-[10px] text-slate-500">Quản lý các album ảnh lưu trữ trên Supabase</p>
+                  </div>
+                  <button
+                    onClick={() => setEditingAlbum({
+                      title: '',
+                      description: '',
+                      cover_image_url: '',
+                      sort_order: 0,
+                      is_featured: false,
+                      status: 'DRAFT'
+                    })}
+                    className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-md transition-colors w-fit text-xs"
+                  >
+                    <Plus className="h-4.5 w-4.5" />
+                    <span>Tạo Album mới</span>
+                  </button>
+                </div>
+
+                {isLoadingAlbums ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 font-bold text-slate-500">Đang tải danh sách album...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {dbAlbums.map((album) => {
+                      const isSelected = selectedAlbumId === album.id;
+                      return (
+                        <div 
+                          key={album.id} 
+                          onClick={() => setSelectedAlbumId(album.id)}
+                          className={`border p-4 rounded-2xl bg-white dark:bg-slate-900 relative flex flex-col justify-between transition-all cursor-pointer ${
+                            isSelected 
+                              ? 'border-blue-500 ring-2 ring-blue-500/10 dark:border-blue-400' 
+                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <img 
+                              src={album.cover_image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=120&auto=format&fit=crop&q=80'} 
+                              className="h-14 w-20 object-cover rounded-lg bg-slate-100 dark:bg-slate-950" 
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="space-y-1">
+                              <h4 className="font-bold text-slate-900 dark:text-white line-clamp-1">{album.title}</h4>
+                              <p className="text-[10px] text-slate-400 line-clamp-2 leading-tight">{album.description || 'Không có mô tả.'}</p>
+                              <div className="flex flex-wrap gap-1 items-center pt-1">
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm ${
+                                  album.status === 'PUBLISHED' 
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' 
+                                    : album.status === 'DRAFT' 
+                                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400'
+                                      : 'bg-slate-50 text-slate-700 dark:bg-slate-950/20 dark:text-slate-400'
+                                }`}>
+                                  {album.status}
+                                </span>
+                                {album.is_featured && (
+                                  <span className="bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded-sm">
+                                    Nổi bật
+                                  </span>
+                                )}
+                                <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-sm">
+                                  Thứ tự: {album.sort_order}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                            <span className="text-[10px] text-slate-400">
+                              Ngày tạo: {new Date(album.created_at).toLocaleDateString('vi-VN')}
+                            </span>
+                            <div className="flex space-x-1.5" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => setEditingAlbum(album)}
+                                className="p-1.5 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                                title="Sửa album"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAlbum(album.id)}
+                                className="p-1.5 border border-slate-200 dark:border-slate-800 text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/10"
+                                title="Xóa album"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {dbAlbums.length === 0 && (
+                      <p className="col-span-full py-8 text-center text-slate-400 italic">Chưa có album ảnh nào được tạo.</p>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {photos.map((item) => (
-                  <div key={item.id} className="border border-slate-200 rounded-2xl bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden p-3 relative group">
-                    <img src={item.imageUrl} className="w-full aspect-square object-cover rounded-xl" referrerPolicy="no-referrer" />
-                    <h4 className="font-bold text-slate-900 dark:text-white line-clamp-1 mt-2 text-[11px]">{item.title}</h4>
-                    <span className="text-[10px] text-slate-400">{item.category}</span>
-                    
-                    <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => setEditingPhoto(item)}
-                        className="bg-white text-slate-800 p-1.5 rounded-lg shadow-md"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeletePhoto(item.id)}
-                        className="bg-red-600 text-white p-1.5 rounded-lg shadow-md"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+              {/* IMAGES IN ALBUM MANAGEMENT SECTION */}
+              {selectedAlbumId !== '' && (
+                <div className="space-y-4 pt-6 border-t border-slate-200/80 dark:border-slate-800/80">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+                    <div>
+                      <h2 className="font-display font-bold text-base text-slate-900 dark:text-white">
+                        Quản lý ảnh của Album: <span className="text-blue-600 dark:text-blue-400">
+                          {dbAlbums.find(a => a.id === selectedAlbumId)?.title || ''}
+                        </span>
+                      </h2>
+                      <p className="text-[10px] text-slate-500">Thêm, sửa, xóa các ảnh thuộc album đang chọn</p>
                     </div>
+                    <button
+                      onClick={() => setEditingAlbumImage({
+                        album_id: Number(selectedAlbumId),
+                        image_url: '',
+                        title: '',
+                        description: '',
+                        alt_text: '',
+                        sort_order: 0,
+                        is_featured: false
+                      })}
+                      className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl shadow-md transition-colors w-fit text-xs"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Thêm ảnh mới</span>
+                    </button>
                   </div>
-                ))}
-              </div>
+
+                  {isLoadingImages ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                      <span className="ml-3 font-bold text-slate-500">Đang tải ảnh của album...</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {dbAlbumImages.map((img) => (
+                        <div key={img.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden p-3 relative group flex flex-col justify-between h-full">
+                          <div className="space-y-2">
+                            <div className="relative aspect-square overflow-hidden bg-slate-50 dark:bg-slate-950 rounded-xl">
+                              <img 
+                                src={img.image_url} 
+                                className="w-full h-full object-cover" 
+                                referrerPolicy="no-referrer"
+                                alt={img.alt_text || img.title || 'Hình ảnh'}
+                              />
+                              {img.is_featured && (
+                                <span className="absolute top-2 left-2 bg-amber-500 text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-sm uppercase tracking-wide shadow-xs">
+                                  Nổi bật
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-900 dark:text-white line-clamp-1 text-[11px]">{img.title || 'Không có tiêu đề'}</h4>
+                              <p className="text-[10px] text-slate-400 line-clamp-2 leading-tight mt-0.5">{img.description || 'Không có mô tả.'}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/50">
+                            <span className="text-[9px] text-slate-400 font-semibold">Thứ tự: {img.sort_order}</span>
+                            <div className="flex space-x-1">
+                              <button
+                                onClick={() => setEditingAlbumImage(img)}
+                                className="p-1 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAlbumImage(img.id)}
+                                className="p-1 border border-slate-200 dark:border-slate-800 text-red-500 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {dbAlbumImages.length === 0 && (
+                        <p className="col-span-full py-8 text-center text-slate-400 italic">Album này chưa có ảnh nào. Hãy thêm ảnh mới!</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -965,82 +1290,230 @@ export default function CMS({
         </div>
       )}
 
-      {/* MODAL EDIT PHOTO */}
-      {editingPhoto !== null && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setEditingPhoto(null)} />
+      {/* MODAL EDIT ALBUM */}
+      {editingAlbum !== null && (
+        <div className="fixed inset-0 z-50 overflow-y-auto text-xs">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setEditingAlbum(null)} />
           <div className="flex min-h-full items-center justify-center p-4">
             <motion.form 
-              onSubmit={handleSavePhoto}
+              onSubmit={handleSaveAlbum}
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="relative w-full max-w-md bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-2xl space-y-4"
+              className="relative w-full max-w-md bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl space-y-4 text-slate-900 dark:text-slate-100"
             >
-              <h3 className="font-display font-bold text-base border-b border-slate-100 pb-2 dark:border-slate-800 text-slate-900 dark:text-white">
-                {editingPhoto.id ? 'Sửa thông tin ảnh' : 'Tải lên hình ảnh Đội mới'}
+              <h3 className="font-display font-bold text-base border-b border-slate-100 pb-2 dark:border-slate-800">
+                {editingAlbum.id ? 'Sửa thông tin Album' : 'Tạo Album mới'}
               </h3>
 
               <div className="space-y-3 font-sans">
                 <div className="space-y-1">
-                  <label className="font-bold">Tiêu đề ảnh / Tên khoảnh khắc:</label>
+                  <label className="font-bold">Tiêu đề Album:</label>
                   <input
                     type="text"
                     required
-                    value={editingPhoto.title || ''}
-                    onChange={(e) => setEditingPhoto({ ...editingPhoto, title: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none focus:border-blue-500"
+                    placeholder="Nhập tên Album ảnh..."
+                    value={editingAlbum.title || ''}
+                    onChange={(e) => setEditingAlbum({ ...editingAlbum, title: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold">Chuyên mục ảnh:</label>
-                  <select
-                    value={editingPhoto.category || 'Hoạt động'}
-                    onChange={(e) => setEditingPhoto({ ...editingPhoto, category: e.target.value as any })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none"
-                  >
-                    <option value="Hoạt động">Hoạt động</option>
-                    <option value="Đại hội">Đại hội</option>
-                    <option value="Thể thao">Thể thao</option>
-                    <option value="Văn nghệ">Văn nghệ</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold">Đường dẫn ảnh (URL):</label>
+                  <label className="font-bold">Đường dẫn tĩnh (Slug - Để trống tự tạo):</label>
                   <input
                     type="text"
-                    required
-                    value={editingPhoto.imageUrl || ''}
-                    onChange={(e) => setEditingPhoto({ ...editingPhoto, imageUrl: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 bg-white dark:bg-slate-950 text-xs focus:outline-none"
+                    placeholder="vi-du-album-anh-dai-hoi"
+                    value={editingAlbum.slug || ''}
+                    onChange={(e) => setEditingAlbum({ ...editingAlbum, slug: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold">Mô tả ảnh cụ thể:</label>
+                  <label className="font-bold">Đường dẫn ảnh bìa (Cover Image URL):</label>
+                  <input
+                    type="text"
+                    placeholder="Link hình ảnh làm đại diện album..."
+                    value={editingAlbum.cover_image_url || ''}
+                    onChange={(e) => setEditingAlbum({ ...editingAlbum, cover_image_url: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold">Mô tả Album:</label>
                   <textarea
                     rows={3}
-                    value={editingPhoto.description || ''}
-                    onChange={(e) => setEditingPhoto({ ...editingPhoto, description: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white dark:bg-slate-950 text-xs focus:outline-none resize-none"
+                    placeholder="Viết một đoạn giới thiệu ngắn cho album này..."
+                    value={editingAlbum.description || ''}
+                    onChange={(e) => setEditingAlbum({ ...editingAlbum, description: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none text-xs"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="font-bold">Thứ tự sắp xếp:</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={editingAlbum.sort_order ?? 0}
+                      onChange={(e) => setEditingAlbum({ ...editingAlbum, sort_order: Number(e.target.value) })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold">Trạng thái:</label>
+                    <select
+                      value={editingAlbum.status || 'DRAFT'}
+                      onChange={(e) => setEditingAlbum({ ...editingAlbum, status: e.target.value as any })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none text-xs"
+                    >
+                      <option value="DRAFT">DRAFT (Nháp)</option>
+                      <option value="PUBLISHED">PUBLISHED (Công khai)</option>
+                      <option value="ARCHIVED">ARCHIVED (Lưu trữ)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="album-is-featured"
+                    checked={editingAlbum.is_featured || false}
+                    onChange={(e) => setEditingAlbum({ ...editingAlbum, is_featured: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="album-is-featured" className="font-bold cursor-pointer select-none">Đánh dấu Album nổi bật</label>
                 </div>
               </div>
 
               <div className="pt-4 flex items-center justify-end space-x-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setEditingPhoto(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  onClick={() => setEditingAlbum(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white font-bold px-5 py-2 rounded-xl shadow-md"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-md flex items-center space-x-1"
                 >
-                  Đăng ảnh
+                  {isLoadingAlbums && (
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white mr-1"></div>
+                  )}
+                  <span>Lưu Album</span>
+                </button>
+              </div>
+            </motion.form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDIT ALBUM IMAGE */}
+      {editingAlbumImage !== null && (
+        <div className="fixed inset-0 z-50 overflow-y-auto text-xs">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setEditingAlbumImage(null)} />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <motion.form 
+              onSubmit={handleSaveAlbumImage}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="relative w-full max-w-md bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl space-y-4 text-slate-900 dark:text-slate-100"
+            >
+              <h3 className="font-display font-bold text-base border-b border-slate-100 pb-2 dark:border-slate-800">
+                {editingAlbumImage.id ? 'Sửa thông tin ảnh' : 'Thêm ảnh mới vào Album'}
+              </h3>
+
+              <div className="space-y-3 font-sans">
+                <div className="space-y-1">
+                  <label className="font-bold">Đường dẫn ảnh (Image URL):</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nhập đường dẫn URL ảnh (ví dụ: https://images.unsplash.com/...)"
+                    value={editingAlbumImage.image_url || ''}
+                    onChange={(e) => setEditingAlbumImage({ ...editingAlbumImage, image_url: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold">Tiêu đề ảnh / Tên khoảnh khắc:</label>
+                  <input
+                    type="text"
+                    placeholder="Nhập tiêu đề hoặc chú thích ảnh..."
+                    value={editingAlbumImage.title || ''}
+                    onChange={(e) => setEditingAlbumImage({ ...editingAlbumImage, title: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold">Mô tả cụ thể:</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Nhập mô tả thêm..."
+                    value={editingAlbumImage.description || ''}
+                    onChange={(e) => setEditingAlbumImage({ ...editingAlbumImage, description: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold">Văn bản thay thế (Alt Text - Để hỗ trợ SEO):</label>
+                  <input
+                    type="text"
+                    placeholder="Ảnh hoạt động văn nghệ học sinh..."
+                    value={editingAlbumImage.alt_text || ''}
+                    onChange={(e) => setEditingAlbumImage({ ...editingAlbumImage, alt_text: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="font-bold">Thứ tự sắp xếp:</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={editingAlbumImage.sort_order ?? 0}
+                      onChange={(e) => setEditingAlbumImage({ ...editingAlbumImage, sort_order: Number(e.target.value) })}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1 flex items-center pt-5">
+                    <input
+                      type="checkbox"
+                      id="img-is-featured"
+                      checked={editingAlbumImage.is_featured || false}
+                      onChange={(e) => setEditingAlbumImage({ ...editingAlbumImage, is_featured: e.target.checked })}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label htmlFor="img-is-featured" className="font-bold cursor-pointer select-none ml-2 text-slate-700 dark:text-slate-300">Nổi bật</label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 flex items-center justify-end space-x-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingAlbumImage(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-md flex items-center space-x-1"
+                >
+                  {isLoadingImages && (
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white mr-1"></div>
+                  )}
+                  <span>Lưu ảnh</span>
                 </button>
               </div>
             </motion.form>
