@@ -36,6 +36,8 @@ export interface DocumentItem {
   issuingBody: string;
   fileUrl: string;
   fileSize: string;
+  fileType?: string;
+  fileName?: string;
 }
 
 export interface PhotoItem {

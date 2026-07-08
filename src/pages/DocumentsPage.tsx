@@ -60,6 +60,8 @@ export default function DocumentsPage() {
       issuingBody: 'Ban Chỉ huy Liên đội',
       fileUrl: doc.file_url,
       fileSize: sizeInMB,
+      fileType: doc.file_type,
+      fileName: doc.file_name,
     };
   });
 

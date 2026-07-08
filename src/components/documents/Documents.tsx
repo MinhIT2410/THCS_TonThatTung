@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Search, Download, Calendar, FolderOpen, ArrowRight, CheckCircle, Sparkles, Building, AlertCircle } from 'lucide-react';
+import { FileText, Search, Download, Calendar, FolderOpen, ArrowRight, CheckCircle, Sparkles, Building, AlertCircle, Eye } from 'lucide-react';
 import { DocumentItem } from '../../types';
 
 interface DocumentsProps {
@@ -34,6 +34,13 @@ export default function Documents({ documents }: DocumentsProps) {
     });
   }, [documents, searchTerm, activeCategory]);
 
+  const isPdf = (doc: DocumentItem): boolean => {
+    if (doc.fileType && doc.fileType.toLowerCase().includes('pdf')) return true;
+    if (doc.fileName && doc.fileName.toLowerCase().endsWith('.pdf')) return true;
+    if (doc.fileUrl && doc.fileUrl.toLowerCase().endsWith('.pdf')) return true;
+    return false;
+  };
+
   const handleDownload = (doc: DocumentItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setDownloadingId(doc.id);
@@ -44,6 +51,19 @@ export default function Documents({ documents }: DocumentsProps) {
       
       // Open in a new tab simulation
       alert(`Đang tiến hành tải tệp tin văn bản: "${doc.title}" (${doc.fileSize}) thành công.`);
+
+      // Trigger actual download link
+      try {
+        const link = document.createElement('a');
+        link.href = doc.fileUrl;
+        link.target = '_blank';
+        link.download = doc.fileName || doc.title;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error('Error triggering download link:', err);
+      }
     }, 1500);
   };
 
@@ -116,7 +136,7 @@ export default function Documents({ documents }: DocumentsProps) {
                   <th className="py-4 px-6">Tên văn bản / Quy định</th>
                   <th className="py-4 px-6">Đơn vị ban hành</th>
                   <th className="py-4 px-6">Ngày ban hành</th>
-                  <th className="py-4 px-6 text-center">Tải xuống</th>
+                  <th className="py-4 px-6 text-center">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -159,27 +179,41 @@ export default function Documents({ documents }: DocumentsProps) {
                         {doc.date}
                       </td>
 
-                      {/* Download */}
+                      {/* Actions */}
                       <td className="py-4.5 px-6 text-center">
-                        {isDownloading ? (
-                          <div className="flex items-center justify-center space-x-1 text-blue-600">
-                            <Sparkles className="h-4 w-4 animate-spin" />
-                            <span className="text-[10px]">Tải...</span>
-                          </div>
-                        ) : isDownloaded ? (
-                          <span className="inline-flex items-center space-x-1 text-emerald-500 font-bold text-[10px]">
-                            <CheckCircle className="h-4 w-4" />
-                            <span>Đã tải</span>
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => handleDownload(doc, e)}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 transition-all"
-                            title={`Tải về (${doc.fileSize})`}
+                        <div className="flex items-center justify-center space-x-2">
+                          <a
+                            href={doc.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 dark:hover:bg-emerald-950/60 px-3 py-1.5 font-bold transition-all shrink-0"
+                            title={isPdf(doc) ? 'Xem văn bản PDF online' : 'Xem văn bản online'}
                           >
-                            <Download className="h-4.5 w-4.5" />
-                          </button>
-                        )}
+                            <Eye className="h-4 w-4" />
+                            <span>{isPdf(doc) ? 'Xem PDF' : 'Xem'}</span>
+                          </a>
+
+                          {isDownloading ? (
+                            <div className="flex items-center justify-center space-x-1 text-blue-600 min-w-[85px] py-1.5">
+                              <Sparkles className="h-4 w-4 animate-spin" />
+                              <span className="text-[10px]">Tải...</span>
+                            </div>
+                          ) : isDownloaded ? (
+                            <span className="inline-flex items-center justify-center space-x-1 text-emerald-500 font-bold text-[10px] min-w-[85px] py-1.5">
+                              <CheckCircle className="h-4 w-4" />
+                              <span>Đã tải</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => handleDownload(doc, e)}
+                              className="inline-flex items-center space-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-600 hover:bg-slate-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-all font-bold shrink-0 shadow-xs"
+                              title={`Tải về (${doc.fileSize})`}
+                            >
+                              <Download className="h-4 w-4" />
+                              <span>Tải về</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -219,28 +253,41 @@ export default function Documents({ documents }: DocumentsProps) {
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
+                  <div className="pt-2.5 border-t border-slate-50 dark:border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <span className="text-[10px] text-slate-400 font-semibold">Cỡ tệp: {doc.fileSize}</span>
                     
-                    {isDownloading ? (
-                      <span className="text-blue-600 font-semibold flex items-center space-x-1">
-                        <Sparkles className="h-3.5 w-3.5 animate-spin" />
-                        <span>Đang tải...</span>
-                      </span>
-                    ) : isDownloaded ? (
-                      <span className="text-emerald-500 font-bold flex items-center space-x-1">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Đã tải thành công</span>
-                      </span>
-                    ) : (
-                      <button
-                        onClick={(e) => handleDownload(doc, e)}
-                        className="flex items-center space-x-1.5 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 px-3.5 py-1.5 font-bold"
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <a
+                        href={doc.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-1 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 px-3 py-1.5 font-bold text-[11px] border border-emerald-200/50 dark:border-emerald-800/50"
+                        title={isPdf(doc) ? 'Xem văn bản PDF online' : 'Xem văn bản online'}
                       >
-                        <Download className="h-3.5 w-3.5" />
-                        <span>Tải tệp tin</span>
-                      </button>
-                    )}
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>{isPdf(doc) ? 'Xem PDF' : 'Xem'}</span>
+                      </a>
+
+                      {isDownloading ? (
+                        <span className="text-blue-600 font-semibold flex items-center space-x-1 text-[11px] py-1.5 px-3">
+                          <Sparkles className="h-3.5 w-3.5 animate-spin" />
+                          <span>Đang tải...</span>
+                        </span>
+                      ) : isDownloaded ? (
+                        <span className="text-emerald-500 font-bold flex items-center space-x-1 text-[11px] py-1.5 px-3">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Đã tải</span>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => handleDownload(doc, e)}
+                          className="flex items-center space-x-1 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 px-3 py-1.5 font-bold text-[11px] border border-blue-200/50 dark:border-blue-800/50 shadow-xs"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span>Tải về</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
