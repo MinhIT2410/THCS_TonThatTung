@@ -12,6 +12,7 @@ export const ROUTES = {
   DOCUMENTS: '/van-ban',
   CONTACT: '/lien-he',
   ADMIN: '/quan-tri',
+  LOGIN: '/dang-nhap',
 } as const;
 
 export type RouteKeys = keyof typeof ROUTES;

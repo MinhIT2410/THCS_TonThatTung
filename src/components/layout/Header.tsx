@@ -7,14 +7,13 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, Sun, Moon, ShieldAlert, Award, FileText, Settings, Search } from 'lucide-react';
 import { NAV_MENU } from '../../config/menu';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface HeaderProps {
   currentView: string;
   setCurrentView: (view: string) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
-  isAdmin: boolean;
-  setIsAdmin: (isAdmin: boolean) => void;
   onOpenSearch: () => void;
   schoolName: string;
 }
@@ -24,12 +23,11 @@ export default function Header({
   setCurrentView,
   isDarkMode,
   toggleDarkMode,
-  isAdmin,
-  setIsAdmin,
   onOpenSearch,
   schoolName
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const navItems = NAV_MENU.filter(item => item.showInNavbar).map(item => ({
     id: item.id,
@@ -125,13 +123,13 @@ export default function Header({
             className={`flex items-center space-x-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-300 ${
               currentView === 'cms'
                 ? 'bg-red-500 text-white shadow-sm shadow-red-500/20'
-                : isAdmin
+                : isAuthenticated
                   ? 'bg-blue-50/80 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900'
                   : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/80 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
             }`}
           >
             <Settings className={`h-4 w-4 ${currentView === 'cms' ? 'animate-spin' : ''}`} />
-            <span className="hidden lg:inline">{isAdmin ? 'Quản trị' : 'Quản lý'}</span>
+            <span className="hidden lg:inline">{isAuthenticated ? 'Quản trị' : 'Quản lý'}</span>
           </button>
 
           {/* Mobile menu button */}
@@ -185,7 +183,7 @@ export default function Header({
                   }`}
                 >
                   <Settings className="h-5 w-5" />
-                  <span>{isAdmin ? 'Mở trang quản trị' : 'Vào Chế độ quản trị'}</span>
+                  <span>{isAuthenticated ? 'Mở trang quản trị' : 'Vào Chế độ quản trị'}</span>
                 </button>
               </div>
             </div>

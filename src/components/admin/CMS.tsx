@@ -10,10 +10,9 @@ import {
   MessageSquare, FileText, Calendar, Image as ImageIcon, FileCode, Check, Eye, X, RefreshCw
 } from 'lucide-react';
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission } from '../../types';
+import { LogoutButton } from '../auth/LogoutButton';
 
 interface CMSProps {
-  isAdmin: boolean;
-  setIsAdmin: (isAdmin: boolean) => void;
   schoolName: string;
   setSchoolName: (name: string) => void;
   schoolSlogan: string;
@@ -36,8 +35,6 @@ interface CMSProps {
 type CMSTab = 'dashboard' | 'news' | 'activities' | 'photos' | 'documents' | 'contacts' | 'settings';
 
 export default function CMS({
-  isAdmin,
-  setIsAdmin,
   schoolName,
   setSchoolName,
   schoolSlogan,
@@ -56,9 +53,6 @@ export default function CMS({
 }: CMSProps) {
   // CMS state values
   const [activeTab, setActiveTab] = useState<CMSTab>('dashboard');
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
 
   // Editor states (Modals or quick forms)
   const [editingNews, setEditingNews] = useState<Partial<NewsItem> | null>(null);
@@ -72,18 +66,6 @@ export default function CMS({
   const triggerAlert = (msg: string) => {
     setCmsAlert(msg);
     setTimeout(() => setCmsAlert(''), 3000);
-  };
-
-  // 1. Authentication Handlers
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === '123456' || password === 'admin') {
-      setIsAdmin(true);
-      setLoginError('');
-      triggerAlert('Đăng nhập thành công! Đã kích hoạt quyền quản trị.');
-    } else {
-      setLoginError('Mật khẩu mô phỏng sai! Hãy sử dụng "admin" hoặc "123456" để đăng nhập.');
-    }
   };
 
   // 2. School Info Configuration Form
@@ -235,68 +217,6 @@ export default function CMS({
     }
   };
 
-  // Render Login Wall if not authorized
-  if (!isAdmin) {
-    return (
-      <div className="mx-auto max-w-md py-16 px-4 font-sans text-xs flex flex-col items-center">
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-6 sm:p-8 shadow-xl space-y-6"
-        >
-          <div className="text-center space-y-2">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500 text-white shadow-md">
-              <Lock className="h-6 w-6" />
-            </div>
-            <h1 className="font-display font-bold text-lg text-slate-900 dark:text-white">Bảo mật hệ thống CMS</h1>
-            <p className="text-slate-500 dark:text-slate-400">Đăng nhập tài khoản Quản trị viên để tiến hành thay đổi cấu trúc, nội dung và phê duyệt phản hồi.</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4 font-sans">
-            <div className="space-y-1.5">
-              <label className="block font-bold text-slate-700 dark:text-slate-300">Tên đăng nhập:</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block font-bold text-slate-700 dark:text-slate-300">Mật khẩu admin:</label>
-              <input
-                type="password"
-                placeholder="Nhập admin hoặc 123456..."
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-              />
-            </div>
-
-            {loginError && (
-              <p className="text-red-500 font-semibold leading-relaxed">{loginError}</p>
-            )}
-
-            <button
-              type="submit"
-              className="flex w-full items-center justify-center space-x-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-red-600 py-3 text-xs font-bold text-white hover:from-blue-700 hover:to-red-700 transition-all shadow-md"
-            >
-              <Key className="h-4.5 w-4.5" />
-              <span>Đăng nhập hệ thống (Mô phỏng)</span>
-            </button>
-          </form>
-
-          <div className="border-t border-slate-100 pt-4 text-center dark:border-slate-800">
-            <span className="text-[10px] text-slate-400 font-medium bg-slate-50 dark:bg-slate-950 px-2 py-1 rounded-md">
-              Mẹo: Nhập mật khẩu <strong>admin</strong> để vượt qua tường lửa bảo mật.
-            </span>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 pb-24 font-sans text-xs">
       
@@ -339,12 +259,7 @@ export default function CMS({
           </button>
 
           {/* Logout */}
-          <button
-            onClick={() => { setIsAdmin(false); triggerAlert('Đã đăng xuất tài khoản quản trị.'); }}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl shadow-md"
-          >
-            Đăng xuất
-          </button>
+          <LogoutButton />
         </div>
       </div>
 

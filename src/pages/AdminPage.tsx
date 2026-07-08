@@ -9,8 +9,6 @@ import CMS from '../components/admin/CMS';
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission } from '../types';
 
 interface AdminPageContext {
-  isAdmin: boolean;
-  setIsAdmin: (isAdmin: boolean) => void;
   schoolName: string;
   setSchoolName: (name: string) => void;
   schoolSlogan: string;
@@ -30,8 +28,6 @@ interface AdminPageContext {
 
 export default function AdminPage() {
   const {
-    isAdmin,
-    setIsAdmin,
     schoolName,
     setSchoolName,
     schoolSlogan,
@@ -51,8 +47,6 @@ export default function AdminPage() {
 
   return (
     <CMS
-      isAdmin={isAdmin}
-      setIsAdmin={setIsAdmin}
       schoolName={schoolName}
       setSchoolName={setSchoolName}
       schoolSlogan={schoolSlogan}

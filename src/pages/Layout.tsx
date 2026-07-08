@@ -15,8 +15,6 @@ interface LayoutProps {
   onNavigate: (viewId: string) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
-  isAdmin: boolean;
-  setIsAdmin: (isAdmin: boolean) => void;
   onOpenSearch: () => void;
   schoolName: string;
   onSubmitContactForm: (submission: Omit<ContactSubmission, 'id' | 'date' | 'status'>) => void;
@@ -28,8 +26,6 @@ export default function Layout({
   onNavigate,
   isDarkMode,
   toggleDarkMode,
-  isAdmin,
-  setIsAdmin,
   onOpenSearch,
   schoolName,
   onSubmitContactForm,
@@ -45,8 +41,6 @@ export default function Layout({
         setCurrentView={onNavigate}
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
-        isAdmin={isAdmin}
-        setIsAdmin={setIsAdmin}
         onOpenSearch={onOpenSearch}
         schoolName={schoolName}
       />

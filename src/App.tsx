@@ -22,6 +22,8 @@ import GalleryPage from './pages/GalleryPage';
 import DocumentsPage from './pages/DocumentsPage';
 import ContactPage from './pages/ContactPage';
 import AdminPage from './pages/AdminPage';
+import LoginPage from './pages/LoginPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 import { newsService } from './services/newsService';
 import { activityService } from './services/activityService';
@@ -107,10 +109,6 @@ function AppContent() {
     return saved !== null ? saved : [];
   });
 
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    return sessionStorage.getItem('isAdmin') === 'true';
-  });
-
   // --- Search Overlay States ---
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
@@ -163,10 +161,6 @@ function AppContent() {
   useEffect(() => {
     storage.set<ContactSubmission[]>(STORAGE_KEYS.CONTACTS, contacts);
   }, [contacts]);
-
-  useEffect(() => {
-    sessionStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
-  }, [isAdmin]);
 
   // --- Reset database to default seed data ---
   const handleResetDefaults = () => {
@@ -258,8 +252,6 @@ function AppContent() {
     setSchoolName,
     schoolSlogan,
     setSchoolSlogan,
-    isAdmin,
-    setIsAdmin,
     selectedNews,
     setSelectedNews,
     selectedActivity,
@@ -283,8 +275,6 @@ function AppContent() {
             onNavigate={handleNavigate}
             isDarkMode={isDarkMode}
             toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-            isAdmin={isAdmin}
-            setIsAdmin={setIsAdmin}
             onOpenSearch={() => setIsSearchOpen(true)}
             schoolName={schoolName}
             onSubmitContactForm={handleSubmitContactForm}
@@ -298,7 +288,12 @@ function AppContent() {
           <Route path={ROUTES.GALLERY} element={<GalleryPage />} />
           <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
           <Route path={ROUTES.CONTACT} element={<ContactPage />} />
-          <Route path={ROUTES.ADMIN} element={<AdminPage />} />
+          <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+          <Route path={ROUTES.ADMIN} element={
+            <ProtectedRoute>
+              <AdminPage />
+            </ProtectedRoute>
+          } />
         </Route>
       </Routes>
 
