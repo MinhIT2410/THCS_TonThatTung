@@ -22,6 +22,7 @@ import {
   GalleryAlbumInput, 
   GalleryImageInput 
 } from '../../types/gallery';
+import { ImageUploadField } from './ImageUploadField';
 
 interface CMSProps {
   schoolName: string;
@@ -1230,16 +1231,13 @@ export default function CMS({
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">Đường dẫn ảnh bìa (URL):</label>
-                  <input
-                    type="text"
-                    placeholder="Nhập link hình ảnh (ví dụ: https://images.unsplash.com/...)"
-                    value={editingDbPost.cover_image_url || ''}
-                    onChange={(e) => setEditingDbPost({ ...editingDbPost, cover_image_url: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
+                <ImageUploadField
+                  label="Đường dẫn ảnh bìa (Cover Image):"
+                  value={editingDbPost.cover_image_url || ''}
+                  onChange={(url) => setEditingDbPost({ ...editingDbPost, cover_image_url: url })}
+                  folder="cms"
+                  placeholder="Nhập link hình ảnh hoặc bấm Chọn ảnh..."
+                />
 
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700 dark:text-slate-300">Tóm tắt ngắn (Excerpt):</label>
@@ -1329,16 +1327,13 @@ export default function CMS({
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="font-bold">Đường dẫn ảnh bìa (Cover Image URL):</label>
-                  <input
-                    type="text"
-                    placeholder="Link hình ảnh làm đại diện album..."
-                    value={editingAlbum.cover_image_url || ''}
-                    onChange={(e) => setEditingAlbum({ ...editingAlbum, cover_image_url: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
-                  />
-                </div>
+                <ImageUploadField
+                  label="Đường dẫn ảnh bìa (Cover Image):"
+                  value={editingAlbum.cover_image_url || ''}
+                  onChange={(url) => setEditingAlbum({ ...editingAlbum, cover_image_url: url })}
+                  folder="gallery/albums"
+                  placeholder="Nhập link hình ảnh hoặc bấm Chọn ảnh..."
+                />
 
                 <div className="space-y-1">
                   <label className="font-bold">Mô tả Album:</label>
@@ -1428,17 +1423,13 @@ export default function CMS({
               </h3>
 
               <div className="space-y-3 font-sans">
-                <div className="space-y-1">
-                  <label className="font-bold">Đường dẫn ảnh (Image URL):</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Nhập đường dẫn URL ảnh (ví dụ: https://images.unsplash.com/...)"
-                    value={editingAlbumImage.image_url || ''}
-                    onChange={(e) => setEditingAlbumImage({ ...editingAlbumImage, image_url: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-xs"
-                  />
-                </div>
+                <ImageUploadField
+                  label="Đường dẫn ảnh (Image URL):"
+                  value={editingAlbumImage.image_url || ''}
+                  onChange={(url) => setEditingAlbumImage({ ...editingAlbumImage, image_url: url })}
+                  folder="gallery/images"
+                  placeholder="Nhập đường dẫn URL ảnh hoặc bấm Chọn ảnh..."
+                />
 
                 <div className="space-y-1">
                   <label className="font-bold">Tiêu đề ảnh / Tên khoảnh khắc:</label>
