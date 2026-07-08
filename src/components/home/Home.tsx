@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Award, ArrowRight, Eye, Calendar, Sparkles, BookOpen, Volume2, Landmark } from 'lucide-react';
 import { NewsItem, ActivityItem, PhotoItem } from '../../types';
 import Hero from './Hero';
+import { bannerService } from '../../services/bannerService';
+import { HomeBanner } from '../../types/banner';
 
 interface HomeProps {
   news: NewsItem[];
@@ -26,6 +28,31 @@ export default function Home({
   onSelectNews,
   onSelectActivity
 }: HomeProps) {
+  const [publishedBanners, setPublishedBanners] = useState<HomeBanner[]>([]);
+  const [isLoadingBanners, setIsLoadingBanners] = useState<boolean>(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchBanners = async () => {
+      try {
+        const list = await bannerService.getPublishedBanners();
+        if (active) {
+          setPublishedBanners(list);
+        }
+      } catch (err) {
+        console.error('Error fetching published banners:', err);
+      } finally {
+        if (active) {
+          setIsLoadingBanners(false);
+        }
+      }
+    };
+    fetchBanners();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Get featured/latest news items (max 3)
   const featuredNews = news.filter(n => n.featured).slice(0, 3);
   const displayNews = featuredNews.length > 0 ? featuredNews : news.slice(0, 3);
