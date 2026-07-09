@@ -23,6 +23,8 @@ import DocumentsPage from './pages/DocumentsPage';
 import ContactPage from './pages/ContactPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
+import NewsDetailPage from './pages/NewsDetailPage';
+import AlbumDetailPage from './pages/AlbumDetailPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 import { newsService } from './services/newsService';
@@ -276,8 +278,10 @@ function AppContent() {
           <Route path={ROUTES.HOME} element={<HomePage />} />
           <Route path={ROUTES.ABOUT} element={<AboutPage />} />
           <Route path={ROUTES.NEWS} element={<NewsPage />} />
+          <Route path={`${ROUTES.NEWS}/:slug`} element={<NewsDetailPage />} />
           <Route path={ROUTES.ACTIVITIES} element={<ActivitiesPage />} />
           <Route path={ROUTES.GALLERY} element={<GalleryPage />} />
+          <Route path={`${ROUTES.GALLERY}/:id`} element={<AlbumDetailPage />} />
           <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
           <Route path={ROUTES.CONTACT} element={<ContactPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />

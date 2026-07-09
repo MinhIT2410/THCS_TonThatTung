@@ -12,7 +12,7 @@ interface DocumentsProps {
   documents: DocumentItem[];
 }
 
-type DocCategory = 'Tất cả' | 'Nghị quyết' | 'Kế hoạch' | 'Điều lệ' | 'Hướng dẫn';
+type DocCategory = 'Tất cả' | 'Kế hoạch' | 'Công văn' | 'Biểu mẫu' | 'Quyết định' | 'Khác';
 
 export default function Documents({ documents }: DocumentsProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,7 +86,7 @@ export default function Documents({ documents }: DocumentsProps) {
       {/* Filters and Search box */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6 dark:border-slate-800">
         <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-          {['Tất cả', 'Nghị quyết', 'Kế hoạch', 'Điều lệ', 'Hướng dẫn'].map((cat) => {
+          {['Tất cả', 'Kế hoạch', 'Công văn', 'Biểu mẫu', 'Quyết định', 'Khác'].map((cat) => {
             const isActive = activeCategory === cat;
             return (
               <button
