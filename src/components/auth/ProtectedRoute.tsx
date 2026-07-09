@@ -5,15 +5,15 @@
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../features/auth/AuthContext';
 import { ROUTES } from '../../config/routes';
-import { AppRoleCode } from '../../types/auth';
+import { UserRole } from '../../features/auth/authTypes';
 import { AccessDenied } from './AccessDenied';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
-  allowedRoles?: AppRoleCode[];
+  allowedRoles?: UserRole[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -25,9 +25,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     isAuthenticated,
     loading,
     profile,
-    roles,
     profileLoading,
-    error,
     isActive,
     isAdminUser,
     hasAnyRole,
@@ -66,7 +64,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // 5. Allowed roles specified but user roles don't match
-  if (allowedRoles && allowedRoles.length > 0 && !hasAnyRole(allowedRoles)) {
+  if (allowedRoles && allowedRoles.length > 0 && !hasAnyRole(allowedRoles as string[])) {
     return <AccessDenied message="Bạn không có vai trò phù hợp để truy cập trang này" />;
   }
 

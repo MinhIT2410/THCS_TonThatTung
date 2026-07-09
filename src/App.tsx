@@ -26,6 +26,7 @@ import LoginPage from './pages/LoginPage';
 import NewsDetailPage from './pages/NewsDetailPage';
 import AlbumDetailPage from './pages/AlbumDetailPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { RoleGuard } from './components/auth/RoleGuard';
 
 import { newsService } from './services/newsService';
 import { activityService } from './services/activityService';
@@ -286,8 +287,10 @@ function AppContent() {
           <Route path={ROUTES.CONTACT} element={<ContactPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.ADMIN} element={
-            <ProtectedRoute requireAdmin>
-              <AdminPage />
+            <ProtectedRoute>
+              <RoleGuard allowedRoles={['admin', 'editor']}>
+                <AdminPage />
+              </RoleGuard>
             </ProtectedRoute>
           } />
         </Route>

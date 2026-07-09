@@ -4,8 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { isSupabaseConfigured } from '../../lib/supabase/client';
+import { useCanEditCms } from './useCanEditCms';
 
 interface EditModeContextType {
   editMode: boolean;
@@ -16,24 +15,8 @@ interface EditModeContextType {
 
 const EditModeContext = createContext<EditModeContextType | undefined>(undefined);
 
-export function useCanEditCms() {
-  const { isAdminUser, roles } = useAuth();
-  const isCmsAdmin = isAdminUser;
-  const isCmsEditor = roles?.some(r => r.code === 'EDITOR' || r.code === 'CMS_EDITOR') || false;
-  
-  const isDev = import.meta.env.DEV;
-  const enableCmsEditing = import.meta.env.VITE_ENABLE_CMS_EDITING === "true";
-  
-  const canEditCms = isCmsAdmin || isCmsEditor || !isSupabaseConfigured || isDev || enableCmsEditing;
+export { useCanEditCms };
 
-  return {
-    canEditCms,
-    canEdit: canEditCms,
-    isAdmin: isCmsAdmin,
-    isEditor: isCmsEditor || isCmsAdmin,
-    role: isCmsAdmin ? "admin" : isCmsEditor ? "editor" : isDev ? "developer" : "viewer"
-  };
-}
 
 export function EditModeProvider({ children }: { children: React.ReactNode }) {
   const { canEditCms } = useCanEditCms();

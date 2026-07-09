@@ -12,7 +12,7 @@ import { motion } from 'motion/react';
 import { isSupabaseConfigured } from '../lib/supabase/client';
 
 export default function LoginPage() {
-  const { signIn, isAuthenticated, loading } = useAuth();
+  const { signIn, isAuthenticated, loading, profile } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -21,10 +21,14 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate(ROUTES.ADMIN, { replace: true });
+    if (!loading && isAuthenticated && profile) {
+      if (['admin', 'editor'].includes(profile.role)) {
+        navigate(ROUTES.ADMIN, { replace: true });
+      } else {
+        navigate(ROUTES.HOME, { replace: true });
+      }
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [isAuthenticated, loading, profile, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +49,6 @@ export default function LoginPage() {
       const { error } = await signIn(email, password);
       if (error) {
         setErrorMsg('Email hoặc mật khẩu không đúng.');
-      } else {
-        navigate(ROUTES.ADMIN, { replace: true });
       }
     } catch (err) {
       setErrorMsg('Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại.');
