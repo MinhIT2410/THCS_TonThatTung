@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, X, FileText, Calendar, FileCode, ArrowRight, AlertCircle 
@@ -33,11 +33,11 @@ import { aboutService } from './services/aboutService';
 import { storage } from './services/storage/localStorage';
 import { NewsItem, ActivityItem, PhotoItem, DocumentItem, ContactSubmission, LeaderProfile } from './types';
 
+export const AppDataContext = React.createContext<any>(null);
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <AppContent />
   );
 }
 
@@ -263,24 +263,16 @@ function AppContent() {
     handleNavigate,
     handleSelectNewsItem,
     handleSelectActivityItem,
-    achievements: aboutService.getAchievements()
+    achievements: aboutService.getAchievements(),
+    isDarkMode,
+    setIsDarkMode,
+    setIsSearchOpen
   };
 
   return (
-    <>
+    <AppDataContext.Provider value={contextValue}>
       <Routes>
-        <Route element={
-          <Layout
-            currentView={currentView}
-            onNavigate={handleNavigate}
-            isDarkMode={isDarkMode}
-            toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-            onOpenSearch={() => setIsSearchOpen(true)}
-            schoolName={schoolName}
-            onSubmitContactForm={handleSubmitContactForm}
-            contextValue={contextValue}
-          />
-        }>
+        <Route element={<Layout />}>
           <Route path={ROUTES.HOME} element={<HomePage />} />
           <Route path={ROUTES.ABOUT} element={<AboutPage />} />
           <Route path={ROUTES.NEWS} element={<NewsPage />} />
@@ -438,6 +430,6 @@ function AppContent() {
           </div>
         )}
       </AnimatePresence>
-    </>
+    </AppDataContext.Provider>
   );
 }

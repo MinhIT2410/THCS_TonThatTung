@@ -3,45 +3,54 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { ContactSubmission } from '../types';
+import { AppDataContext } from '../App';
+import { ROUTES } from '../config/routes';
 
-interface LayoutProps {
-  currentView: string;
-  onNavigate: (viewId: string) => void;
-  isDarkMode: boolean;
-  toggleDarkMode: () => void;
-  onOpenSearch: () => void;
-  schoolName: string;
-  onSubmitContactForm: (submission: Omit<ContactSubmission, 'id' | 'date' | 'status'>) => void;
-  contextValue: any;
-}
-
-export default function Layout({
-  currentView,
-  onNavigate,
-  isDarkMode,
-  toggleDarkMode,
-  onOpenSearch,
-  schoolName,
-  onSubmitContactForm,
-  contextValue
-}: LayoutProps) {
+export default function Layout() {
   const location = useLocation();
+  const context = useContext(AppDataContext);
+
+  if (!context) {
+    return <Outlet />;
+  }
+
+  const {
+    schoolName,
+    isDarkMode,
+    setIsDarkMode,
+    handleNavigate,
+    handleSubmitContactForm,
+    setIsSearchOpen,
+  } = context;
+
+  // Derive currentView from pathname
+  const getActiveView = (pathname: string): string => {
+    if (pathname === ROUTES.HOME) return 'home';
+    if (pathname === ROUTES.ABOUT) return 'about';
+    if (pathname === ROUTES.NEWS) return 'news';
+    if (pathname === ROUTES.ACTIVITIES) return 'activities';
+    if (pathname === ROUTES.GALLERY) return 'gallery';
+    if (pathname === ROUTES.DOCUMENTS) return 'documents';
+    if (pathname === ROUTES.CONTACT) return 'contact';
+    if (pathname === ROUTES.ADMIN) return 'cms';
+    return 'home';
+  };
+  const currentView = getActiveView(location.pathname);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300 relative">
       {/* Header Navigation Bar */}
       <Header
         currentView={currentView}
-        setCurrentView={onNavigate}
+        setCurrentView={handleNavigate}
         isDarkMode={isDarkMode}
-        toggleDarkMode={toggleDarkMode}
-        onOpenSearch={onOpenSearch}
+        toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        onOpenSearch={() => setIsSearchOpen(true)}
         schoolName={schoolName}
       />
 
@@ -55,15 +64,15 @@ export default function Layout({
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
           >
-            <Outlet context={contextValue} />
+            <Outlet context={context} />
           </motion.div>
         </AnimatePresence>
       </main>
 
       {/* Footer Section */}
       <Footer
-        onNavigate={onNavigate}
-        onSubmitSuggestion={onSubmitContactForm}
+        onNavigate={handleNavigate}
+        onSubmitSuggestion={handleSubmitContactForm}
       />
     </div>
   );
