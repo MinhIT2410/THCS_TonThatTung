@@ -25,6 +25,40 @@ const MOCK_NEWS: NewsItem[] = [
 
 export const newsApi = {
   /**
+   * Get all news articles for admin, including draft, published, archived
+   */
+  async getAllNewsForAdmin(): Promise<NewsItem[]> {
+    if (!isSupabaseConfigured) {
+      return [...MOCK_NEWS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    try {
+      const { data, error } = await supabase
+        .from('news')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        if (error.code === 'PGRST116' || error.code === '42P01') {
+          console.warn('public.news table is not available yet, falling back to mock data');
+          return [...MOCK_NEWS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        }
+        throw normalizeApiError(error);
+      }
+      return data || [];
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      return [...MOCK_NEWS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+  },
+
+  /**
+   * Get a news article by ID for admin
+   */
+  async getNewsByIdForAdmin(id: string): Promise<NewsItem | null> {
+    return this.getNewsById(id);
+  },
+
+  /**
    * Get all published news articles
    */
   async getPublishedNews(): Promise<NewsItem[]> {

@@ -19,3 +19,15 @@ export interface NewsItem {
   created_at: string;
   updated_at: string;
 }
+
+export type CreateNewsInput = {
+  title: string;
+  slug: string;
+  summary?: string | null;
+  content?: string | null;
+  thumbnail_url?: string | null;
+  status?: NewsStatus;
+};
+
+export type UpdateNewsInput = Partial<CreateNewsInput>;
+
