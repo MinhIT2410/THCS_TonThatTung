@@ -16,6 +16,7 @@ const MOCK_DOCUMENTS: SchoolDocument[] = [
     file_url: "https://example.com/ke-hoach-hk1.pdf",
     file_name: "ke-hoach-hk1.pdf",
     file_size: 1024 * 350, // 350 KB
+    status: "published",
     published_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -35,6 +36,7 @@ export const documentApi = {
       const { data, error } = await supabase
         .from('documents')
         .select('*')
+        .eq('status', 'published')
         .order('published_at', { ascending: false });
 
       if (error) {
@@ -64,6 +66,7 @@ export const documentApi = {
         .from('documents')
         .select('*')
         .eq('id', id)
+        .eq('status', 'published')
         .maybeSingle();
 
       if (error) {
@@ -92,6 +95,7 @@ export const documentApi = {
         file_url: input.file_url || '',
         file_name: input.file_name || 'document.pdf',
         file_size: input.file_size || 0,
+        status: input.status || 'published',
         published_at: input.published_at || new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -111,6 +115,8 @@ export const documentApi = {
           file_url: input.file_url,
           file_name: input.file_name,
           file_size: input.file_size,
+          mime_type: input.mime_type,
+          status: input.status || 'published',
           published_at: input.published_at || now,
           created_at: now,
           updated_at: now

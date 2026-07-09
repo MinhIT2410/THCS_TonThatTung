@@ -68,6 +68,7 @@ export const newsApi = {
         .from('news')
         .select('*')
         .eq('slug', slug)
+        .eq('status', 'published')
         .maybeSingle();
 
       if (error) {

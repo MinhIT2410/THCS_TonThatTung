@@ -13,6 +13,7 @@ const MOCK_ALBUMS: Album[] = [
     title: "Đại hội Đội viên THCS Tôn Thất Tùng năm học 2025 - 2026",
     description: "Hình ảnh ghi lại không khí rộn ràng, nghiêm túc và đoàn kết của Đại hội.",
     cover_image_url: "https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800",
+    status: "published",
     published_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -51,6 +52,7 @@ export const albumApi = {
       const { data, error } = await supabase
         .from('albums')
         .select('*')
+        .eq('status', 'published')
         .order('published_at', { ascending: false });
 
       if (error) {
@@ -80,6 +82,7 @@ export const albumApi = {
         .from('albums')
         .select('*')
         .eq('id', id)
+        .eq('status', 'published')
         .maybeSingle();
 
       if (error) {
@@ -134,6 +137,7 @@ export const albumApi = {
         title: input.title || 'Untitled Album',
         description: input.description,
         cover_image_url: input.cover_image_url || '',
+        status: input.status || 'published',
         published_at: input.published_at || new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -150,6 +154,7 @@ export const albumApi = {
           title: input.title,
           description: input.description,
           cover_image_url: input.cover_image_url,
+          status: input.status || 'published',
           published_at: input.published_at || now,
           created_at: now,
           updated_at: now
