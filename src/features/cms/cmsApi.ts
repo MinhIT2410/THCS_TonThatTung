@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { supabase, isSupabaseConfigured } from '../../lib/supabase/client';
+import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
 import { CmsOverride } from './cmsTypes';
+import { ApiError, normalizeApiError } from '../../services/apiError';
 
 const LOCAL_STORAGE_KEY = 'cms_overrides_fallback';
 
@@ -31,18 +32,22 @@ export const cmsApi = {
       const list = getLocalFallback();
       return list.find(o => o.page_key === pageKey && o.block_key === blockKey && o.is_enabled !== false) || null;
     }
-    const { data, error } = await supabase
-      .from('cms_overrides')
-      .select('*')
-      .eq('page_key', pageKey)
-      .eq('block_key', blockKey)
-      .eq('is_enabled', true)
-      .maybeSingle(); // maybeSingle doesn't throw PGRST116 when no row is found
-    
-    if (error) {
-      throw error;
+    try {
+      const { data, error } = await supabase
+        .from('cms_overrides')
+        .select('*')
+        .eq('page_key', pageKey)
+        .eq('block_key', blockKey)
+        .eq('is_enabled', true)
+        .maybeSingle(); // maybeSingle doesn't throw PGRST116 when no row is found
+      
+      if (error) {
+        throw normalizeApiError(error);
+      }
+      return data;
+    } catch (err) {
+      throw normalizeApiError(err);
     }
-    return data;
   },
 
   async getPageOverrides(pageKey: string): Promise<CmsOverride[]> {
@@ -50,14 +55,18 @@ export const cmsApi = {
       const list = getLocalFallback();
       return list.filter(o => o.page_key === pageKey && o.is_enabled !== false);
     }
-    const { data, error } = await supabase
-      .from('cms_overrides')
-      .select('*')
-      .eq('page_key', pageKey)
-      .eq('is_enabled', true);
-    
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('cms_overrides')
+        .select('*')
+        .eq('page_key', pageKey)
+        .eq('is_enabled', true);
+      
+      if (error) throw normalizeApiError(error);
+      return data || [];
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
   },
 
   async upsertOverride(pageKey: string, blockKey: string, data: object): Promise<CmsOverride> {
@@ -95,27 +104,31 @@ export const cmsApi = {
       return record;
     }
 
-    const now = new Date().toISOString();
-    const { data: upsertedData, error } = await supabase
-      .from('cms_overrides')
-      .upsert(
-        {
-          page_key: pageKey,
-          block_key: blockKey,
-          data,
-          is_enabled: true,
-          updated_at: now,
-          updated_by: updatedBy
-        },
-        {
-          onConflict: 'page_key,block_key'
-        }
-      )
-      .select()
-      .single();
+    try {
+      const now = new Date().toISOString();
+      const { data: upsertedData, error } = await supabase
+        .from('cms_overrides')
+        .upsert(
+          {
+            page_key: pageKey,
+            block_key: blockKey,
+            data,
+            is_enabled: true,
+            updated_at: now,
+            updated_by: updatedBy
+          },
+          {
+            onConflict: 'page_key,block_key'
+          }
+        )
+        .select()
+        .single();
 
-    if (error) throw error;
-    return upsertedData;
+      if (error) throw normalizeApiError(error);
+      return upsertedData;
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
   },
 
   async deleteOverride(pageKey: string, blockKey: string): Promise<boolean> {
@@ -125,14 +138,18 @@ export const cmsApi = {
       saveLocalFallback(filtered);
       return true;
     }
-    const { error } = await supabase
-      .from('cms_overrides')
-      .delete()
-      .eq('page_key', pageKey)
-      .eq('block_key', blockKey);
-    
-    if (error) throw error;
-    return true;
+    try {
+      const { error } = await supabase
+        .from('cms_overrides')
+        .delete()
+        .eq('page_key', pageKey)
+        .eq('block_key', blockKey);
+      
+      if (error) throw normalizeApiError(error);
+      return true;
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
   },
 
   async disableOverride(pageKey: string, blockKey: string): Promise<boolean> {
@@ -145,13 +162,17 @@ export const cmsApi = {
       }
       return true;
     }
-    const { error } = await supabase
-      .from('cms_overrides')
-      .update({ is_enabled: false })
-      .eq('page_key', pageKey)
-      .eq('block_key', blockKey);
-    
-    if (error) throw error;
-    return true;
+    try {
+      const { error } = await supabase
+        .from('cms_overrides')
+        .update({ is_enabled: false })
+        .eq('page_key', pageKey)
+        .eq('block_key', blockKey);
+      
+      if (error) throw normalizeApiError(error);
+      return true;
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
   }
 };

@@ -1,0 +1,235 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
+import { NewsItem, NewsStatus } from './newsTypes';
+import { ApiError, normalizeApiError } from '../../services/apiError';
+
+// Static/mock data fallback for development or before public.news table is fully migrated.
+const MOCK_NEWS: NewsItem[] = [
+  {
+    id: "news-1",
+    title: "Đại hội Liên đội THCS Tôn Thất Tùng nhiệm kỳ mới thành công rực rỡ",
+    slug: "dai-hoi-lien-doi-nhiem-ky-moi-thanh-cong-ruc-ro",
+    summary: "Đại hội đã tổng kết hoạt động năm qua và đề ra phương hướng chỉ đạo cho hoạt động Đội xuất sắc trong năm học mới.",
+    content: "<p>Đại hội đã diễn ra trong không khí trang nghiêm và đầy nhiệt huyết của các Đội viên học sinh...</p>",
+    thumbnail_url: "https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800",
+    status: "published",
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+export const newsApi = {
+  /**
+   * Get all published news articles
+   */
+  async getPublishedNews(): Promise<NewsItem[]> {
+    if (!isSupabaseConfigured) {
+      return MOCK_NEWS;
+    }
+    try {
+      // TODO: Connect to public.news table when database schema is ready.
+      const { data, error } = await supabase
+        .from('news')
+        .select('*')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false });
+
+      if (error) {
+        // If table doesn't exist yet, gracefully fall back to mock data
+        if (error.code === 'PGRST116' || error.code === '42P01') {
+          console.warn('public.news table is not available yet, falling back to mock data');
+          return MOCK_NEWS;
+        }
+        throw normalizeApiError(error);
+      }
+      return data || [];
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      // Graceful fallback for local development if DB is not fully synced
+      return MOCK_NEWS;
+    }
+  },
+
+  /**
+   * Get a news article by slug
+   */
+  async getNewsBySlug(slug: string): Promise<NewsItem | null> {
+    if (!isSupabaseConfigured) {
+      return MOCK_NEWS.find(n => n.slug === slug) || null;
+    }
+    try {
+      // TODO: Connect to public.news table when database schema is ready.
+      const { data, error } = await supabase
+        .from('news')
+        .select('*')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (error) {
+        if (error.code === '42P01') {
+          return MOCK_NEWS.find(n => n.slug === slug) || null;
+        }
+        throw normalizeApiError(error);
+      }
+      return data;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      return MOCK_NEWS.find(n => n.slug === slug) || null;
+    }
+  },
+
+  /**
+   * Get a news article by ID
+   */
+  async getNewsById(id: string): Promise<NewsItem | null> {
+    if (!isSupabaseConfigured) {
+      return MOCK_NEWS.find(n => n.id === id) || null;
+    }
+    try {
+      // TODO: Connect to public.news table when database schema is ready.
+      const { data, error } = await supabase
+        .from('news')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) {
+        if (error.code === '42P01') {
+          return MOCK_NEWS.find(n => n.id === id) || null;
+        }
+        throw normalizeApiError(error);
+      }
+      return data;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      return MOCK_NEWS.find(n => n.id === id) || null;
+    }
+  },
+
+  /**
+   * Create a new news article
+   */
+  async createNews(input: Partial<Omit<NewsItem, 'id' | 'created_at' | 'updated_at'>>): Promise<NewsItem> {
+    if (!isSupabaseConfigured) {
+      const newItem: NewsItem = {
+        id: `news-${Date.now()}`,
+        title: input.title || 'Untitled',
+        slug: input.slug || `untitled-${Date.now()}`,
+        summary: input.summary,
+        content: input.content,
+        thumbnail_url: input.thumbnail_url,
+        status: input.status || 'draft',
+        published_at: input.status === 'published' ? new Date().toISOString() : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      MOCK_NEWS.push(newItem);
+      return newItem;
+    }
+    try {
+      // TODO: Connect to public.news table when database schema is ready.
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('news')
+        .insert({
+          title: input.title,
+          slug: input.slug,
+          summary: input.summary,
+          content: input.content,
+          thumbnail_url: input.thumbnail_url,
+          status: input.status || 'draft',
+          published_at: input.status === 'published' ? now : null,
+          created_at: now,
+          updated_at: now
+        })
+        .select()
+        .single();
+
+      if (error) throw normalizeApiError(error);
+      return data;
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
+  },
+
+  /**
+   * Update an existing news article
+   */
+  async updateNews(id: string, input: Partial<NewsItem>): Promise<NewsItem> {
+    if (!isSupabaseConfigured) {
+      const idx = MOCK_NEWS.findIndex(n => n.id === id);
+      if (idx === -1) {
+        throw new ApiError('NOT_FOUND', 'Không tìm thấy bài viết.');
+      }
+      const updated: NewsItem = {
+        ...MOCK_NEWS[idx],
+        ...input,
+        updated_at: new Date().toISOString()
+      };
+      MOCK_NEWS[idx] = updated;
+      return updated;
+    }
+    try {
+      // TODO: Connect to public.news table when database schema is ready.
+      const { data, error } = await supabase
+        .from('news')
+        .update({
+          ...input,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw normalizeApiError(error);
+      return data;
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
+  },
+
+  /**
+   * Delete a news article
+   */
+  async deleteNews(id: string): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      const idx = MOCK_NEWS.findIndex(n => n.id === id);
+      if (idx !== -1) {
+        MOCK_NEWS.splice(idx, 1);
+      }
+      return true;
+    }
+    try {
+      // TODO: Connect to public.news table when database schema is ready.
+      const { error } = await supabase
+        .from('news')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw normalizeApiError(error);
+      return true;
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
+  },
+
+  /**
+   * Publish a news article
+   */
+  async publishNews(id: string): Promise<NewsItem> {
+    const now = new Date().toISOString();
+    return this.updateNews(id, { status: 'published', published_at: now });
+  },
+
+  /**
+   * Archive a news article
+   */
+  async archiveNews(id: string): Promise<NewsItem> {
+    return this.updateNews(id, { status: 'archived' });
+  }
+};
