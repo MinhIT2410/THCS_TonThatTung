@@ -65,3 +65,17 @@ where p.id = u.id
 
 *Lưu ý*: Không bao giờ đưa địa chỉ email admin thực tế vào tệp di chuyển SQL di động để tránh rò rỉ thông tin bảo mật.
 
+## User Management
+
+Trang quản lý người dùng `/quan-tri/nguoi-dung` được bảo vệ nghiêm ngặt, chỉ cho phép thành viên có vai trò `admin` truy cập (thông qua `RoleGuard` và chính sách bảo mật cơ sở dữ liệu RLS):
+
+- **Tính năng chính**:
+  - Xem danh sách thành viên trong hệ thống (từ bảng `public.profiles`).
+  - Sửa đổi họ tên (`full_name`) của thành viên.
+  - Phân quyền vai trò mới (`role` gồm: `admin`, `editor`, `teacher`, `viewer`).
+  - Khóa hoặc kích hoạt lại tài khoản thành viên thông qua trường `is_active`.
+- **Nguyên tắc bảo mật**:
+  - Ứng dụng tuân thủ nguyên tắc không truy vấn trực tiếp bảng `auth.users` từ phía Client hay lưu trữ `service_role` key trên Frontend. Do đó, các thông tin nhạy cảm như Email thành viên được ẩn danh và bảo mật tuyệt đối ở mức Database.
+  - Để bảo vệ an toàn hệ thống, tài khoản của chính Quản trị viên đang đăng nhập sẽ bị hạn chế tự thay đổi vai trò hoặc tự khóa tài khoản của chính mình (chống vô tình lockout).
+
+
