@@ -5,15 +5,19 @@ import App from './App.tsx';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import { SiteSettingsProvider } from './contexts/SiteSettingsContext.tsx';
+import { EditModeProvider } from './features/cms/EditModeContext.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <SiteSettingsProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <EditModeProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </EditModeProvider>
       </SiteSettingsProvider>
     </AuthProvider>
   </StrictMode>,
 );
+

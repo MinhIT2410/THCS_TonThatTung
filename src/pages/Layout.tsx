@@ -8,6 +8,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import EditToolbar from '../components/editable/EditToolbar';
 import { AppDataContext } from '../App';
 import { ROUTES } from '../config/routes';
 
@@ -44,6 +45,9 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300 relative">
+      {/* Global Administrative CMS Floating Toolbar */}
+      <EditToolbar />
+
       {/* Header Navigation Bar */}
       <Header
         currentView={currentView}
