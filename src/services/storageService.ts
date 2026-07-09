@@ -194,10 +194,64 @@ export async function uploadDocument(file: File, folder: string = 'documents'): 
   }
 }
 
+/**
+ * Upload ảnh album lên Supabase Storage và trả về thông tin file
+ */
+export async function uploadAlbumImage(file: File, albumId?: string): Promise<{
+  url: string;
+  path: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+}> {
+  const validationError = validateImageFile(file);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  const folderPath = `albums/${albumId || 'temp'}`;
+  const safeName = getSafeFileName(file.name);
+  const path = `${folderPath}/${safeName}`;
+
+  try {
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Supabase album image upload error:', error);
+      throw new Error(`Tải ảnh album lên Supabase thất bại: ${error.message}`);
+    }
+
+    const { data } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(path);
+
+    if (!data || !data.publicUrl) {
+      throw new Error('Không thể lấy public URL cho ảnh vừa upload.');
+    }
+
+    return {
+      url: data.publicUrl,
+      path,
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type || 'image/jpeg',
+    };
+  } catch (err: any) {
+    console.error('Error during uploadAlbumImage:', err);
+    throw new Error(err.message || 'Có lỗi xảy ra khi tải ảnh album lên hệ thống.');
+  }
+}
+
 export const storageService = {
   validateImageFile,
   uploadImage,
   deleteImageByUrl,
   validateDocumentFile,
   uploadDocument,
+  uploadAlbumImage,
 };

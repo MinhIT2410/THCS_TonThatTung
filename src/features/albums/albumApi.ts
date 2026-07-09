@@ -4,7 +4,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
-import { Album, AlbumImage } from './albumTypes';
+import { Album, AlbumImage, CreateAlbumInput, UpdateAlbumInput, AddAlbumImageInput, UpdateAlbumImageInput } from './albumTypes';
 import { ApiError, normalizeApiError } from '../../services/apiError';
 
 const MOCK_ALBUMS: Album[] = [
@@ -41,14 +41,13 @@ const MOCK_IMAGES: AlbumImage[] = [
 
 export const albumApi = {
   /**
-   * Get all albums
+   * Get all published albums (Public)
    */
   async getAlbums(): Promise<Album[]> {
     if (!isSupabaseConfigured) {
       return MOCK_ALBUMS;
     }
     try {
-      // TODO: Connect to public.albums table when database schema is ready.
       const { data, error } = await supabase
         .from('albums')
         .select('*')
@@ -70,14 +69,40 @@ export const albumApi = {
   },
 
   /**
-   * Get an album by ID
+   * Get all albums for admin (including draft, published, archived)
+   */
+  async getAllAlbumsForAdmin(): Promise<Album[]> {
+    if (!isSupabaseConfigured) {
+      return [...MOCK_ALBUMS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    try {
+      const { data, error } = await supabase
+        .from('albums')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        if (error.code === '42P01') {
+          console.warn('public.albums table is not available yet, falling back to mock data');
+          return [...MOCK_ALBUMS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        }
+        throw normalizeApiError(error);
+      }
+      return data || [];
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      return [...MOCK_ALBUMS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+  },
+
+  /**
+   * Get an album by ID (Public)
    */
   async getAlbumById(id: string): Promise<Album | null> {
     if (!isSupabaseConfigured) {
       return MOCK_ALBUMS.find(a => a.id === id) || null;
     }
     try {
-      // TODO: Connect to public.albums table when database schema is ready.
       const { data, error } = await supabase
         .from('albums')
         .select('*')
@@ -99,14 +124,40 @@ export const albumApi = {
   },
 
   /**
-   * Get all images belonging to an album
+   * Get an album by ID for admin (any status)
+   */
+  async getAlbumByIdForAdmin(id: string): Promise<Album | null> {
+    if (!isSupabaseConfigured) {
+      return MOCK_ALBUMS.find(a => a.id === id) || null;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('albums')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) {
+        if (error.code === '42P01') {
+          return MOCK_ALBUMS.find(a => a.id === id) || null;
+        }
+        throw normalizeApiError(error);
+      }
+      return data;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      return MOCK_ALBUMS.find(a => a.id === id) || null;
+    }
+  },
+
+  /**
+   * Get all images belonging to an album (Public)
    */
   async getAlbumImages(albumId: string): Promise<AlbumImage[]> {
     if (!isSupabaseConfigured) {
       return MOCK_IMAGES.filter(img => img.album_id === albumId);
     }
     try {
-      // TODO: Connect to public.album_images table when database schema is ready.
       const { data, error } = await supabase
         .from('album_images')
         .select('*')
@@ -128,34 +179,65 @@ export const albumApi = {
   },
 
   /**
+   * Get all images belonging to an album for admin
+   */
+  async getAlbumImagesForAdmin(albumId: string): Promise<AlbumImage[]> {
+    if (!isSupabaseConfigured) {
+      return MOCK_IMAGES.filter(img => img.album_id === albumId);
+    }
+    try {
+      const { data, error } = await supabase
+        .from('album_images')
+        .select('*')
+        .eq('album_id', albumId)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        if (error.code === '42P01') {
+          console.warn('public.album_images table is not available yet, falling back to mock data');
+          return MOCK_IMAGES.filter(img => img.album_id === albumId);
+        }
+        throw normalizeApiError(error);
+      }
+      return data || [];
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      return MOCK_IMAGES.filter(img => img.album_id === albumId);
+    }
+  },
+
+  /**
    * Create a new album
    */
-  async createAlbum(input: Partial<Omit<Album, 'id' | 'created_at' | 'updated_at'>>): Promise<Album> {
+  async createAlbum(input: CreateAlbumInput): Promise<Album> {
+    const status = input.status || 'draft';
+    const now = new Date().toISOString();
+    const published_at = status === 'published' ? now : null;
+
     if (!isSupabaseConfigured) {
       const newAlbum: Album = {
         id: `album-${Date.now()}`,
         title: input.title || 'Untitled Album',
         description: input.description,
-        cover_image_url: input.cover_image_url || '',
-        status: input.status || 'published',
-        published_at: input.published_at || new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        cover_image_url: input.cover_image_url,
+        status,
+        published_at,
+        created_at: now,
+        updated_at: now
       };
       MOCK_ALBUMS.push(newAlbum);
       return newAlbum;
     }
     try {
-      // TODO: Connect to public.albums table when database schema is ready.
-      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from('albums')
         .insert({
           title: input.title,
           description: input.description,
           cover_image_url: input.cover_image_url,
-          status: input.status || 'published',
-          published_at: input.published_at || now,
+          status,
+          published_at,
           created_at: now,
           updated_at: now
         })
@@ -172,7 +254,7 @@ export const albumApi = {
   /**
    * Update an existing album
    */
-  async updateAlbum(id: string, input: Partial<Album>): Promise<Album> {
+  async updateAlbum(id: string, input: UpdateAlbumInput): Promise<Album> {
     if (!isSupabaseConfigured) {
       const idx = MOCK_ALBUMS.findIndex(a => a.id === id);
       if (idx === -1) {
@@ -187,7 +269,6 @@ export const albumApi = {
       return updated;
     }
     try {
-      // TODO: Connect to public.albums table when database schema is ready.
       const { data, error } = await supabase
         .from('albums')
         .update({
@@ -206,6 +287,25 @@ export const albumApi = {
   },
 
   /**
+   * Publish an album
+   */
+  async publishAlbum(id: string): Promise<Album> {
+    return this.updateAlbum(id, {
+      status: 'published',
+      published_at: new Date().toISOString()
+    } as UpdateAlbumInput);
+  },
+
+  /**
+   * Archive an album
+   */
+  async archiveAlbum(id: string): Promise<Album> {
+    return this.updateAlbum(id, {
+      status: 'archived'
+    } as UpdateAlbumInput);
+  },
+
+  /**
    * Delete an album
    */
   async deleteAlbum(id: string): Promise<boolean> {
@@ -221,7 +321,7 @@ export const albumApi = {
       return true;
     }
     try {
-      // TODO: Connect to public.albums table when database schema is ready.
+      // TODO: Delete file artifacts in Storage if needed, but cascade DB delete covers images table
       const { error } = await supabase
         .from('albums')
         .delete()
@@ -237,30 +337,66 @@ export const albumApi = {
   /**
    * Add an image to an album
    */
-  async addAlbumImage(albumId: string, input: Partial<Omit<AlbumImage, 'id' | 'album_id' | 'created_at'>>): Promise<AlbumImage> {
+  async addAlbumImage(albumId: string, input: AddAlbumImageInput): Promise<AlbumImage> {
+    const sort_order = input.sort_order ?? 0;
+    const now = new Date().toISOString();
+
     if (!isSupabaseConfigured) {
       const newImg: AlbumImage = {
         id: `img-${Date.now()}`,
         album_id: albumId,
         image_url: input.image_url || '',
         caption: input.caption,
-        sort_order: input.sort_order || 10,
-        created_at: new Date().toISOString()
+        sort_order,
+        created_at: now
       };
       MOCK_IMAGES.push(newImg);
       return newImg;
     }
     try {
-      // TODO: Connect to public.album_images table when database schema is ready.
       const { data, error } = await supabase
         .from('album_images')
         .insert({
           album_id: albumId,
           image_url: input.image_url,
-          caption: input.caption,
-          sort_order: input.sort_order || 10,
-          created_at: new Date().toISOString()
+          caption: input.caption ?? null,
+          sort_order,
+          created_at: now
         })
+        .select()
+        .single();
+
+      if (error) throw normalizeApiError(error);
+      return data;
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
+  },
+
+  /**
+   * Update an image caption or sort order
+   */
+  async updateAlbumImage(imageId: string, input: UpdateAlbumImageInput): Promise<AlbumImage> {
+    if (!isSupabaseConfigured) {
+      const idx = MOCK_IMAGES.findIndex(img => img.id === imageId);
+      if (idx === -1) {
+        throw new ApiError('NOT_FOUND', 'Không tìm thấy ảnh.');
+      }
+      const updated: AlbumImage = {
+        ...MOCK_IMAGES[idx],
+        ...input,
+      };
+      MOCK_IMAGES[idx] = updated;
+      return updated;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('album_images')
+        .update({
+          caption: input.caption,
+          sort_order: input.sort_order
+        })
+        .eq('id', imageId)
         .select()
         .single();
 
@@ -283,7 +419,7 @@ export const albumApi = {
       return true;
     }
     try {
-      // TODO: Connect to public.album_images table when database schema is ready.
+      // TODO: Delete file from Storage if needed
       const { error } = await supabase
         .from('album_images')
         .delete()
