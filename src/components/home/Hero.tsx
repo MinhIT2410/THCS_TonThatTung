@@ -16,7 +16,7 @@ interface HeroProps {
 }
 
 export default function Hero({ onNavigate }: HeroProps) {
-  const { overrides, saveOverride, resetOverride } = usePageOverrides('home');
+  const { overrides, saveOverride, resetOverride, error } = usePageOverrides('home');
   const heroOverride = overrides['hero'];
   const finalHeroData = deepMerge(HOME_HERO_DEFAULT, heroOverride?.data);
 
@@ -59,6 +59,7 @@ export default function Hero({ onNavigate }: HeroProps) {
           overrideData={heroOverride}
           onSave={saveOverride}
           onReset={resetOverride}
+          error={error}
         >
           {/* Sleek Blue/Indigo Gradient Main Hero Card */}
           <div 

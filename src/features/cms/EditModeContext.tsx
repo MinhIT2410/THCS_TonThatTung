@@ -16,8 +16,21 @@ interface EditModeContextType {
 
 const EditModeContext = createContext<EditModeContextType | undefined>(undefined);
 
+export function useCanEditCms() {
+  const { isAdminUser, roles } = useAuth();
+  const isCmsAdmin = isAdminUser;
+  const isCmsEditor = roles.some(r => r.code === 'EDITOR' || r.code === 'CMS_EDITOR');
+  const canEdit = isCmsAdmin || isCmsEditor || !isSupabaseConfigured;
+
+  return {
+    canEdit,
+    isAdmin: isCmsAdmin,
+    isEditor: isCmsEditor || isCmsAdmin,
+  };
+}
+
 export function EditModeProvider({ children }: { children: React.ReactNode }) {
-  const { isAdminUser } = useAuth();
+  const { canEdit } = useCanEditCms();
   const [editMode, setEditModeState] = useState<boolean>(() => {
     try {
       return localStorage.getItem('cms_edit_mode') === 'true';
@@ -25,8 +38,6 @@ export function EditModeProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
   });
-
-  const canEdit = isAdminUser || !isSupabaseConfigured;
 
   const setEditMode = (val: boolean) => {
     if (!canEdit) {

@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { useEditMode } from '../../features/cms/useEditMode';
-import { Edit3, RotateCcw, Shield } from 'lucide-react';
+import { Edit3, RotateCcw, Shield, AlertCircle } from 'lucide-react';
 import EditModal from './EditModal';
 
 interface EditableBlockProps {
@@ -17,6 +17,7 @@ interface EditableBlockProps {
   onSave: (blockKey: string, data: any) => Promise<void>;
   onReset: (blockKey: string) => Promise<void>;
   children: React.ReactNode;
+  error?: string | null;
 }
 
 export default function EditableBlock({
@@ -28,6 +29,7 @@ export default function EditableBlock({
   onSave,
   onReset,
   children,
+  error,
 }: EditableBlockProps) {
   const { editMode } = useEditMode();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,8 +43,9 @@ export default function EditableBlock({
       setIsResetting(true);
       try {
         await onReset(blockKey);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to reset block overrides:', err);
+        alert(`Không thể khôi phục mặc định: ${err?.message || 'Có lỗi xảy ra'}`);
       } finally {
         setIsResetting(false);
       }
@@ -57,6 +60,17 @@ export default function EditableBlock({
     <div className="relative group/block border-2 border-dashed border-indigo-500/40 hover:border-indigo-600/80 rounded-[2.2rem] transition-all duration-300 p-1.5 my-2">
       {/* Floating Control Badges */}
       <div className="absolute top-4 right-4 z-40 flex items-center space-x-2 opacity-100 md:opacity-0 md:group-hover/block:opacity-100 transition-all duration-200">
+        {/* Sync Error Badge */}
+        {error && (
+          <div 
+            className="flex items-center space-x-1 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-md uppercase tracking-wider"
+            title={`Lỗi đồng bộ CMS: ${error}`}
+          >
+            <AlertCircle className="h-3 w-3 animate-pulse" />
+            <span>Lỗi CMS</span>
+          </div>
+        )}
+
         {/* Info Label */}
         <div className="flex items-center space-x-1.5 bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-md uppercase tracking-wider">
           <Shield className="h-3 w-3" />
