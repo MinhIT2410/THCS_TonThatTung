@@ -21,12 +21,20 @@ import ActivitiesPage from './pages/ActivitiesPage';
 import GalleryPage from './pages/GalleryPage';
 import DocumentsPage from './pages/DocumentsPage';
 import ContactPage from './pages/ContactPage';
-import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
+import AdminLayout from './layouts/admin/AdminLayout';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminNewsPage from './pages/admin/AdminNewsPage';
+import AdminDocumentsPage from './pages/admin/AdminDocumentsPage';
+import AdminAlbumsPage from './pages/admin/AdminAlbumsPage';
+import AdminCmsPage from './pages/admin/AdminCmsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import NewsDetailPage from './pages/NewsDetailPage';
 import AlbumDetailPage from './pages/AlbumDetailPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { RoleGuard } from './components/auth/RoleGuard';
+import { AccessDenied } from './components/auth/AccessDenied';
 
 import { newsService } from './services/newsService';
 import { activityService } from './services/activityService';
@@ -286,13 +294,28 @@ function AppContent() {
           <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
           <Route path={ROUTES.CONTACT} element={<ContactPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-          <Route path={ROUTES.ADMIN} element={
+        </Route>
+
+        <Route
+          path={ROUTES.ADMIN}
+          element={
             <ProtectedRoute>
-              <RoleGuard allowedRoles={['admin', 'editor']}>
-                <AdminPage />
+              <RoleGuard
+                allowedRoles={['admin', 'editor']}
+                fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực quản trị" />}
+              >
+                <AdminLayout />
               </RoleGuard>
             </ProtectedRoute>
-          } />
+          }
+        >
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="tin-tuc" element={<AdminNewsPage />} />
+          <Route path="tai-lieu" element={<AdminDocumentsPage />} />
+          <Route path="album" element={<AdminAlbumsPage />} />
+          <Route path="cms" element={<AdminCmsPage />} />
+          <Route path="nguoi-dung" element={<AdminUsersPage />} />
+          <Route path="cai-dat" element={<AdminSettingsPage />} />
         </Route>
       </Routes>
 
