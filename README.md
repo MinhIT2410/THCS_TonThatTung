@@ -1,20 +1,23 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Liên Đội Trường THCS Tôn Thất Tùng
 
-# Run and deploy your AI Studio app
+Trang web Liên đội trường THCS Tôn Thất Tùng với các tính năng quản lý hoạt động, tin tức và đặc biệt là hệ thống **Visual Edit Mode (CMS)** trực quan.
 
-This contains everything you need to run your app locally.
+## CMS Visual Edit Mode
 
-View your app in AI Studio: https://ai.studio/apps/2b30113d-cf7b-49c2-b42d-e6cfcc8e2ecb
+Hệ thống quản lý nội dung trực tiếp trên giao diện áp dụng mô hình:
 
-## Run Locally
+`Frontend Defaults + Database Overrides + Supabase Storage Assets = Final UI`
 
-**Prerequisites:**  Node.js
+- **Frontend Defaults**: Lưu trữ cấu hình mặc định giao diện của ứng dụng trong code nhằm tăng tốc độ tải trang ban đầu và làm phương án dự phòng hoàn hảo.
+- **Database Overrides**: Bảng `public.cms_overrides` trong cơ sở dữ liệu Supabase chỉ lưu trữ những phần thay đổi do quản trị viên chỉnh sửa.
+- **Supabase Storage Assets**: Các tệp tin đa phương tiện được lưu trữ công khai trong bucket `school-media` và `school-document`.
 
+### Luồng Hoạt Động
+- Người dùng thông thường chỉ tải cấu hình mặc định kèm các bản ghi ghi đè có thuộc tính `is_enabled = true`.
+- Quản trị viên/Biên tập viên bật **Edit Mode** để sửa trực tiếp văn bản, hình ảnh, liên kết nút của Hero trang chủ.
+- Khi lưu thay đổi, dữ liệu sẽ được `upsert` vào bảng `cms_overrides`. Khi "Khôi phục mặc định", bản ghi tương ứng sẽ bị xóa khỏi cơ sở dữ liệu và giao diện quay về cấu hình code ban đầu.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Phân Quyền
+- **Public**: Chỉ có quyền đọc công khai các bản ghi CMS Overrides đã bật (`is_enabled = true`) và đọc file trong storage.
+- **Authenticated (Tạm thời)**: Có toàn quyền quản lý `cms_overrides` và tải tệp lên storage nhằm phục vụ kiểm thử và demo.
+- *Lưu ý quan trọng*: Trong môi trường Production thực tế, các policy ghi tạm thời cần được thay thế bằng kiểm tra phân quyền người dùng (Role-based Access Control - RBAC) như `admin`, `editor` để bảo mật tối đa.
