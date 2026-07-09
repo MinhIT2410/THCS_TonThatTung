@@ -28,3 +28,17 @@ export interface SchoolDocument {
   created_at: string;
   updated_at: string;
 }
+
+export type CreateDocumentInput = {
+  title: string;
+  description?: string | null;
+  category: DocumentCategory;
+  file_url: string;
+  file_name?: string | null;
+  file_size?: number | null;
+  mime_type?: string | null;
+  status?: DocumentStatus;
+};
+
+export type UpdateDocumentInput = Partial<CreateDocumentInput>;
+
