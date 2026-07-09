@@ -31,15 +31,27 @@ export function normalizeApiError(error: unknown): ApiError {
   if (error && typeof error === 'object') {
     const errObj = error as any;
     // Handle Supabase/PostgREST error codes
+    if (errObj.code === '42501') {
+      return new ApiError("FORBIDDEN", "Bạn không có quyền thực hiện thao tác này.", error);
+    }
     if (errObj.code && typeof errObj.message === 'string') {
+      if (errObj.message.toLowerCase().includes('row-level security') || errObj.message.toLowerCase().includes('violates row-level security')) {
+        return new ApiError("FORBIDDEN", "Bạn không có quyền thực hiện thao tác này.", error);
+      }
       return new ApiError("DATABASE_ERROR", errObj.message, error);
     }
     if (errObj.message && typeof errObj.message === 'string') {
+      if (errObj.message.toLowerCase().includes('row-level security') || errObj.message.toLowerCase().includes('violates row-level security') || errObj.message.toLowerCase().includes('insufficient_privilege')) {
+        return new ApiError("FORBIDDEN", "Bạn không có quyền thực hiện thao tác này.", error);
+      }
       return new ApiError("UNKNOWN_ERROR", errObj.message, error);
     }
   }
 
   if (error instanceof Error) {
+    if (error.message.toLowerCase().includes('row-level security') || error.message.toLowerCase().includes('violates row-level security') || error.message.toLowerCase().includes('insufficient_privilege') || error.message.includes('42501')) {
+      return new ApiError("FORBIDDEN", "Bạn không có quyền thực hiện thao tác này.", error);
+    }
     return new ApiError("UNKNOWN_ERROR", error.message, error);
   }
 
