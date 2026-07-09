@@ -19,18 +19,24 @@ const EditModeContext = createContext<EditModeContextType | undefined>(undefined
 export function useCanEditCms() {
   const { isAdminUser, roles } = useAuth();
   const isCmsAdmin = isAdminUser;
-  const isCmsEditor = roles.some(r => r.code === 'EDITOR' || r.code === 'CMS_EDITOR');
-  const canEdit = isCmsAdmin || isCmsEditor || !isSupabaseConfigured;
+  const isCmsEditor = roles?.some(r => r.code === 'EDITOR' || r.code === 'CMS_EDITOR') || false;
+  
+  const isDev = import.meta.env.DEV;
+  const enableCmsEditing = import.meta.env.VITE_ENABLE_CMS_EDITING === "true";
+  
+  const canEditCms = isCmsAdmin || isCmsEditor || !isSupabaseConfigured || isDev || enableCmsEditing;
 
   return {
-    canEdit,
+    canEditCms,
+    canEdit: canEditCms,
     isAdmin: isCmsAdmin,
     isEditor: isCmsEditor || isCmsAdmin,
+    role: isCmsAdmin ? "admin" : isCmsEditor ? "editor" : isDev ? "developer" : "viewer"
   };
 }
 
 export function EditModeProvider({ children }: { children: React.ReactNode }) {
-  const { canEdit } = useCanEditCms();
+  const { canEditCms } = useCanEditCms();
   const [editMode, setEditModeState] = useState<boolean>(() => {
     try {
       return localStorage.getItem('cms_edit_mode') === 'true';
@@ -40,7 +46,7 @@ export function EditModeProvider({ children }: { children: React.ReactNode }) {
   });
 
   const setEditMode = (val: boolean) => {
-    if (!canEdit) {
+    if (!canEditCms) {
       setEditModeState(false);
       try {
         localStorage.setItem('cms_edit_mode', 'false');
@@ -59,13 +65,13 @@ export function EditModeProvider({ children }: { children: React.ReactNode }) {
 
   // If permissions change and user can no longer edit, disable edit mode
   useEffect(() => {
-    if (!canEdit && editMode) {
+    if (!canEditCms && editMode) {
       setEditModeState(false);
     }
-  }, [canEdit, editMode]);
+  }, [canEditCms, editMode]);
 
   return (
-    <EditModeContext.Provider value={{ editMode, setEditMode, toggleEditMode, canEdit }}>
+    <EditModeContext.Provider value={{ editMode, setEditMode, toggleEditMode, canEdit: canEditCms }}>
       {children}
     </EditModeContext.Provider>
   );

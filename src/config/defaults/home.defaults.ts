@@ -3,7 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export const HOME_HERO_DEFAULT = {
+export type HeroButtonConfig = {
+  label: string;
+  href: string;
+};
+
+export type HomeHeroConfig = {
+  title: string;
+  subtitle: string;
+  description: string;
+  backgroundImage: string;
+  primaryButton: HeroButtonConfig;
+  secondaryButton: HeroButtonConfig;
+};
+
+export const HOME_HERO_DEFAULT: HomeHeroConfig = {
   title: "Chào mừng bạn đến với Liên đội trường THCS Tôn Thất Tùng",
   subtitle: "Nơi ươm mầm tri thức, nuôi dưỡng ước mơ và xây dựng hoài bão cho tương lai Đội viên",
   description: "Nơi nuôi dưỡng lý tưởng cách mạng, bồi dưỡng kỹ năng toàn diện, rèn luyện phẩm chất Đội viên tài năng, sẵn sàng tiếp bước xây dựng Tổ quốc xã hội chủ nghĩa tươi đẹp.",
