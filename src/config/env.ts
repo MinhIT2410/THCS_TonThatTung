@@ -24,5 +24,4 @@ export const isSupabaseConfigured = !!(
   (env.supabaseUrl.startsWith('http://') || env.supabaseUrl.startsWith('https://'))
 );
 
-export const canUseDemoFallback =
-  env.isDev && env.enableDemoFallback && !isSupabaseConfigured;
+export const canUseDemoFallback = !isSupabaseConfigured;
