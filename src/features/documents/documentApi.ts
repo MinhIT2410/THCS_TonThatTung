@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
+import { supabase } from '../../services/supabaseClient';
+import { isSupabaseConfigured, canUseDemoFallback } from '../../config/env';
 import { SchoolDocument, CreateDocumentInput, UpdateDocumentInput } from './documentTypes';
 import { ApiError, normalizeApiError } from '../../services/apiError';
 
@@ -30,7 +31,10 @@ export const documentApi = {
    */
   async getDocuments(): Promise<SchoolDocument[]> {
     if (!isSupabaseConfigured) {
-      return MOCK_DOCUMENTS;
+      if (canUseDemoFallback) {
+        return MOCK_DOCUMENTS;
+      }
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
       const { data, error } = await supabase
@@ -40,7 +44,7 @@ export const documentApi = {
         .order('published_at', { ascending: false });
 
       if (error) {
-        if (error.code === '42P01') {
+        if (error.code === '42P01' && canUseDemoFallback) {
           console.warn('public.documents table is not available yet, falling back to mock data');
           return MOCK_DOCUMENTS;
         }
@@ -49,7 +53,8 @@ export const documentApi = {
       return data || [];
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      return MOCK_DOCUMENTS;
+      if (canUseDemoFallback) return MOCK_DOCUMENTS;
+      throw normalizeApiError(err);
     }
   },
 
@@ -58,7 +63,10 @@ export const documentApi = {
    */
   async getAllDocumentsForAdmin(): Promise<SchoolDocument[]> {
     if (!isSupabaseConfigured) {
-      return [...MOCK_DOCUMENTS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      if (canUseDemoFallback) {
+        return [...MOCK_DOCUMENTS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      }
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
       const { data, error } = await supabase
@@ -67,7 +75,7 @@ export const documentApi = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        if (error.code === '42P01' || error.code === 'PGRST116') {
+        if ((error.code === '42P01' || error.code === 'PGRST116') && canUseDemoFallback) {
           console.warn('public.documents table is not available yet, falling back to mock data');
           return [...MOCK_DOCUMENTS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         }
@@ -76,7 +84,10 @@ export const documentApi = {
       return data || [];
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      return [...MOCK_DOCUMENTS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      if (canUseDemoFallback) {
+        return [...MOCK_DOCUMENTS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      }
+      throw normalizeApiError(err);
     }
   },
 
@@ -85,7 +96,10 @@ export const documentApi = {
    */
   async getDocumentById(id: string): Promise<SchoolDocument | null> {
     if (!isSupabaseConfigured) {
-      return MOCK_DOCUMENTS.find(d => d.id === id) || null;
+      if (canUseDemoFallback) {
+        return MOCK_DOCUMENTS.find(d => d.id === id) || null;
+      }
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
       const { data, error } = await supabase
@@ -96,7 +110,7 @@ export const documentApi = {
         .maybeSingle();
 
       if (error) {
-        if (error.code === '42P01') {
+        if (error.code === '42P01' && canUseDemoFallback) {
           return MOCK_DOCUMENTS.find(d => d.id === id) || null;
         }
         throw normalizeApiError(error);
@@ -104,7 +118,8 @@ export const documentApi = {
       return data;
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      return MOCK_DOCUMENTS.find(d => d.id === id) || null;
+      if (canUseDemoFallback) return MOCK_DOCUMENTS.find(d => d.id === id) || null;
+      throw normalizeApiError(err);
     }
   },
 
@@ -113,7 +128,10 @@ export const documentApi = {
    */
   async getDocumentByIdForAdmin(id: string): Promise<SchoolDocument | null> {
     if (!isSupabaseConfigured) {
-      return MOCK_DOCUMENTS.find(d => d.id === id) || null;
+      if (canUseDemoFallback) {
+        return MOCK_DOCUMENTS.find(d => d.id === id) || null;
+      }
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
       const { data, error } = await supabase
@@ -123,7 +141,7 @@ export const documentApi = {
         .maybeSingle();
 
       if (error) {
-        if (error.code === '42P01') {
+        if (error.code === '42P01' && canUseDemoFallback) {
           return MOCK_DOCUMENTS.find(d => d.id === id) || null;
         }
         throw normalizeApiError(error);
@@ -131,12 +149,13 @@ export const documentApi = {
       return data;
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      return MOCK_DOCUMENTS.find(d => d.id === id) || null;
+      if (canUseDemoFallback) return MOCK_DOCUMENTS.find(d => d.id === id) || null;
+      throw normalizeApiError(err);
     }
   },
 
   /**
-   * Create a new school document record
+   * Create a new school school document record
    */
   async createDocument(input: CreateDocumentInput): Promise<SchoolDocument> {
     const status = input.status || 'draft';
@@ -144,22 +163,25 @@ export const documentApi = {
     const published_at = status === 'published' ? now : null;
 
     if (!isSupabaseConfigured) {
-      const newDoc: SchoolDocument = {
-        id: `doc-${Date.now()}`,
-        title: input.title || 'Untitled Document',
-        description: input.description,
-        category: input.category || 'khac',
-        file_url: input.file_url || '',
-        file_name: input.file_name || 'document.pdf',
-        file_size: input.file_size || 0,
-        mime_type: input.mime_type || null,
-        status,
-        published_at,
-        created_at: now,
-        updated_at: now
-      };
-      MOCK_DOCUMENTS.push(newDoc);
-      return newDoc;
+      if (canUseDemoFallback) {
+        const newDoc: SchoolDocument = {
+          id: `doc-${Date.now()}`,
+          title: input.title || 'Untitled Document',
+          description: input.description,
+          category: input.category || 'khac',
+          file_url: input.file_url || '',
+          file_name: input.file_name || 'document.pdf',
+          file_size: input.file_size || 0,
+          mime_type: input.mime_type || null,
+          status,
+          published_at,
+          created_at: now,
+          updated_at: now
+        };
+        MOCK_DOCUMENTS.push(newDoc);
+        return newDoc;
+      }
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
       const { data, error } = await supabase
@@ -192,17 +214,20 @@ export const documentApi = {
    */
   async updateDocument(id: string, input: UpdateDocumentInput): Promise<SchoolDocument> {
     if (!isSupabaseConfigured) {
-      const idx = MOCK_DOCUMENTS.findIndex(d => d.id === id);
-      if (idx === -1) {
-        throw new ApiError('NOT_FOUND', 'Không tìm thấy tài liệu.');
+      if (canUseDemoFallback) {
+        const idx = MOCK_DOCUMENTS.findIndex(d => d.id === id);
+        if (idx === -1) {
+          throw new ApiError('NOT_FOUND', 'Không tìm thấy tài liệu.');
+        }
+        const updated: SchoolDocument = {
+          ...MOCK_DOCUMENTS[idx],
+          ...input,
+          updated_at: new Date().toISOString()
+        };
+        MOCK_DOCUMENTS[idx] = updated;
+        return updated;
       }
-      const updated: SchoolDocument = {
-        ...MOCK_DOCUMENTS[idx],
-        ...input,
-        updated_at: new Date().toISOString()
-      };
-      MOCK_DOCUMENTS[idx] = updated;
-      return updated;
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
       const { data, error } = await supabase
@@ -246,11 +271,14 @@ export const documentApi = {
    */
   async deleteDocument(id: string): Promise<boolean> {
     if (!isSupabaseConfigured) {
-      const idx = MOCK_DOCUMENTS.findIndex(d => d.id === id);
-      if (idx !== -1) {
-        MOCK_DOCUMENTS.splice(idx, 1);
+      if (canUseDemoFallback) {
+        const idx = MOCK_DOCUMENTS.findIndex(d => d.id === id);
+        if (idx !== -1) {
+          MOCK_DOCUMENTS.splice(idx, 1);
+        }
+        return true;
       }
-      return true;
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
       const { error } = await supabase

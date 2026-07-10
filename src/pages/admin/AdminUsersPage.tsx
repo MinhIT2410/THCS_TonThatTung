@@ -16,12 +16,14 @@ import { AccessDenied } from '../../components/auth/AccessDenied';
 export default function AdminUsersPage() {
   const navigate = useNavigate();
   const { profile: currentUserProfile, refreshProfile } = useAuth();
+  const isAdmin = currentUserProfile?.role === 'admin';
   
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = async () => {
+    if (!isAdmin) return;
     setLoading(true);
     setError(null);
     try {
@@ -36,8 +38,12 @@ export default function AdminUsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (isAdmin) {
+      fetchUsers();
+    } else {
+      setLoading(false);
+    }
+  }, [isAdmin]);
 
   const handleUpdateUser = async (id: string, data: { full_name: string; role: UserRole; is_active: boolean }) => {
     try {

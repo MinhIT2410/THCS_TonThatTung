@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
+import { supabase } from '../../services/supabaseClient';
+import { isSupabaseConfigured, canUseDemoFallback, env } from '../../config/env';
 import { ApiError, normalizeApiError } from '../../services/apiError';
 import { UserProfile, UserRole } from './authTypes';
 import { User, Session } from '@supabase/supabase-js';
@@ -33,7 +34,7 @@ export const authApi = {
   async getCurrentProfile(userId: string): Promise<UserProfile | null> {
     if (!isSupabaseConfigured) {
       // Return a mock fallback profile in development if not configured
-      if (import.meta.env.DEV) {
+      if (canUseDemoFallback) {
         return {
           id: userId,
           full_name: 'Quản trị viên (Dev)',

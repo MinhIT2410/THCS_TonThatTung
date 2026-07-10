@@ -6,6 +6,7 @@
 import React from 'react';
 import { useAuth } from '../../features/auth/AuthContext';
 import { UserRole } from '../../features/auth/authTypes';
+import { AccessDenied } from './AccessDenied';
 
 export interface RoleGuardProps {
   allowedRoles: UserRole[];
@@ -16,7 +17,7 @@ export interface RoleGuardProps {
 export const RoleGuard: React.FC<RoleGuardProps> = ({
   allowedRoles,
   children,
-  fallback = null,
+  fallback = <AccessDenied message="Bạn không có quyền truy cập khu vực này." />,
 }) => {
   const { profile } = useAuth();
 

@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
+import { supabase } from '../../services/supabaseClient';
+import { isSupabaseConfigured, canUseDemoFallback } from '../../config/env';
 import { CmsOverride } from './cmsTypes';
 import { ApiError, normalizeApiError } from '../../services/apiError';
 
@@ -29,8 +30,11 @@ function saveLocalFallback(overrides: CmsOverride[]) {
 export const cmsApi = {
   async getOverride(pageKey: string, blockKey: string): Promise<CmsOverride | null> {
     if (!isSupabaseConfigured) {
-      const list = getLocalFallback();
-      return list.find(o => o.page_key === pageKey && o.block_key === blockKey && o.is_enabled !== false) || null;
+      if (canUseDemoFallback) {
+        const list = getLocalFallback();
+        return list.find(o => o.page_key === pageKey && o.block_key === blockKey && o.is_enabled !== false) || null;
+      }
+      return null; // Public page graceful empty fallback
     }
     try {
       const { data, error } = await supabase
@@ -46,14 +50,21 @@ export const cmsApi = {
       }
       return data;
     } catch (err) {
-      throw normalizeApiError(err);
+      if (canUseDemoFallback) {
+        const list = getLocalFallback();
+        return list.find(o => o.page_key === pageKey && o.block_key === blockKey && o.is_enabled !== false) || null;
+      }
+      return null;
     }
   },
 
   async getPageOverrides(pageKey: string): Promise<CmsOverride[]> {
     if (!isSupabaseConfigured) {
-      const list = getLocalFallback();
-      return list.filter(o => o.page_key === pageKey && o.is_enabled !== false);
+      if (canUseDemoFallback) {
+        const list = getLocalFallback();
+        return list.filter(o => o.page_key === pageKey && o.is_enabled !== false);
+      }
+      return []; // Public page graceful empty fallback
     }
     try {
       const { data, error } = await supabase
@@ -65,7 +76,11 @@ export const cmsApi = {
       if (error) throw normalizeApiError(error);
       return data || [];
     } catch (err) {
-      throw normalizeApiError(err);
+      if (canUseDemoFallback) {
+        const list = getLocalFallback();
+        return list.filter(o => o.page_key === pageKey && o.is_enabled !== false);
+      }
+      return [];
     }
   },
 
@@ -81,27 +96,30 @@ export const cmsApi = {
     }
 
     if (!isSupabaseConfigured) {
-      const list = getLocalFallback();
-      const existingIdx = list.findIndex(o => o.page_key === pageKey && o.block_key === blockKey);
-      const now = new Date().toISOString();
-      const record: CmsOverride = {
-        id: existingIdx >= 0 ? list[existingIdx].id : Math.random().toString(36).substring(2),
-        page_key: pageKey,
-        block_key: blockKey,
-        data,
-        is_enabled: true,
-        updated_by: updatedBy,
-        created_at: existingIdx >= 0 ? list[existingIdx].created_at : now,
-        updated_at: now
-      };
+      if (canUseDemoFallback) {
+        const list = getLocalFallback();
+        const existingIdx = list.findIndex(o => o.page_key === pageKey && o.block_key === blockKey);
+        const now = new Date().toISOString();
+        const record: CmsOverride = {
+          id: existingIdx >= 0 ? list[existingIdx].id : Math.random().toString(36).substring(2),
+          page_key: pageKey,
+          block_key: blockKey,
+          data,
+          is_enabled: true,
+          updated_by: updatedBy,
+          created_at: existingIdx >= 0 ? list[existingIdx].created_at : now,
+          updated_at: now
+        };
 
-      if (existingIdx >= 0) {
-        list[existingIdx] = record;
-      } else {
-        list.push(record);
+        if (existingIdx >= 0) {
+          list[existingIdx] = record;
+        } else {
+          list.push(record);
+        }
+        saveLocalFallback(list);
+        return record;
       }
-      saveLocalFallback(list);
-      return record;
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
 
     try {
@@ -133,10 +151,13 @@ export const cmsApi = {
 
   async deleteOverride(pageKey: string, blockKey: string): Promise<boolean> {
     if (!isSupabaseConfigured) {
-      const list = getLocalFallback();
-      const filtered = list.filter(o => !(o.page_key === pageKey && o.block_key === blockKey));
-      saveLocalFallback(filtered);
-      return true;
+      if (canUseDemoFallback) {
+        const list = getLocalFallback();
+        const filtered = list.filter(o => !(o.page_key === pageKey && o.block_key === blockKey));
+        saveLocalFallback(filtered);
+        return true;
+      }
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
       const { error } = await supabase
@@ -154,13 +175,16 @@ export const cmsApi = {
 
   async disableOverride(pageKey: string, blockKey: string): Promise<boolean> {
     if (!isSupabaseConfigured) {
-      const list = getLocalFallback();
-      const item = list.find(o => o.page_key === pageKey && o.block_key === blockKey);
-      if (item) {
-        item.is_enabled = false;
-        saveLocalFallback(list);
+      if (canUseDemoFallback) {
+        const list = getLocalFallback();
+        const item = list.find(o => o.page_key === pageKey && o.block_key === blockKey);
+        if (item) {
+          item.is_enabled = false;
+          saveLocalFallback(list);
+        }
+        return true;
       }
-      return true;
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
       const { error } = await supabase

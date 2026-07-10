@@ -6,25 +6,14 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { env, isSupabaseConfigured } from '../../config/env';
 
-const rawUrl = import.meta.env.VITE_SUPABASE_URL;
-const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-export const isSupabaseConfigured = !!(
-  rawUrl &&
-  rawKey &&
-  rawUrl !== 'undefined' &&
-  rawKey !== 'undefined' &&
-  rawUrl !== 'null' &&
-  rawKey !== 'null' &&
-  (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))
-);
-
-export const supabaseUrl = isSupabaseConfigured ? rawUrl : '';
-export const supabaseAnonKey = isSupabaseConfigured ? rawKey : '';
+export { isSupabaseConfigured };
+export const supabaseUrl = isSupabaseConfigured ? env.supabaseUrl : '';
+export const supabaseAnonKey = isSupabaseConfigured ? env.supabaseAnonKey : '';
 
 if (!isSupabaseConfigured) {
-  if (import.meta.env.DEV) {
+  if (env.isDev) {
     console.warn('Missing Supabase environment variables: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
   }
 }

@@ -4,17 +4,16 @@
  */
 
 import { useAuth } from '../auth/AuthContext';
+import { env } from '../../config/env';
 
 export function useCanEditCms() {
   const { profile } = useAuth();
-  const isDev = import.meta.env.DEV;
-  const enableCmsEditing = import.meta.env.VITE_ENABLE_CMS_EDITING === 'true';
 
   const canEditByRole =
     Boolean(profile?.is_active) &&
     ['admin', 'editor'].includes(profile.role);
 
-  const canEditCms = canEditByRole || (isDev && enableCmsEditing);
+  const canEditCms = canEditByRole || (env.isDev && env.enableCmsEditing);
 
   return {
     canEditCms,
