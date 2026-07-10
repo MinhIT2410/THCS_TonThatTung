@@ -344,15 +344,6 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
         </div>
       </div>
 
-      {/* TODO message about email verification */}
-      <div className="p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-        <p className="font-bold text-slate-700 dark:text-slate-300">💡 Ghi chú Bảo mật:</p>
-        <p className="mt-1">
-          Hệ thống không hiển thị và cho phép chỉnh sửa trực tiếp email của thành viên ở trang này. Điều này tuân thủ nguyên tắc bảo mật thông tin tài khoản và phân tách quyền của Supabase Auth (dữ liệu email lưu ở schema `auth.users`, không truy cập trực tiếp từ frontend để tránh lộ lọt thông tin).
-        </p>
-        {/* TODO: Show user email via secure admin API/Edge Function later. */}
-      </div>
-
       {/* Edit Modal */}
       {selectedUser && (
         <AdminUserEditModal
