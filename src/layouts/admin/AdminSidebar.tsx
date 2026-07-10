@@ -7,6 +7,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { ADMIN_MENU_ITEMS } from '../../config/adminMenu';
 import { Home, X, GraduationCap } from 'lucide-react';
+import { useAuth } from '../../features/auth/AuthContext';
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -14,6 +15,15 @@ interface AdminSidebarProps {
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) => {
+  const { role } = useAuth();
+
+  const filteredMenuItems = ADMIN_MENU_ITEMS.filter((item) => {
+    if (role === 'editor') {
+      return item.href !== '/quan-tri/nguoi-dung' && item.href !== '/quan-tri/cai-dat';
+    }
+    return true;
+  });
+
   return (
     <>
       {/* Mobile Backdrop Overlay */}
@@ -51,7 +61,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) =
 
         {/* Navigation Menu */}
         <nav className="flex-1 space-y-1 px-4 py-4 overflow-y-auto">
-          {ADMIN_MENU_ITEMS.map((item) => {
+          {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink

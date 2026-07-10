@@ -80,8 +80,19 @@ export default function LoginPage() {
     setSubmittingForgot(true);
 
     try {
+      let redirectUrl = `${window.location.origin}/reset-password`;
+      const hostname = window.location.hostname;
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        (hostname.includes('.vercel.app') && hostname !== 'thcs-ton-that-tung.vercel.app') ||
+        hostname.includes('run.app')
+      ) {
+        redirectUrl = 'https://thcs-ton-that-tung.vercel.app/reset-password';
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectUrl,
       });
 
       if (error) {

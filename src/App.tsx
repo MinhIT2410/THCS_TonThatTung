@@ -321,13 +321,23 @@ function AppContent() {
             element={
               <RoleGuard
                 allowedRoles={['admin']}
-                fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Quản lý người dùng. Chỉ tài khoản Quản trị viên (Admin) mới có thể xem và điều khiển phân quyền." />}
+                fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Quản lý người dùng. Chỉ tài khoản Quản trị viên mới có thể xem và điều khiển phân quyền." />}
               >
                 <AdminUsersPage />
               </RoleGuard>
             }
           />
-          <Route path="cai-dat" element={<AdminSettingsPage />} />
+          <Route
+            path="cai-dat"
+            element={
+              <RoleGuard
+                allowedRoles={['admin']}
+                fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Cài đặt hệ thống." />}
+              >
+                <AdminSettingsPage />
+              </RoleGuard>
+            }
+          />
         </Route>
       </Routes>
 

@@ -20,7 +20,7 @@ const MOCK_PROFILES: UserProfile[] = [
   },
   {
     id: "user-2",
-    full_name: "Trần Thị Biên Tập",
+    full_name: "Biên Tập",
     avatar_url: null,
     role: "editor",
     is_active: true,
@@ -29,7 +29,7 @@ const MOCK_PROFILES: UserProfile[] = [
   },
   {
     id: "user-3",
-    full_name: "Phạm Văn Giáo Viên",
+    full_name: "Giáo Viên",
     avatar_url: null,
     role: "teacher",
     is_active: true,
@@ -38,7 +38,7 @@ const MOCK_PROFILES: UserProfile[] = [
   },
   {
     id: "user-4",
-    full_name: "Lê Văn Khách",
+    full_name: "Khách",
     avatar_url: null,
     role: "viewer",
     is_active: false,
@@ -53,9 +53,6 @@ export const userApi = {
    */
   async getUsers(): Promise<UserProfile[]> {
     if (!isSupabaseConfigured) {
-      if (canUseDemoFallback) {
-        return [...MOCK_PROFILES];
-      }
       throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
@@ -65,16 +62,10 @@ export const userApi = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        if (error.code === '42P01' && canUseDemoFallback) {
-          console.warn('public.profiles table is not available yet, falling back to mock data');
-          return MOCK_PROFILES;
-        }
         throw normalizeApiError(error);
       }
       return data || [];
     } catch (err) {
-      if (err instanceof ApiError) throw err;
-      if (canUseDemoFallback) return MOCK_PROFILES;
       throw normalizeApiError(err);
     }
   },
@@ -84,9 +75,6 @@ export const userApi = {
    */
   async getUserById(id: string): Promise<UserProfile | null> {
     if (!isSupabaseConfigured) {
-      if (canUseDemoFallback) {
-        return MOCK_PROFILES.find(p => p.id === id) || null;
-      }
       throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
@@ -97,15 +85,10 @@ export const userApi = {
         .maybeSingle();
 
       if (error) {
-        if (error.code === '42P01' && canUseDemoFallback) {
-          return MOCK_PROFILES.find(p => p.id === id) || null;
-        }
         throw normalizeApiError(error);
       }
       return data;
     } catch (err) {
-      if (err instanceof ApiError) throw err;
-      if (canUseDemoFallback) return MOCK_PROFILES.find(p => p.id === id) || null;
       throw normalizeApiError(err);
     }
   },
@@ -116,19 +99,6 @@ export const userApi = {
   async updateUserProfile(id: string, input: UpdateUserProfileInput): Promise<UserProfile> {
     const now = new Date().toISOString();
     if (!isSupabaseConfigured) {
-      if (canUseDemoFallback) {
-        const idx = MOCK_PROFILES.findIndex(p => p.id === id);
-        if (idx === -1) {
-          throw new ApiError('NOT_FOUND', 'Không tìm thấy người dùng.');
-        }
-        const updated: UserProfile = {
-          ...MOCK_PROFILES[idx],
-          ...input,
-          updated_at: now
-        };
-        MOCK_PROFILES[idx] = updated;
-        return updated;
-      }
       throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {

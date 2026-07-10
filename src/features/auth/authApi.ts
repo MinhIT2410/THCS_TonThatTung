@@ -33,18 +33,7 @@ export const authApi = {
    */
   async getCurrentProfile(userId: string): Promise<UserProfile | null> {
     if (!isSupabaseConfigured) {
-      // Return a mock fallback profile in development if not configured
-      if (canUseDemoFallback) {
-        return {
-          id: userId,
-          full_name: 'Quản trị viên (Dev)',
-          role: 'admin',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-      }
-      return null;
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình. Không thể lấy hồ sơ người dùng.');
     }
 
     try {
