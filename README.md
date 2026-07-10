@@ -115,4 +115,9 @@ where p.id = u.id
 
 Do not put real admin emails in migrations.
 
+## Deployment
+
+See [Deploy Checklist](./docs/DEPLOY_CHECKLIST.md).
+
+
 
