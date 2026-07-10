@@ -13,6 +13,7 @@ export const ROUTES = {
   CONTACT: '/lien-he',
   ADMIN: '/quan-tri',
   LOGIN: '/dang-nhap',
+  RESET_PASSWORD: '/reset-password',
 } as const;
 
 export type RouteKeys = keyof typeof ROUTES;

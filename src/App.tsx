@@ -22,6 +22,7 @@ import GalleryPage from './pages/GalleryPage';
 import DocumentsPage from './pages/DocumentsPage';
 import ContactPage from './pages/ContactPage';
 import LoginPage from './pages/LoginPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import AdminLayout from './layouts/admin/AdminLayout';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminNewsPage from './pages/admin/AdminNewsPage';
@@ -294,6 +295,7 @@ function AppContent() {
           <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
           <Route path={ROUTES.CONTACT} element={<ContactPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+          <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />
         </Route>
 
         <Route

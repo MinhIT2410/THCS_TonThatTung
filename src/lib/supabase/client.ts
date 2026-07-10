@@ -32,6 +32,8 @@ function createMockSupabaseProxy(): any {
           }),
           signInWithPassword: () => Promise.resolve({ data: { session: null, user: null }, error: null }),
           signOut: () => Promise.resolve({ error: null }),
+          resetPasswordForEmail: () => Promise.resolve({ data: {}, error: null }),
+          updateUser: () => Promise.resolve({ data: { user: {} }, error: null }),
         };
       }
 
