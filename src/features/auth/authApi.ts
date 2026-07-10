@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '../../services/supabaseClient';
-import { isSupabaseConfigured, canUseDemoFallback, env } from '../../config/env';
+import { isSupabaseConfigured } from '../../config/env';
 import { ApiError, normalizeApiError } from '../../services/apiError';
 import { UserProfile, UserRole } from './authTypes';
 import { User, Session } from '@supabase/supabase-js';
