@@ -19,10 +19,9 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   children,
   fallback = <AccessDenied message="Bạn không có quyền truy cập khu vực này." />,
 }) => {
-  const { profile } = useAuth();
+  const { hasAnyRole } = useAuth();
 
-  const userRole = profile?.role;
-  const isAllowed = userRole && allowedRoles.includes(userRole);
+  const isAllowed = hasAnyRole(allowedRoles as string[]);
 
   if (!isAllowed) {
     return <>{fallback}</>;

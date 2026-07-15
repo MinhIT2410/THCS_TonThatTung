@@ -15,10 +15,11 @@ interface AdminSidebarProps {
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) => {
-  const { role } = useAuth();
+  const { hasRole } = useAuth();
+  const isSuperAdmin = hasRole('SUPER_ADMIN');
 
   const filteredMenuItems = ADMIN_MENU_ITEMS.filter((item) => {
-    if (role === 'editor') {
+    if (!isSuperAdmin) {
       return item.href !== '/quan-tri/nguoi-dung' && item.href !== '/quan-tri/cai-dat';
     }
     return true;

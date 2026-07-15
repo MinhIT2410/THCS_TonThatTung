@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { UserProfile, UserRole } from '../userTypes';
+import { UserProfile } from '../userTypes';
 import { UserRoleBadge } from './UserRoleBadge';
 import { UserStatusBadge } from './UserStatusBadge';
 import { AdminUserEditModal } from './AdminUserEditModal';
@@ -26,7 +26,7 @@ interface AdminUsersTableProps {
   users: UserProfile[];
   loading: boolean;
   error: string | null;
-  onUpdateUser: (id: string, data: { full_name: string; role: UserRole; is_active: boolean }) => Promise<void>;
+  onUpdateUser: (id: string, data: { full_name: string; roles: string[]; is_active: boolean }) => Promise<void>;
   onToggleStatus: (id: string, currentStatus: boolean) => Promise<void>;
 }
 
@@ -53,7 +53,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
       const nameMatch = (user.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                         user.id.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const roleMatch = roleFilter === 'all' || user.role === roleFilter;
+      const roleMatch = roleFilter === 'all' || (user.roles || []).includes(roleFilter);
       
       let statusMatch = true;
       if (statusFilter === 'active') {
@@ -158,10 +158,14 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
               className="text-xs bg-transparent border-none outline-none text-slate-700 dark:text-slate-300 font-semibold cursor-pointer"
             >
               <option value="all">Tất cả vai trò</option>
-              <option value="admin">Quản trị viên</option>
-              <option value="editor">Biên tập viên</option>
-              <option value="teacher">Giáo viên</option>
-              <option value="viewer">Người xem</option>
+              <option value="SUPER_ADMIN">Quản trị viên cấp cao</option>
+              <option value="PRINCIPAL">Hiệu trưởng</option>
+              <option value="VICE_PRINCIPAL">Hiệu phó</option>
+              <option value="CONTENT_EDITOR">Biên tập viên nội dung</option>
+              <option value="STAFF">Nhân viên hành chính</option>
+              <option value="TEACHER">Giáo viên</option>
+              <option value="STUDENT">Học sinh</option>
+              <option value="PARENT">Phụ huynh</option>
             </select>
           </div>
 
@@ -276,7 +280,15 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
 
                       {/* Role */}
                       <td className="px-6 py-4">
-                        <UserRoleBadge role={user.role} />
+                        <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+                          {user.roles && user.roles.length > 0 ? (
+                            user.roles.map((r) => (
+                              <UserRoleBadge key={r} role={r} />
+                            ))
+                          ) : (
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 italic">Chưa phân quyền</span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Status */}

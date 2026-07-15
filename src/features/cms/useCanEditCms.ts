@@ -7,19 +7,20 @@ import { useAuth } from '../auth/AuthContext';
 import { env } from '../../config/env';
 
 export function useCanEditCms() {
-  const { profile } = useAuth();
+  const { roles, isActive } = useAuth();
 
-  const canEditByRole =
-    Boolean(profile?.is_active) &&
-    ['admin', 'editor'].includes(profile.role);
+  const isSuperAdmin = roles.some((r: any) => r.code === 'SUPER_ADMIN');
+  const isContentEditor = roles.some((r: any) => r.code === 'CONTENT_EDITOR');
+
+  const canEditByRole = isActive && (isSuperAdmin || isContentEditor);
 
   const canEditCms = canEditByRole || (env.isDev && env.enableCmsEditing);
 
   return {
     canEditCms,
     canEdit: canEditCms,
-    isAdmin: profile?.role === 'admin',
-    isEditor: profile?.role === 'editor' || profile?.role === 'admin',
-    role: profile?.role ?? null,
+    isAdmin: isSuperAdmin,
+    isEditor: isSuperAdmin || isContentEditor,
+    role: isSuperAdmin ? 'SUPER_ADMIN' : (isContentEditor ? 'CONTENT_EDITOR' : null),
   };
 }

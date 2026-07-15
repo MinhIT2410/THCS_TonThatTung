@@ -303,7 +303,7 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <RoleGuard
-                allowedRoles={['admin', 'editor']}
+                allowedRoles={['SUPER_ADMIN', 'CONTENT_EDITOR']}
                 fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực quản trị" />}
               >
                 <AdminLayout />
@@ -320,7 +320,7 @@ function AppContent() {
             path="nguoi-dung"
             element={
               <RoleGuard
-                allowedRoles={['admin']}
+                allowedRoles={['SUPER_ADMIN']}
                 fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Quản lý người dùng. Chỉ tài khoản Quản trị viên mới có thể xem và điều khiển phân quyền." />}
               >
                 <AdminUsersPage />
@@ -331,7 +331,7 @@ function AppContent() {
             path="cai-dat"
             element={
               <RoleGuard
-                allowedRoles={['admin']}
+                allowedRoles={['SUPER_ADMIN']}
                 fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Cài đặt hệ thống." />}
               >
                 <AdminSettingsPage />

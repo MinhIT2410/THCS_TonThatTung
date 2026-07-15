@@ -37,22 +37,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [rolesList, setRolesList] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [profileLoading, setProfileLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Helper to fetch the profile from profiles table
+  // Helper to fetch the profile from profiles table and roles from user_roles
   const fetchProfile = async (userId: string) => {
     try {
       setProfileLoading(true);
       setError(null);
-      const data = await authApi.getCurrentProfile(userId);
-      setProfile(data);
+      const [profileData, rolesData] = await Promise.all([
+        authApi.getCurrentProfile(userId),
+        authApi.getUserRoles(userId)
+      ]);
+      setProfile(profileData);
+      setRolesList(rolesData || []);
     } catch (err: any) {
       console.error('Error loading profile in AuthContext:', err);
       // Do not blank the page or crash, just set error and clear profile
       setError(err?.message || 'Không thể tải hồ sơ tài khoản.');
       setProfile(null);
+      setRolesList([]);
     } finally {
       setProfileLoading(false);
     }
@@ -75,11 +81,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await fetchProfile(currentUser.id);
         } else {
           setProfile(null);
+          setRolesList([]);
           setProfileLoading(false);
         }
       } catch (err) {
         console.error('Unexpected error checking session:', err);
         setProfile(null);
+        setRolesList([]);
         setProfileLoading(false);
       } finally {
         setLoading(false);
@@ -99,6 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchProfile(currentUser.id);
       } else {
         setProfile(null);
+        setRolesList([]);
         setProfileLoading(false);
       }
     });
@@ -134,6 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       setProfile(null);
+      setRolesList([]);
       setError(null);
       
       return { error: null };
@@ -151,37 +161,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAuthenticated = !!user;
-  const role: UserRole | null = profile?.role ?? null;
+  const role: UserRole | null = (rolesList[0] as UserRole) ?? null;
   const isActive = profile?.is_active === true;
-  const isAdminUser = profile?.role === 'admin';
+  const isAdminUser = rolesList.includes('SUPER_ADMIN');
+
+  const ROLE_NAMES: Record<string, string> = {
+    SUPER_ADMIN: 'Quản trị viên cấp cao',
+    PRINCIPAL: 'Hiệu trưởng',
+    VICE_PRINCIPAL: 'Hiệu phó',
+    CONTENT_EDITOR: 'Biên tập viên nội dung',
+    STAFF: 'Nhân viên hành chính',
+    TEACHER: 'Giáo viên',
+    STUDENT: 'Học sinh',
+    PARENT: 'Phụ huynh',
+  };
 
   // Map to mock roles array for backward compatibility
-  const roles = profile 
-    ? [
-        {
-          id: 1,
-          code: profile.role.toUpperCase(),
-          name: profile.role,
-          description: `Vai trò ${profile.role}`,
-          is_admin: profile.role === 'admin'
-        }
-      ] 
-    : [];
+  const roles = rolesList.map((code) => ({
+    id: code,
+    code: code,
+    name: ROLE_NAMES[code] || code,
+    description: `Vai trò ${ROLE_NAMES[code] || code}`,
+    is_admin: code === 'SUPER_ADMIN'
+  }));
 
   const primaryRole = roles[0] ?? null;
 
   const hasRole = (roleCode: string) => {
-    if (!profile) return false;
-    const lowerRole = roleCode.toLowerCase();
-    return profile.role === lowerRole || profile.role.toUpperCase() === roleCode;
+    return rolesList.includes(roleCode);
   };
 
   const hasAnyRole = (roleCodes: string[]) => {
-    if (!profile) return false;
-    return roleCodes.some(code => {
-      const lowerCode = code.toLowerCase();
-      return profile.role === lowerCode || profile.role.toUpperCase() === code;
-    });
+    return roleCodes.some(code => rolesList.includes(code));
   };
 
   return (

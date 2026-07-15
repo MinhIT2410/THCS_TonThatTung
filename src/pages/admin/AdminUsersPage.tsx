@@ -8,15 +8,15 @@ import { Users, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { userApi } from '../../features/users/userApi';
-import { UserProfile, UserRole } from '../../features/users/userTypes';
+import { UserProfile } from '../../features/users/userTypes';
 import { AdminUsersTable } from '../../features/users/components/AdminUsersTable';
 import { RoleGuard } from '../../components/auth/RoleGuard';
 import { AccessDenied } from '../../components/auth/AccessDenied';
 
 export default function AdminUsersPage() {
   const navigate = useNavigate();
-  const { profile: currentUserProfile, refreshProfile } = useAuth();
-  const isAdmin = currentUserProfile?.role === 'admin';
+  const { profile: currentUserProfile, refreshProfile, hasRole } = useAuth();
+  const isAdmin = hasRole('SUPER_ADMIN');
   
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,9 +45,14 @@ export default function AdminUsersPage() {
     }
   }, [isAdmin]);
 
-  const handleUpdateUser = async (id: string, data: { full_name: string; role: UserRole; is_active: boolean }) => {
+  const handleUpdateUser = async (id: string, data: { full_name: string; roles: string[]; is_active: boolean }) => {
     try {
-      const updated = await userApi.updateUserProfile(id, data);
+      const targetUser = users.find(u => u.id === id);
+      const currentRoles = targetUser?.roles || [];
+      const updated = await userApi.updateUserWithRoles(id, currentRoles, data.roles, {
+        full_name: data.full_name,
+        is_active: data.is_active
+      });
       setUsers(prev => prev.map(u => u.id === id ? updated : u));
       
       // Nếu tự cập nhật bản thân, đồng bộ lại profile trong AuthContext
@@ -62,7 +67,7 @@ export default function AdminUsersPage() {
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
       const updated = await userApi.setUserActive(id, !currentStatus);
-      setUsers(prev => prev.map(u => u.id === id ? updated : u));
+      setUsers(prev => prev.map(u => u.id === id ? { ...updated, roles: u.roles } : u));
     } catch (err: any) {
       console.error(err);
       alert(err.message || 'Không thể thay đổi trạng thái người dùng.');
@@ -71,8 +76,8 @@ export default function AdminUsersPage() {
 
   return (
     <RoleGuard 
-      allowedRoles={['admin']} 
-      fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Quản lý người dùng. Chỉ tài khoản Quản trị viên (Admin) mới có thể xem và điều khiển phân quyền." />}
+      allowedRoles={['SUPER_ADMIN']} 
+      fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Quản lý người dùng. Chỉ tài khoản Quản trị viên (SUPER_ADMIN) mới có thể xem và điều khiển phân quyền." />}
     >
       <div className="space-y-6 py-4 font-sans animate-fade-in" id="admin-users-page">
         {/* Page Header */}

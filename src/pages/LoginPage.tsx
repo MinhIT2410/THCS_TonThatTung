@@ -12,7 +12,7 @@ import { motion } from 'motion/react';
 import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 export default function LoginPage() {
-  const { signIn, isAuthenticated, loading, profile } = useAuth();
+  const { signIn, isAuthenticated, loading, profile, hasAnyRole } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -29,13 +29,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && isAuthenticated && profile) {
-      if (['admin', 'editor'].includes(profile.role)) {
+      if (hasAnyRole(['SUPER_ADMIN', 'CONTENT_EDITOR'])) {
         navigate(ROUTES.ADMIN, { replace: true });
       } else {
         navigate(ROUTES.HOME, { replace: true });
       }
     }
-  }, [isAuthenticated, loading, profile, navigate]);
+  }, [isAuthenticated, loading, profile, hasAnyRole, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

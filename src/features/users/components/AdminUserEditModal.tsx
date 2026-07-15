@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile, UserRole } from '../userTypes';
+import { UserProfile } from '../userTypes';
 import { useAuth } from '../../auth/useAuth';
 import { X, AlertTriangle, Shield, User, Loader2 } from 'lucide-react';
 
@@ -12,8 +12,19 @@ interface AdminUserEditModalProps {
   userProfile: UserProfile;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, data: { full_name: string; role: UserRole; is_active: boolean }) => Promise<void>;
+  onSave: (id: string, data: { full_name: string; roles: string[]; is_active: boolean }) => Promise<void>;
 }
+
+const AVAILABLE_ROLES = [
+  { code: 'SUPER_ADMIN', name: 'Quản trị viên cấp cao' },
+  { code: 'PRINCIPAL', name: 'Hiệu trưởng' },
+  { code: 'VICE_PRINCIPAL', name: 'Hiệu phó' },
+  { code: 'CONTENT_EDITOR', name: 'Biên tập viên nội dung' },
+  { code: 'STAFF', name: 'Nhân viên hành chính' },
+  { code: 'TEACHER', name: 'Giáo viên' },
+  { code: 'STUDENT', name: 'Học sinh' },
+  { code: 'PARENT', name: 'Phụ huynh' }
+];
 
 export const AdminUserEditModal: React.FC<AdminUserEditModalProps> = ({
   userProfile,
@@ -23,7 +34,7 @@ export const AdminUserEditModal: React.FC<AdminUserEditModalProps> = ({
 }) => {
   const { profile: currentUserProfile } = useAuth();
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<UserRole>('viewer');
+  const [roles, setRoles] = useState<string[]>([]);
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +44,7 @@ export const AdminUserEditModal: React.FC<AdminUserEditModalProps> = ({
   useEffect(() => {
     if (isOpen && userProfile) {
       setFullName(userProfile.full_name || '');
-      setRole(userProfile.role || 'viewer');
+      setRoles(userProfile.roles || []);
       setIsActive(userProfile.is_active ?? true);
       setError(null);
     }
@@ -54,7 +65,7 @@ export const AdminUserEditModal: React.FC<AdminUserEditModalProps> = ({
     try {
       await onSave(userProfile.id, {
         full_name: fullName.trim(),
-        role,
+        roles,
         is_active: isActive,
       });
       onClose();
@@ -132,40 +143,57 @@ export const AdminUserEditModal: React.FC<AdminUserEditModalProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Role select */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Vai trò hệ thống
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-                disabled={isSelf}
-                className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed"
-              >
-                <option value="viewer">Người xem (Viewer)</option>
-                <option value="teacher">Giáo viên (Teacher)</option>
-                <option value="editor">Biên tập viên (Editor)</option>
-                <option value="admin">Quản trị viên (Admin)</option>
-              </select>
+          {/* Roles Selection */}
+          <div className="space-y-2">
+            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+              Vai trò thành viên (Có thể chọn nhiều)
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl">
+              {AVAILABLE_ROLES.map((r) => {
+                const checked = roles.includes(r.code);
+                return (
+                  <label 
+                    key={r.code} 
+                    className={`flex items-center space-x-2.5 p-2 rounded-xl text-xs font-semibold cursor-pointer border select-none transition-all ${
+                      checked 
+                        ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-400' 
+                        : 'bg-white dark:bg-slate-950 border-slate-150 dark:border-slate-850 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={isSelf && r.code === 'SUPER_ADMIN'}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setRoles(prev => [...prev, r.code]);
+                        } else {
+                          setRoles(prev => prev.filter(code => code !== r.code));
+                        }
+                      }}
+                      className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 h-4 w-4 disabled:opacity-50"
+                    />
+                    <span>{r.name}</span>
+                  </label>
+                );
+              })}
             </div>
+          </div>
 
-            {/* Status select */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Trạng thái hoạt động
-              </label>
-              <select
-                value={isActive ? 'true' : 'false'}
-                onChange={(e) => setIsActive(e.target.value === 'true')}
-                disabled={isSelf}
-                className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed"
-              >
-                <option value="true">Đang hoạt động</option>
-                <option value="false">Tạm khóa tài khoản</option>
-              </select>
-            </div>
+          {/* Status select */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+              Trạng thái hoạt động
+            </label>
+            <select
+              value={isActive ? 'true' : 'false'}
+              onChange={(e) => setIsActive(e.target.value === 'true')}
+              disabled={isSelf}
+              className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed font-medium"
+            >
+              <option value="true">Đang hoạt động</option>
+              <option value="false">Tạm khóa tài khoản</option>
+            </select>
           </div>
 
           {/* Buttons */}

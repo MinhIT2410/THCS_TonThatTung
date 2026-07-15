@@ -54,6 +54,30 @@ export const authApi = {
   },
 
   /**
+   * Get role codes from user_roles table
+   */
+  async getUserRoles(userId: string): Promise<string[]> {
+    if (!isSupabaseConfigured) {
+      return [];
+    }
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role_code')
+        .eq('user_id', userId);
+
+      if (error) {
+        throw new ApiError('DATABASE_ERROR', 'Lỗi truy vấn vai trò người dùng.', error);
+      }
+
+      return (data || []).map((row: any) => row.role_code);
+    } catch (err) {
+      console.error('Error fetching user roles:', err);
+      return [];
+    }
+  },
+
+  /**
    * Sign in using email and password
    */
   async signInWithPassword(email: string, password: string): Promise<{ user: User; session: Session }> {

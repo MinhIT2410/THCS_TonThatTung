@@ -14,7 +14,7 @@ interface AdminHeaderProps {
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({ onOpenSidebar }) => {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, primaryRole } = useAuth();
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -59,7 +59,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onOpenSidebar }) => {
             </p>
             <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400 leading-none mt-0.5 uppercase tracking-wide flex items-center gap-0.5">
               <Shield className="h-2.5 w-2.5 text-blue-500" />
-              {profile?.role}
+              {primaryRole?.name || 'Chưa phân quyền'}
             </p>
           </div>
         </div>
