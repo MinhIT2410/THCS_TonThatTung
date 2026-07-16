@@ -7,7 +7,8 @@ import { supabase } from '../../services/supabaseClient';
 
 export interface CreateUserInput {
   full_name: string;
-  email: string;
+  email?: string;
+  student_code?: string | null;
   roles: string[];
   class_id?: string | null;
   academic_year_id?: string | null;
@@ -23,7 +24,8 @@ export const userCreationApi = {
         action: 'create_one',
         user: {
           full_name: input.full_name,
-          email: input.email,
+          email: input.email || undefined,
+          student_code: input.student_code || null,
           roles: input.roles,
           class_id: input.class_id || null,
           academic_year_id: input.academic_year_id || null
@@ -36,6 +38,31 @@ export const userCreationApi = {
       throw error;
     }
 
+    return data;
+  },
+
+  /**
+   * Invoke Edge Function to create multiple users.
+   */
+  async createManyUsers(users: any[]) {
+    const { data, error } = await supabase.functions.invoke('admin-create-users', {
+      body: {
+        action: 'create_many',
+        users: users.map(u => ({
+          row_number: u.row_number,
+          full_name: u.full_name,
+          email: u.email || undefined,
+          student_code: u.student_code || null,
+          roles: u.roles,
+          class_id: u.class_id || null,
+          academic_year_id: u.academic_year_id || null
+        }))
+      }
+    });
+
+    if (error) {
+      throw error;
+    }
     return data;
   },
 

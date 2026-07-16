@@ -9,6 +9,7 @@ export const env = {
 
   enableCmsEditing: import.meta.env.VITE_ENABLE_CMS_EDITING === 'true',
   enableDemoFallback: import.meta.env.VITE_ENABLE_DEMO_FALLBACK === 'true',
+  studentInternalEmailDomain: import.meta.env.VITE_STUDENT_INTERNAL_EMAIL_DOMAIN || '',
 
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,

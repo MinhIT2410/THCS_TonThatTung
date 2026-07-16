@@ -10,6 +10,7 @@ import { ROUTES } from '../config/routes';
 import { Lock, Key, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
+import { env } from '../config/env';
 
 export default function LoginPage() {
   const { signIn, isAuthenticated, loading, profile, hasAnyRole } = useAuth();
@@ -45,7 +46,7 @@ export default function LoginPage() {
     }
 
     if (!email || !password) {
-      setErrorMsg('Vui lòng nhập đầy đủ email và mật khẩu.');
+      setErrorMsg('Vui lòng nhập đầy đủ tài khoản và mật khẩu.');
       return;
     }
 
@@ -53,12 +54,31 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      const { error } = await signIn(email, password);
+      let finalEmail = email.trim();
+      if (finalEmail.includes('@')) {
+        finalEmail = finalEmail.toLowerCase();
+      } else {
+        const studentCode = finalEmail.toUpperCase();
+        if (!/^[A-Z0-9-]+$/.test(studentCode)) {
+          setErrorMsg('Thông tin đăng nhập không chính xác.');
+          setSubmitting(false);
+          return;
+        }
+        const domain = env.studentInternalEmailDomain;
+        if (!domain) {
+          setErrorMsg('Hệ thống đăng nhập bằng mã học sinh chưa được cấu hình.');
+          setSubmitting(false);
+          return;
+        }
+        finalEmail = `${studentCode.toLowerCase()}@${domain}`;
+      }
+
+      const { error } = await signIn(finalEmail, password);
       if (error) {
-        setErrorMsg('Email hoặc mật khẩu không đúng.');
+        setErrorMsg('Thông tin đăng nhập không chính xác.');
       }
     } catch (err) {
-      setErrorMsg('Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại.');
+      setErrorMsg('Thông tin đăng nhập không chính xác.');
     } finally {
       setSubmitting(false);
     }
@@ -146,12 +166,12 @@ export default function LoginPage() {
               )}
 
               <div className="space-y-1.5">
-                <label className="block font-bold text-slate-700 dark:text-slate-300">Email đăng nhập:</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300">Email hoặc mã học sinh:</label>
                 <input
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="example@domain.com"
+                  placeholder="example@domain.com hoặc HS000001"
                   disabled={submitting}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white disabled:opacity-55"
                   required

@@ -34,9 +34,26 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   // Form states
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [hasEmail, setHasEmail] = useState(true);
+  const [studentCode, setStudentCode] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('');
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    studentCode: string;
+    loginIdentifier: string;
+    temporaryPassword: string;
+    fullName: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCredentials = () => {
+    if (!createdCredentials) return;
+    const textToCopy = `Họ tên: ${createdCredentials.fullName}\nMã học sinh: ${createdCredentials.studentCode}\nTên đăng nhập: ${createdCredentials.loginIdentifier}\nMật khẩu tạm: ${createdCredentials.temporaryPassword}`;
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   
   // Config & Loading states
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -71,9 +88,12 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
       // Reset form states
       setFullName('');
       setEmail('');
+      setHasEmail(true);
+      setStudentCode('');
       setSelectedRoles([]);
       setSelectedClassId('');
       setSelectedAcademicYearId('');
+      setCreatedCredentials(null);
       setError(null);
 
       const loadData = async () => {
@@ -111,11 +131,19 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
   const handleRoleToggle = (code: string) => {
     setSelectedRoles(prev => {
+      let nextRoles = [];
       if (prev.includes(code)) {
-        return prev.filter(r => r !== code);
+        nextRoles = prev.filter(r => r !== code);
       } else {
-        return [...prev, code];
+        nextRoles = [...prev, code];
       }
+      
+      // If STUDENT is no longer selected, force hasEmail to true
+      if (!nextRoles.includes('STUDENT')) {
+        setHasEmail(true);
+        setStudentCode('');
+      }
+      return nextRoles;
     });
   };
 
@@ -126,26 +154,37 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
     // 1. Validation
     const trimmedName = fullName.trim();
     const trimmedEmail = email.trim().toLowerCase();
+    const trimmedStudentCode = studentCode.trim().toUpperCase();
 
     if (!trimmedName) {
       setError('Họ và tên không được để trống.');
       return;
     }
 
-    if (!trimmedEmail) {
-      setError('Email không được để trống.');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      setError('Định dạng email không hợp lệ.');
-      return;
-    }
-
     if (selectedRoles.length === 0) {
       setError('Vui lòng chọn ít nhất một vai trò.');
       return;
+    }
+
+    if (isStudentSelected && !hasEmail) {
+      if (!trimmedStudentCode) {
+        setError('Mã học sinh là bắt buộc khi không có email.');
+        return;
+      }
+      if (!/^[A-Z0-9-]+$/.test(trimmedStudentCode)) {
+        setError('Mã học sinh chỉ được chứa chữ cái, số và dấu gạch ngang.');
+        return;
+      }
+    } else {
+      if (!trimmedEmail) {
+        setError('Email không được để trống.');
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        setError('Định dạng email không hợp lệ.');
+        return;
+      }
     }
 
     if (isStudentSelected) {
@@ -164,7 +203,8 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
     try {
       const result = await userCreationApi.createUser({
         full_name: trimmedName,
-        email: trimmedEmail,
+        email: (isStudentSelected && !hasEmail) ? undefined : trimmedEmail,
+        student_code: (isStudentSelected && !hasEmail) ? trimmedStudentCode : null,
         roles: selectedRoles,
         class_id: isStudentSelected ? selectedClassId : null,
         academic_year_id: isStudentSelected ? selectedAcademicYearId : null
@@ -174,8 +214,19 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
         const errCode = result.error_code || 'UNKNOWN';
         setError(getFriendlyErrorMessage(errCode, result.message || 'Có lỗi xảy ra khi tạo tài khoản. Vui lòng thử lại sau.'));
       } else {
-        onSuccess();
-        onClose();
+        const data = result?.data || {};
+        if (data.temporary_password) {
+          setCreatedCredentials({
+            fullName: trimmedName,
+            studentCode: (data.student_code || trimmedStudentCode).toUpperCase(),
+            loginIdentifier: (data.student_code || trimmedStudentCode).toUpperCase(),
+            temporaryPassword: data.temporary_password
+          });
+          onSuccess();
+        } else {
+          onSuccess();
+          onClose();
+        }
       }
     } catch (err: any) {
       console.error("Lỗi khi gọi API tạo tài khoản:", err);
@@ -200,6 +251,12 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
           errorCode = 'FORBIDDEN';
         } else if (rawMsg.includes('EMAIL_EXISTS')) {
           errorCode = 'EMAIL_EXISTS';
+        } else if (rawMsg.includes('STUDENT_CODE_EXISTS')) {
+          errorCode = 'STUDENT_CODE_EXISTS';
+        } else if (rawMsg.includes('STUDENT_CODE_INVALID')) {
+          errorCode = 'STUDENT_CODE_INVALID';
+        } else if (rawMsg.includes('STUDENT_CODE_REQUIRED')) {
+          errorCode = 'STUDENT_CODE_REQUIRED';
         }
       }
 
@@ -217,14 +274,95 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
       EMAIL_REQUIRED: 'Vui lòng nhập email.',
       EMAIL_EXISTS: 'Email này đã có tài khoản trong hệ thống.',
       INVITE_FAILED: 'Không thể gửi email mời. Vui lòng thử lại.',
+      STUDENT_CODE_REQUIRED: 'Mã học sinh là bắt buộc khi không có email.',
+      STUDENT_CODE_INVALID: 'Mã học sinh không hợp lệ. Chỉ cho phép chữ cái (A-Z), số (0-9) và dấu gạch ngang (-).',
+      STUDENT_CODE_EXISTS: 'Mã học sinh này đã tồn tại trên hệ thống.',
+      TEMPORARY_ACCOUNT_CREATION_FAILED: 'Không thể tạo tài khoản học sinh tạm thời trên Auth.',
       DATABASE_FINALIZATION_FAILED: 'Không thể hoàn tất dữ liệu tài khoản. Hệ thống đã hủy tài khoản vừa tạo.',
       COMPENSATION_FAILED: 'Tài khoản chưa được hoàn tất và cần quản trị viên kiểm tra.',
       INTERNAL_SERVER_ERROR: 'Đã có lỗi hệ thống. Vui lòng thử lại sau.'
     };
-    return mapping[errorCode] || 'Có lỗi xảy ra khi tạo tài khoản. Vui lòng thử lại sau.';
+    return mapping[errorCode] || defaultMsg || 'Có lỗi xảy ra khi tạo tài khoản. Vui lòng thử lại sau.';
   };
 
   const isConfigEmpty = academicYears.length === 0 || classes.length === 0;
+
+  if (createdCredentials) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in font-sans" id="create-user-modal">
+        <div 
+          className="relative w-full max-w-md bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl overflow-hidden animate-scale-up p-6 text-center space-y-5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400">
+            <Check className="h-6 w-6" />
+          </div>
+          
+          <div className="space-y-1.5">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Tạo tài khoản học sinh thành công</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Học sinh: <strong className="text-slate-800 dark:text-slate-200">{createdCredentials.fullName}</strong>
+            </p>
+          </div>
+
+          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl text-left space-y-3 border border-slate-100 dark:border-slate-900 font-medium text-slate-700 dark:text-slate-300">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-400 font-medium">Họ tên:</span>
+              <strong className="text-slate-800 dark:text-slate-100">{createdCredentials.fullName}</strong>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-400 font-medium">Mã học sinh:</span>
+              <strong className="font-mono text-slate-800 dark:text-slate-100">{createdCredentials.studentCode}</strong>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-400 font-medium">Tên đăng nhập:</span>
+              <strong className="font-mono text-slate-800 dark:text-slate-100 select-all">{createdCredentials.loginIdentifier}</strong>
+            </div>
+            <div className="flex justify-between items-center text-xs border-t border-slate-200/50 dark:border-slate-800/50 pt-2.5">
+              <span className="text-slate-400 font-medium">Mật khẩu tạm:</span>
+              <strong className="font-mono text-blue-600 dark:text-blue-400 select-all font-bold tracking-wider">{createdCredentials.temporaryPassword}</strong>
+            </div>
+          </div>
+
+          <div className="flex justify-end px-1">
+            <button
+              onClick={handleCopyCredentials}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 border border-blue-200/40 dark:border-blue-900/40 transition-colors"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3 w-3" />
+                  <span>Đã sao chép!</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                  <span>Sao chép thông tin</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="flex gap-2 p-3.5 bg-amber-50 dark:bg-amber-950/25 border border-amber-100 dark:border-amber-900/50 rounded-2xl text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed font-semibold text-left">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+            <span>Mật khẩu này chỉ hiển thị một lần. Vui lòng lưu lại và bàn giao an toàn cho học sinh.</span>
+          </div>
+
+          <button
+            onClick={() => {
+              setCreatedCredentials(null);
+              onClose();
+            }}
+            className="w-full py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-lg shadow-blue-500/10"
+          >
+            Đóng cửa sổ
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in font-sans" id="create-user-modal">
@@ -252,7 +390,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
         {/* Scrollable Form Body */}
         <div className="overflow-y-auto p-6 flex-1 space-y-5">
           {error && (
-            <div className="flex gap-2.5 p-4 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 rounded-2xl text-xs text-red-700 dark:text-red-400 leading-relaxed font-semibold">
+            <div className="flex gap-2.5 p-4 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 rounded-2xl text-xs text-red-700 dark:text-red-400 leading-relaxed font-semibold animate-shake">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -276,25 +414,84 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
               />
             </div>
 
-            {/* Email */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5 text-slate-400" />
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                required
-                disabled={isSubmitting}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="example@school.edu.vn"
-                className="w-full px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-white font-medium transition-all"
-              />
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                Mật khẩu sẽ không cần thiết lập thủ công. Hệ thống sẽ gửi một email mời kích hoạt tài khoản để người dùng tự khởi tạo mật khẩu riêng.
-              </p>
-            </div>
+            {/* Student Account Type (Only if STUDENT is selected) */}
+            {isStudentSelected && (
+              <div className="space-y-1.5 p-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-850 rounded-2xl animate-fade-in">
+                <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-1.5">
+                  Hình thức tài khoản học sinh
+                </span>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasEmail(true);
+                      setStudentCode('');
+                    }}
+                    className={`flex items-center justify-center p-2.5 rounded-xl text-xs font-semibold border select-none transition-all ${
+                      hasEmail
+                        ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-400 font-bold'
+                        : 'bg-white dark:bg-slate-950 border-slate-150 dark:border-slate-850 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 font-medium'
+                    }`}
+                  >
+                    Có địa chỉ Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHasEmail(false)}
+                    className={`flex items-center justify-center p-2.5 rounded-xl text-xs font-semibold border select-none transition-all ${
+                      !hasEmail
+                        ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-400 font-bold'
+                        : 'bg-white dark:bg-slate-950 border-slate-150 dark:border-slate-850 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 font-medium'
+                    }`}
+                  >
+                    Chưa có địa chỉ Email
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Conditional input fields */}
+            {(!isStudentSelected || hasEmail) ? (
+              /* Email */
+              <div className="space-y-1.5 animate-fade-in">
+                <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-slate-400" />
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  disabled={isSubmitting}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="example@school.edu.vn"
+                  className="w-full px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-white font-medium transition-all"
+                />
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
+                  Mật khẩu sẽ không cần thiết lập thủ công. Hệ thống sẽ gửi một email mời kích hoạt tài khoản để người dùng tự khởi tạo mật khẩu riêng.
+                </p>
+              </div>
+            ) : (
+              /* Student Code (No Email) */
+              <div className="space-y-1.5 animate-fade-in">
+                <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <GraduationCap className="h-3.5 w-3.5 text-slate-400" />
+                  Mã học sinh <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  disabled={isSubmitting}
+                  value={studentCode}
+                  onChange={(e) => setStudentCode(e.target.value)}
+                  placeholder="Ví dụ: HS000123"
+                  className="w-full px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-white font-mono font-bold tracking-wider transition-all"
+                />
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
+                  Hệ thống sẽ tạo tên đăng nhập bằng mã học sinh và một mật khẩu tạm riêng.
+                </p>
+              </div>
+            )}
 
             {/* Roles Selection */}
             <div className="space-y-2">
@@ -340,8 +537,8 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
                 {loadingConfig ? (
                   <div className="flex items-center justify-center py-4 space-x-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                    <span className="text-xs text-slate-500">Đang tải năm học & lớp...</span>
+                     <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                     <span className="text-xs text-slate-500">Đang tải năm học & lớp...</span>
                   </div>
                 ) : isConfigEmpty ? (
                   <div className="flex gap-2 p-3 bg-amber-50 dark:bg-amber-950/25 border border-amber-100 dark:border-amber-900/50 rounded-xl text-xs text-amber-700 dark:text-amber-400 font-semibold">

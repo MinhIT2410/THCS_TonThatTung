@@ -22,7 +22,8 @@ function getCorsHeaders(origin: string) {
 interface UserInput {
   row_number?: number;
   full_name: string;
-  email: string;
+  email?: string;
+  student_code?: string;
   roles: string[];
   class_id?: string | null;
   academic_year_id?: string | null;
@@ -30,7 +31,10 @@ interface UserInput {
 
 interface ProcessResult {
   row_number?: number;
-  email: string;
+  email?: string;
+  student_code?: string;
+  login_identifier?: string;
+  temporary_password?: string;
   success: boolean;
   user_id?: string;
   error_code?: string;
@@ -54,13 +58,18 @@ function validateUserData(user: any): ValidationResult {
   }
 
   const email = typeof user.email === "string" ? user.email.trim() : "";
-  if (!email) {
-    return { isValid: false, error_code: "EMAIL_REQUIRED", message: "Email không được để trống." };
+  const rawCode = typeof user.student_code === "string" ? user.student_code.trim() : "";
+  const studentCode = rawCode ? rawCode.toUpperCase() : "";
+
+  if (!email && !studentCode) {
+    return { isValid: false, error_code: "VALIDATION_ERROR", message: "Phải cung cấp Email hoặc Mã học sinh." };
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return { isValid: false, error_code: "VALIDATION_ERROR", message: `Email không hợp lệ: ${email}` };
+  if (email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { isValid: false, error_code: "VALIDATION_ERROR", message: `Email không hợp lệ: ${email}` };
+    }
   }
 
   if (!user.roles || !Array.isArray(user.roles) || user.roles.length === 0) {
@@ -78,16 +87,36 @@ function validateUserData(user: any): ValidationResult {
     if (!allowedRoles.includes(rUpper)) {
       return { isValid: false, error_code: "VALIDATION_ERROR", message: `Vai trò không hợp lệ: ${role}. Các vai trò hợp lệ: ${allowedRoles.join(", ")}` };
     }
-    if (rolesSet.has(rUpper)) {
-      return { isValid: false, error_code: "VALIDATION_ERROR", message: `Vai trò bị trùng lặp: ${role}` };
-    }
     rolesSet.add(rUpper);
   }
 
-  // Update user roles with normalized versions
-  user.roles = Array.from(rolesSet);
+  const roles = Array.from(rolesSet);
+  user.roles = roles;
 
-  if (user.roles.includes("STUDENT")) {
+  const isStudent = roles.includes("STUDENT");
+
+  if (!email) {
+    if (!isStudent) {
+      return { isValid: false, error_code: "VALIDATION_ERROR", message: "Tạo tài khoản không email chỉ cho phép với vai trò học sinh (STUDENT)." };
+    }
+    if (roles.length > 1) {
+      return { isValid: false, error_code: "VALIDATION_ERROR", message: "Tài khoản học sinh không email chỉ được phép chứa vai trò STUDENT." };
+    }
+    if (!studentCode) {
+      return { isValid: false, error_code: "STUDENT_CODE_REQUIRED", message: "Mã học sinh là bắt buộc khi không có email." };
+    }
+  }
+
+  if (studentCode) {
+    if (!isStudent) {
+      return { isValid: false, error_code: "VALIDATION_ERROR", message: "Chỉ vai trò học sinh (STUDENT) mới được khai báo Mã học sinh." };
+    }
+    if (!/^[A-Z0-9-]+$/.test(studentCode)) {
+      return { isValid: false, error_code: "STUDENT_CODE_INVALID", message: "Mã học sinh chỉ được chứa chữ cái, số và dấu gạch ngang." };
+    }
+  }
+
+  if (isStudent) {
     if (!user.class_id) {
       return { isValid: false, error_code: "VALIDATION_ERROR", message: "Lớp học (class_id) là bắt buộc đối với vai trò Học sinh." };
     }
@@ -121,14 +150,50 @@ async function deleteUserCompensation(supabaseAdmin: any, userId: string): Promi
   }
 }
 
+function generateTemporaryPassword(): string {
+  const length = 12;
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const specials = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+  
+  const array = new Uint32Array(length);
+  crypto.getRandomValues(array);
+  
+  let passwordArray: string[] = [];
+  passwordArray.push(uppercase[array[0] % uppercase.length]);
+  passwordArray.push(lowercase[array[1] % lowercase.length]);
+  passwordArray.push(numbers[array[2] % numbers.length]);
+  passwordArray.push(specials[array[3] % specials.length]);
+  
+  const allChars = uppercase + lowercase + numbers + specials;
+  for (let i = 4; i < length; i++) {
+    passwordArray.push(allChars[array[i] % allChars.length]);
+  }
+  
+  const shuffleArray = new Uint32Array(length);
+  crypto.getRandomValues(shuffleArray);
+  for (let i = length - 1; i > 0; i--) {
+    const j = shuffleArray[i] % (i + 1);
+    const temp = passwordArray[i];
+    passwordArray[i] = passwordArray[j];
+    passwordArray[j] = temp;
+  }
+  
+  return passwordArray.join("");
+}
+
 async function processSingleUser(
   user: UserInput,
   callerId: string,
   supabaseUser: any,
-  supabaseAdmin: any
+  supabaseAdmin: any,
+  studentDomain: string
 ): Promise<ProcessResult> {
   const rowNum = user.row_number;
-  const email = (user.email || "").trim().toLowerCase();
+  const rawEmail = (user.email || "").trim().toLowerCase();
+  const rawCode = (user.student_code || "").trim();
+  const studentCode = rawCode ? rawCode.toUpperCase() : "";
   const fullName = (user.full_name || "").trim();
   const roles = user.roles || [];
   const classId = user.class_id || null;
@@ -154,7 +219,8 @@ async function processSingleUser(
     if (forbiddenRoles.length > 0) {
       return {
         row_number: rowNum,
-        email,
+        email: rawEmail || undefined,
+        student_code: studentCode || undefined,
         success: false,
         error_code: "FORBIDDEN",
         error: "Bạn không có quyền quản lý/tạo vai trò được yêu cầu trong phạm vi này.",
@@ -163,61 +229,150 @@ async function processSingleUser(
   } catch (err: any) {
     return {
       row_number: rowNum,
-      email,
+      email: rawEmail || undefined,
+      student_code: studentCode || undefined,
       success: false,
       error_code: "FORBIDDEN",
       error: "Yêu cầu bị từ chối do không có quyền thực hiện hành động này.",
     };
   }
 
-  // 2. Invite Auth User using Admin API
-  let authUserId = "";
-  try {
-    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName },
-    });
+  // 2. Check if student_code is already declared / exists in profiles table
+  if (studentCode) {
+    try {
+      const { data: existingStudent, error: checkError } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("student_code", studentCode)
+        .maybeSingle();
 
-    if (inviteError) {
+      if (checkError) {
+        console.error("Error checking student_code uniqueness:", checkError);
+      }
+
+      if (existingStudent) {
+        return {
+          row_number: rowNum,
+          email: rawEmail || undefined,
+          student_code: studentCode,
+          success: false,
+          error_code: "STUDENT_CODE_EXISTS",
+          error: `Mã học sinh '${studentCode}' đã tồn tại trên hệ thống.`,
+        };
+      }
+    } catch (err) {
+      console.error("Unexpected error checking student_code:", err);
+    }
+  }
+
+  let authUserId = "";
+  let temporaryPassword = "";
+  let targetEmail = rawEmail;
+
+  if (!rawEmail && studentCode) {
+    // STUDENT without email: Use internal email & createUser with password
+    const internalEmail = `${studentCode.toLowerCase()}@${studentDomain}`;
+    targetEmail = internalEmail;
+    temporaryPassword = generateTemporaryPassword();
+
+    try {
+      const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: internalEmail,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName,
+          student_code: studentCode,
+        },
+      });
+
+      if (createError) {
+        console.error("auth.admin.createUser error for student without email:", createError);
+        return {
+          row_number: rowNum,
+          student_code: studentCode,
+          success: false,
+          error_code: createError.status === 422 ? "STUDENT_CODE_EXISTS" : "TEMPORARY_ACCOUNT_CREATION_FAILED",
+          error: createError.status === 422 
+            ? `Tài khoản học sinh '${studentCode}' đã tồn tại.` 
+            : "Tạo tài khoản học sinh tạm thời không thành công.",
+        };
+      }
+
+      if (!createData?.user) {
+        return {
+          row_number: rowNum,
+          student_code: studentCode,
+          success: false,
+          error_code: "TEMPORARY_ACCOUNT_CREATION_FAILED",
+          error: "Tạo tài khoản học sinh tạm thời không thành công.",
+        };
+      }
+
+      authUserId = createData.user.id;
+    } catch (err: any) {
+      console.error("Unexpected error creating user without email:", err);
       return {
         row_number: rowNum,
-        email,
+        student_code: studentCode,
         success: false,
-        error_code: inviteError.status === 422 ? "EMAIL_EXISTS" : "INVITE_FAILED",
-        error: inviteError.status === 422 ? "Email này đã tồn tại trong hệ thống." : "Lời mời người dùng không thành công.",
+        error_code: "TEMPORARY_ACCOUNT_CREATION_FAILED",
+        error: "Lỗi kết nối khi tạo tài khoản học sinh tạm thời.",
       };
     }
+  } else {
+    // Normal Flow: Invite user by email
+    try {
+      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(rawEmail, {
+        data: { full_name: fullName },
+      });
 
-    if (!inviteData?.user) {
+      if (inviteError) {
+        return {
+          row_number: rowNum,
+          email: rawEmail,
+          student_code: studentCode || undefined,
+          success: false,
+          error_code: inviteError.status === 422 ? "EMAIL_EXISTS" : "INVITE_FAILED",
+          error: inviteError.status === 422 ? "Email này đã tồn tại trong hệ thống." : "Lời mời người dùng không thành công.",
+        };
+      }
+
+      if (!inviteData?.user) {
+        return {
+          row_number: rowNum,
+          email: rawEmail,
+          student_code: studentCode || undefined,
+          success: false,
+          error_code: "INVITE_FAILED",
+          error: "Lời mời người dùng không thành công.",
+        };
+      }
+
+      authUserId = inviteData.user.id;
+    } catch (err: any) {
       return {
         row_number: rowNum,
-        email,
+        email: rawEmail,
+        student_code: studentCode || undefined,
         success: false,
         error_code: "INVITE_FAILED",
-        error: "Lời mời người dùng không thành công.",
+        error: "Lỗi kết nối khi gửi lời mời.",
       };
     }
-
-    authUserId = inviteData.user.id;
-  } catch (err: any) {
-    return {
-      row_number: rowNum,
-      email,
-      success: false,
-      error_code: "INVITE_FAILED",
-      error: "Lỗi kết nối khi gửi lời mời.",
-    };
   }
 
   // 3. Finalize User Setup using RPC
   try {
     const { error: rpcError } = await supabaseAdmin.rpc("finalize_invited_user", {
       target_user_id: authUserId,
-      target_email: email,
+      target_email: targetEmail,
       target_full_name: fullName,
       target_role_codes: roles,
       target_class_id: classId,
       target_academic_year_id: academicYearId,
       actor_user_id: callerId,
+      target_student_code: studentCode || null,
     });
 
     if (rpcError) {
@@ -226,7 +381,8 @@ async function processSingleUser(
       const compensated = await deleteUserCompensation(supabaseAdmin, authUserId);
       return {
         row_number: rowNum,
-        email,
+        email: rawEmail || undefined,
+        student_code: studentCode || undefined,
         success: false,
         error_code: compensated ? "DATABASE_FINALIZATION_FAILED" : "COMPENSATION_FAILED",
         error: compensated
@@ -237,7 +393,10 @@ async function processSingleUser(
 
     return {
       row_number: rowNum,
-      email,
+      email: rawEmail || undefined,
+      student_code: studentCode || undefined,
+      login_identifier: studentCode || targetEmail,
+      temporary_password: temporaryPassword || undefined,
       success: true,
       user_id: authUserId,
     };
@@ -246,7 +405,8 @@ async function processSingleUser(
     const compensated = await deleteUserCompensation(supabaseAdmin, authUserId);
     return {
       row_number: rowNum,
-      email,
+      email: rawEmail || undefined,
+      student_code: studentCode || undefined,
       success: false,
       error_code: compensated ? "DATABASE_FINALIZATION_FAILED" : "COMPENSATION_FAILED",
       error: compensated
@@ -295,13 +455,16 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const studentDomain = Deno.env.get("STUDENT_INTERNAL_EMAIL_DOMAIN")?.trim();
 
-    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey || !studentDomain) {
+      const missingVar = !studentDomain ? "STUDENT_INTERNAL_EMAIL_DOMAIN" : "Supabase keys";
+      console.error(`System configuration incomplete: missing ${missingVar}`);
       return new Response(
         JSON.stringify({
           success: false,
           error_code: "INTERNAL_SERVER_ERROR",
-          message: "Cấu hình hệ thống chưa hoàn chỉnh.",
+          message: "Cấu hình hệ thống chưa hoàn chỉnh (Thiếu tên miền email kỹ thuật).",
         }),
         { status: 500, headers: corsHeaders }
       );
@@ -376,7 +539,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const result = await processSingleUser(userInput, callerId, supabaseUser, supabaseAdmin);
+      const result = await processSingleUser(userInput, callerId, supabaseUser, supabaseAdmin, studentDomain);
 
       if (!result.success) {
         const status = result.error_code === "FORBIDDEN" ? 403 : 400;
@@ -395,6 +558,9 @@ Deno.serve(async (req) => {
           success: true,
           data: {
             user_id: result.user_id,
+            login_identifier: result.login_identifier,
+            temporary_password: result.temporary_password,
+            student_code: result.student_code,
           },
         }),
         { status: 200, headers: corsHeaders }
@@ -443,14 +609,23 @@ Deno.serve(async (req) => {
       const emailsInBatch = users
         .map((u) => u?.email?.toLowerCase()?.trim())
         .filter((email) => !!email);
-      const duplicates = emailsInBatch.filter((item, index) => emailsInBatch.indexOf(item) !== index);
+      const duplicateEmails = emailsInBatch.filter((item, index) => emailsInBatch.indexOf(item) !== index);
+
+      // Detect student_code duplicates in request payload - excluding blank/undefined values
+      const codesInBatch = users
+        .map((u) => {
+          const raw = u?.student_code?.trim() || "";
+          return raw ? raw.toUpperCase() : "";
+        })
+        .filter((code) => !!code);
+      const duplicateCodes = codesInBatch.filter((item, index) => codesInBatch.indexOf(item) !== index);
 
       const results: ProcessResult[] = [];
 
       for (const u of users) {
         const rowNum = u.row_number || (users.indexOf(u) + 1);
 
-        if (u?.email && duplicates.includes(u.email.toLowerCase().trim())) {
+        if (u?.email && duplicateEmails.includes(u.email.toLowerCase().trim())) {
           results.push({
             row_number: rowNum,
             email: u.email,
@@ -461,11 +636,27 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        const rawCode = u?.student_code?.trim() || "";
+        const studentCode = rawCode ? rawCode.toUpperCase() : "";
+
+        if (studentCode && duplicateCodes.includes(studentCode)) {
+          results.push({
+            row_number: rowNum,
+            email: u.email || undefined,
+            student_code: studentCode,
+            success: false,
+            error_code: "VALIDATION_ERROR",
+            error: `Mã học sinh '${studentCode}' bị trùng lặp trong tệp tải lên.`,
+          });
+          continue;
+        }
+
         const validation = validateUserData(u);
         if (!validation.isValid) {
           results.push({
             row_number: rowNum,
-            email: u?.email || "",
+            email: u?.email || undefined,
+            student_code: studentCode || undefined,
             success: false,
             error_code: validation.error_code,
             error: validation.message,
@@ -473,10 +664,13 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const res = await processSingleUser(u, callerId, supabaseUser, supabaseAdmin);
+        const res = await processSingleUser(u, callerId, supabaseUser, supabaseAdmin, studentDomain);
         results.push({
           row_number: rowNum,
-          email: u.email,
+          email: u.email || undefined,
+          student_code: res.student_code,
+          login_identifier: res.login_identifier,
+          temporary_password: res.temporary_password,
           success: res.success,
           user_id: res.user_id,
           error_code: res.error_code,

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Users, ArrowLeft, RefreshCw, UserPlus, CheckCircle2 } from 'lucide-react';
+import { Users, ArrowLeft, RefreshCw, UserPlus, CheckCircle2, FileSpreadsheet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { userApi } from '../../features/users/userApi';
@@ -13,6 +13,7 @@ import { AdminUsersTable } from '../../features/users/components/AdminUsersTable
 import { RoleGuard } from '../../components/auth/RoleGuard';
 import { AccessDenied } from '../../components/auth/AccessDenied';
 import { CreateUserModal } from '../../features/users/components/CreateUserModal';
+import { UserImportModal } from '../../features/users/import/UserImportModal';
 
 export default function AdminUsersPage() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchUsers = async () => {
@@ -124,14 +126,24 @@ export default function AdminUsersPage() {
           </div>
           <div className="flex items-center space-x-2 flex-wrap gap-2 sm:gap-0">
             {canCreateUser && (
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all w-fit shadow-sm hover:shadow-md cursor-pointer"
-                id="btn-open-create-user"
-              >
-                <UserPlus className="h-4 w-4" />
-                <span>Tạo tài khoản</span>
-              </button>
+              <>
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all w-fit shadow-sm hover:shadow-md cursor-pointer"
+                  id="btn-open-create-user"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  <span>Tạo tài khoản</span>
+                </button>
+                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 dark:text-slate-300 dark:hover:text-white dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all w-fit shadow-sm hover:shadow-md cursor-pointer"
+                  id="btn-open-import-excel"
+                >
+                  <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Nhập tài khoản từ Excel</span>
+                </button>
+              </>
             )}
             {isAdmin && (
               <button
@@ -184,6 +196,13 @@ export default function AdminUsersPage() {
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={handleCreateSuccess}
+        />
+
+        {/* Import User Modal Popup */}
+        <UserImportModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onSuccess={fetchUsers}
         />
       </div>
     </RoleGuard>
