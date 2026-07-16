@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Users, ArrowLeft, RefreshCw, UserPlus, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { Users, RefreshCw, UserPlus, CheckCircle2, FileSpreadsheet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { userApi } from '../../features/users/userApi';
@@ -124,7 +124,7 @@ export default function AdminUsersPage() {
               </p>
             )}
           </div>
-          <div className="flex items-center space-x-2 flex-wrap gap-2 sm:gap-0">
+          <div className="flex items-center gap-2 flex-wrap sm:justify-end">
             {canCreateUser && (
               <>
                 <button
@@ -156,14 +156,6 @@ export default function AdminUsersPage() {
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
             )}
-            <button
-              onClick={() => navigate('/quan-tri')}
-              className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all w-fit cursor-pointer"
-              id="btn-back-to-admin"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Quay lại</span>
-            </button>
           </div>
         </div>
 

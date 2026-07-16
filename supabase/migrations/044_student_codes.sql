@@ -115,7 +115,7 @@ begin
     target_user_id,
     target_full_name,
     v_normalized_student_code,
-    'viewer', -- legacy default role in profiles_role_check
+    'viewer', -- legacy default role in profiles_role_check (used strictly for compatibility with NOT NULL constraint; actual authorization/permissions are strictly resolved from public.user_roles)
     true
   )
   on conflict (id) do update set
@@ -164,3 +164,9 @@ revoke execute on function public.finalize_invited_user(uuid, text, text, text[]
 -- Grant to service_role and postgres
 grant execute on function public.finalize_invited_user(uuid, text, text, text[], uuid, uuid, uuid, text) to service_role;
 grant execute on function public.finalize_invited_user(uuid, text, text, text[], uuid, uuid, uuid, text) to postgres;
+
+-- 5. Adjust SELECT policy for classes to allow all authenticated users (read-only, safe data)
+drop policy if exists "Select classes for authorized school roles" on public.classes;
+create policy "Select classes for authorized school roles"
+on public.classes for select to authenticated
+using (true);

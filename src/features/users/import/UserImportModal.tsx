@@ -44,6 +44,7 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
   // Load classes and academic years
@@ -54,6 +55,7 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
       setValidatedRows([]);
       setImportResults([]);
       setGeneralError(null);
+      setConfigError(null);
 
       const loadConfig = async () => {
         setLoadingConfig(true);
@@ -64,9 +66,10 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
           ]);
           setAcademicYears(years);
           setClasses(classList);
+          setConfigError(null);
         } catch (err) {
           console.error("Không thể tải danh mục năm học/lớp học:", err);
-          setGeneralError("Không thể tải danh mục cấu hình lớp học và năm học.");
+          setConfigError("Không thể tải danh mục lớp học và năm học. Bạn vẫn có thể tải file mẫu cơ bản, nhưng cần bổ sung đúng ID lớp và ID năm học trước khi nhập.");
         } finally {
           setLoadingConfig(false);
         }
@@ -273,6 +276,34 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
                 </div>
               </div>
 
+              {configError && (
+                <div className="flex gap-2.5 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-2xl text-xs text-amber-700 dark:text-amber-400 leading-relaxed font-semibold">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                  <span>{configError}</span>
+                </div>
+              )}
+
+              {/* Template download action */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200/60 dark:border-slate-800/60">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl text-emerald-600 dark:text-emerald-400">
+                    <FileSpreadsheet className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Chưa có file dữ liệu mẫu?</h4>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Tải file excel mẫu đầy đủ cấu trúc các trường học tập và chỉ dẫn UUID</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="flex items-center space-x-1.5 px-3.5 py-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 rounded-xl border border-emerald-200/60 dark:border-emerald-900/35 transition-all cursor-pointer"
+                  id="btn-download-import-template"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Tải file Excel mẫu</span>
+                </button>
+              </div>
+
               {/* Upload drag drop zone */}
               <div 
                 onDragEnter={handleDrag}
@@ -303,34 +334,12 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs font-bold text-slate-800 dark:text-white">
-                    {isProcessingFile ? "Đang đọc file..." : "Nhấp để tải lên hoặc kéo thả file Excel tại đây"}
+                    {isProcessingFile ? "Đang đọc file..." : "Kéo thả file Excel vào đây hoặc bấm để chọn file"}
                   </p>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">
                     Hỗ trợ định dạng .xlsx, .xls, .csv tối đa 100 dòng dữ liệu
                   </p>
                 </div>
-              </div>
-
-              {/* Template download action */}
-              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200/60 dark:border-slate-800/60">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl text-emerald-600 dark:text-emerald-400">
-                    <FileSpreadsheet className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Chưa có file dữ liệu mẫu?</h4>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Tải file excel mẫu đầy đủ cấu trúc các trường học tập và chỉ dẫn UUID</p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleDownloadTemplate}
-                  disabled={loadingConfig}
-                  className="flex items-center space-x-1.5 px-3.5 py-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 rounded-xl border border-emerald-200/60 dark:border-emerald-900/35 transition-all cursor-pointer"
-                  id="btn-download-import-template"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>Tải file Excel mẫu</span>
-                </button>
               </div>
             </div>
           )}
