@@ -7,12 +7,10 @@ export type AppRoleCode =
   | 'SUPER_ADMIN'
   | 'PRINCIPAL'
   | 'VICE_PRINCIPAL'
-  | 'TEAM_LEADER'
-  | 'VICE_TEAM_LEADER'
+  | 'CONTENT_EDITOR'
+  | 'STAFF'
   | 'TEACHER'
-  | 'HOMEROOM_TEACHER'
-  | 'STUDENT'
-  | 'PARENT';
+  | 'STUDENT';
 
 export interface UserProfile {
   user_id: string;

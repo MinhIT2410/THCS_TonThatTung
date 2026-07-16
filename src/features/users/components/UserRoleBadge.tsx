@@ -14,7 +14,7 @@ export const UserRoleBadge: React.FC<{ role: string }> = ({ role }) => {
     case 'SUPER_ADMIN':
       bg = 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60';
       text = 'text-rose-700 dark:text-rose-400';
-      label = 'Quản trị viên cấp cao';
+      label = 'Quản trị hệ thống';
       break;
     case 'PRINCIPAL':
       bg = 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-900/60';
@@ -29,7 +29,7 @@ export const UserRoleBadge: React.FC<{ role: string }> = ({ role }) => {
     case 'CONTENT_EDITOR':
       bg = 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/60';
       text = 'text-blue-700 dark:text-blue-400';
-      label = 'Biên tập viên nội dung';
+      label = 'Biên tập nội dung';
       break;
     case 'STAFF':
       bg = 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60';
@@ -45,11 +45,6 @@ export const UserRoleBadge: React.FC<{ role: string }> = ({ role }) => {
       bg = 'bg-cyan-50 dark:bg-cyan-950/40 border-cyan-200 dark:border-cyan-900/60';
       text = 'text-cyan-700 dark:text-cyan-400';
       label = 'Học sinh';
-      break;
-    case 'PARENT':
-      bg = 'bg-teal-50 dark:bg-teal-950/40 border-teal-200 dark:border-teal-900/60';
-      text = 'text-teal-700 dark:text-teal-400';
-      label = 'Phụ huynh';
       break;
     default:
       bg = 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800';

@@ -158,14 +158,13 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
               className="text-xs bg-transparent border-none outline-none text-slate-700 dark:text-slate-300 font-semibold cursor-pointer"
             >
               <option value="all">Tất cả vai trò</option>
-              <option value="SUPER_ADMIN">Quản trị viên cấp cao</option>
+              <option value="SUPER_ADMIN">Quản trị hệ thống</option>
               <option value="PRINCIPAL">Hiệu trưởng</option>
               <option value="VICE_PRINCIPAL">Hiệu phó</option>
-              <option value="CONTENT_EDITOR">Biên tập viên nội dung</option>
-              <option value="STAFF">Nhân viên hành chính</option>
+              <option value="CONTENT_EDITOR">Biên tập nội dung</option>
+              <option value="STAFF">Nhân viên</option>
               <option value="TEACHER">Giáo viên</option>
               <option value="STUDENT">Học sinh</option>
-              <option value="PARENT">Phụ huynh</option>
             </select>
           </div>
 

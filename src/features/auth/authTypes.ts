@@ -10,8 +10,7 @@ export type UserRole =
   | 'CONTENT_EDITOR'
   | 'STAFF'
   | 'TEACHER'
-  | 'STUDENT'
-  | 'PARENT';
+  | 'STUDENT';
 
 export interface UserProfile {
   id: string;

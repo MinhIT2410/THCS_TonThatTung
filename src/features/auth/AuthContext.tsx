@@ -166,14 +166,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdminUser = rolesList.includes('SUPER_ADMIN');
 
   const ROLE_NAMES: Record<string, string> = {
-    SUPER_ADMIN: 'Quản trị viên cấp cao',
+    SUPER_ADMIN: 'Quản trị hệ thống',
     PRINCIPAL: 'Hiệu trưởng',
     VICE_PRINCIPAL: 'Hiệu phó',
-    CONTENT_EDITOR: 'Biên tập viên nội dung',
-    STAFF: 'Nhân viên hành chính',
+    CONTENT_EDITOR: 'Biên tập nội dung',
+    STAFF: 'Nhân viên',
     TEACHER: 'Giáo viên',
     STUDENT: 'Học sinh',
-    PARENT: 'Phụ huynh',
   };
 
   // Map to mock roles array for backward compatibility

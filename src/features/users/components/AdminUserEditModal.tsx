@@ -16,14 +16,13 @@ interface AdminUserEditModalProps {
 }
 
 const AVAILABLE_ROLES = [
-  { code: 'SUPER_ADMIN', name: 'Quản trị viên cấp cao' },
+  { code: 'SUPER_ADMIN', name: 'Quản trị hệ thống' },
   { code: 'PRINCIPAL', name: 'Hiệu trưởng' },
   { code: 'VICE_PRINCIPAL', name: 'Hiệu phó' },
-  { code: 'CONTENT_EDITOR', name: 'Biên tập viên nội dung' },
-  { code: 'STAFF', name: 'Nhân viên hành chính' },
+  { code: 'CONTENT_EDITOR', name: 'Biên tập nội dung' },
+  { code: 'STAFF', name: 'Nhân viên' },
   { code: 'TEACHER', name: 'Giáo viên' },
-  { code: 'STUDENT', name: 'Học sinh' },
-  { code: 'PARENT', name: 'Phụ huynh' }
+  { code: 'STUDENT', name: 'Học sinh' }
 ];
 
 export const AdminUserEditModal: React.FC<AdminUserEditModalProps> = ({
