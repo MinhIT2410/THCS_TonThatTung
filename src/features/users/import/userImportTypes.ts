@@ -10,6 +10,8 @@ export interface RawImportRow {
   roles: string;
   class_id?: string;
   academic_year_id?: string;
+  class_name?: string;
+  academic_year_name?: string;
   row_number: number;
 }
 
@@ -21,6 +23,8 @@ export interface ValidatedImportRow {
   roles: string[];
   class_id?: string | null;
   academic_year_id?: string | null;
+  class_name?: string | null;
+  academic_year_name?: string | null;
   isValid: boolean;
   errors: string[];
 }

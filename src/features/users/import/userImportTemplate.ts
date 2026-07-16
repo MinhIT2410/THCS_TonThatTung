@@ -9,50 +9,43 @@ export const downloadImportTemplate = (classes: any[], academicYears: any[]) => 
   // 1. Tai_khoan sheet data
   const accountRows = [
     {
-      full_name: 'Nguyễn Văn A',
+      full_name: 'Nguyễn Văn An',
       student_code: 'HS000001',
       email: '',
       roles: 'STUDENT',
-      class_id: '',
-      academic_year_id: ''
+      class_name: '6A1',
+      academic_year_name: '2026-2027'
     },
     {
-      full_name: 'Trần Thị B',
+      full_name: 'Trần Thị Bé',
       student_code: 'HS000002',
-      email: 'hs2@gmail.com',
+      email: '',
       roles: 'STUDENT',
-      class_id: '',
-      academic_year_id: ''
+      class_name: '6A1',
+      academic_year_name: '2026-2027'
     },
     {
       full_name: 'Lê Văn C',
       student_code: '',
       email: 'gv1@gmail.com',
       roles: 'TEACHER',
-      class_id: '',
-      academic_year_id: ''
+      class_name: '',
+      academic_year_name: ''
     }
   ];
 
   // 2. Danh_sach_lop sheet data
   let classRows: any[] = [];
   if (classes && classes.length > 0) {
-    const activeYear = academicYears?.find(y => y.is_active) || academicYears?.[0];
     classRows = classes.map(c => ({
-      class_id: c.id,
       class_name: c.name,
-      grade: c.grade_level,
-      academic_year_id: activeYear ? activeYear.id : '',
-      academic_year_name: activeYear ? activeYear.name : ''
+      grade_level: c.grade_level || ''
     }));
   } else {
     classRows = [
       {
-        class_id: 'Không tải được danh sách lớp. Vui lòng kiểm tra cấu hình hệ thống.',
-        class_name: '',
-        grade: '',
-        academic_year_id: '',
-        academic_year_name: ''
+        class_name: 'Không tải được danh sách lớp. Vui lòng kiểm tra cấu hình hệ thống.',
+        grade_level: ''
       }
     ];
   }
@@ -61,7 +54,6 @@ export const downloadImportTemplate = (classes: any[], academicYears: any[]) => 
   let yearRows: any[] = [];
   if (academicYears && academicYears.length > 0) {
     yearRows = academicYears.map(y => ({
-      academic_year_id: y.id,
       academic_year_name: y.name,
       start_date: y.start_date || '',
       end_date: y.end_date || '',
@@ -70,8 +62,7 @@ export const downloadImportTemplate = (classes: any[], academicYears: any[]) => 
   } else {
     yearRows = [
       {
-        academic_year_id: 'Không tải được danh sách năm học. Vui lòng kiểm tra cấu hình hệ thống.',
-        academic_year_name: '',
+        academic_year_name: 'Không tải được danh sách năm học. Vui lòng kiểm tra cấu hình hệ thống.',
         start_date: '',
         end_date: '',
         is_current: ''
@@ -84,8 +75,8 @@ export const downloadImportTemplate = (classes: any[], academicYears: any[]) => 
     { 'Quy tắc chuẩn bị dữ liệu': 'Họ tên (full_name)', 'Mô tả chi tiết': 'Bắt buộc nhập.' },
     { 'Quy tắc chuẩn bị dữ liệu': 'Vai trò (roles)', 'Mô tả chi tiết': 'Bắt buộc nhập. Các vai trò hợp lệ: SUPER_ADMIN, PRINCIPAL, VICE_PRINCIPAL, CONTENT_EDITOR, STAFF, TEACHER, STUDENT.' },
     { 'Quy tắc chuẩn bị dữ liệu': 'Mã học sinh (student_code)', 'Mô tả chi tiết': 'Bắt buộc nhập đối với vai trò STUDENT.' },
-    { 'Quy tắc chuẩn bị dữ liệu': 'Mã lớp học (class_id)', 'Mô tả chi tiết': 'Bắt buộc nhập đối với vai trò STUDENT. Vui lòng copy chính xác mã UUID ở sheet Danh_sach_lop.' },
-    { 'Quy tắc chuẩn bị dữ liệu': 'Mã năm học (academic_year_id)', 'Mô tả chi tiết': 'Bắt buộc nhập đối với vai trò STUDENT. Vui lòng copy chính xác mã UUID ở sheet Nam_hoc.' },
+    { 'Quy tắc chuẩn bị dữ liệu': 'Tên lớp học (class_name)', 'Mô tả chi tiết': 'Bắt buộc nhập đối với vai trò STUDENT. Vui lòng copy chính xác tên lớp học ở sheet Danh_sach_lop.' },
+    { 'Quy tắc chuẩn bị dữ liệu': 'Tên năm học (academic_year_name)', 'Mô tả chi tiết': 'Bắt buộc nhập đối với vai trò STUDENT. Vui lòng copy chính xác tên năm học ở sheet Nam_hoc.' },
     { 'Quy tắc chuẩn bị dữ liệu': 'Email', 'Mô tả chi tiết': 'Bắt buộc nhập đối với các vai trò không phải STUDENT.' },
     { 'Quy tắc chuẩn bị dữ liệu': 'Phân cách vai trò', 'Mô tả chi tiết': 'Nhiều vai trò có thể được khai báo phân cách bằng dấu phẩy (ví dụ: TEACHER,STAFF).' },
     { 'Quy tắc chuẩn bị dữ liệu': 'Giới hạn số lượng', 'Mô tả chi tiết': 'Tối đa 100 tài khoản mỗi lần nhập để đảm bảo hiệu năng tối ưu.' }

@@ -200,10 +200,10 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Thành viên
                 </th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">
                   Vai trò
                 </th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">
                   Trạng thái
                 </th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -278,21 +278,23 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                       </td>
 
                       {/* Role */}
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+                      <td className="px-6 py-4 text-center align-middle">
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
                           {user.roles && user.roles.length > 0 ? (
                             user.roles.map((r) => (
                               <UserRoleBadge key={r} role={r} />
                             ))
                           ) : (
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500 italic">Chưa phân quyền</span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 italic text-center w-full">Chưa phân quyền</span>
                           )}
                         </div>
                       </td>
 
                       {/* Status */}
-                      <td className="px-6 py-4">
-                        <UserStatusBadge isActive={user.is_active} />
+                      <td className="px-6 py-4 text-center align-middle">
+                        <div className="flex items-center justify-center">
+                          <UserStatusBadge isActive={user.is_active} />
+                        </div>
                       </td>
 
                       {/* Created At */}

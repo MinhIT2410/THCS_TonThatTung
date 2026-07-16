@@ -34,10 +34,14 @@ const mapRowKeys = (row: any, rowNumber: number): RawImportRow => {
       normalized.email = val;
     } else if (k.includes('vai trò') || k.includes('roles') || k.includes('role') || k.includes('chức vụ')) {
       normalized.roles = val;
-    } else if (k.includes('mã lớp') || k.includes('class_id') || k.includes('class id') || k === 'class') {
+    } else if (k.includes('mã lớp') || k.includes('class_id') || k.includes('class id') || k === 'class_id') {
       normalized.class_id = val;
-    } else if (k.includes('mã năm') || k.includes('academic_year_id') || k.includes('academic year id') || k === 'academic_year') {
+    } else if (k.includes('tên lớp') || k.includes('class_name') || k.includes('class name') || k === 'lớp' || k === 'lop') {
+      normalized.class_name = val;
+    } else if (k.includes('mã năm') || k.includes('academic_year_id') || k.includes('academic year id') || k === 'academic_year_id') {
       normalized.academic_year_id = val;
+    } else if (k.includes('tên năm') || k.includes('academic_year_name') || k.includes('academic year name') || k === 'năm học' || k === 'nam hoc') {
+      normalized.academic_year_name = val;
     }
   });
 
@@ -47,7 +51,9 @@ const mapRowKeys = (row: any, rowNumber: number): RawImportRow => {
     email: normalized.email || '',
     roles: normalized.roles || '',
     class_id: normalized.class_id || '',
+    class_name: normalized.class_name || '',
     academic_year_id: normalized.academic_year_id || '',
+    academic_year_name: normalized.academic_year_name || '',
     row_number: rowNumber
   };
 };
@@ -116,9 +122,6 @@ export const validateImportRows = (
     }
   });
 
-  const classIds = new Set(classes.map((c) => c.id));
-  const yearIds = new Set(academicYears.map((y) => y.id));
-
   return rows.map((r) => {
     const errors: string[] = [];
     const fullName = r.full_name.trim();
@@ -183,28 +186,81 @@ export const validateImportRows = (
       }
     }
 
-    // 5. Student specific requirements
+    // 5. Student specific requirements - class_name and academic_year_name resolution
     let classId: string | null = null;
+    let className: string | null = null;
     let academicYearId: string | null = null;
+    let academicYearName: string | null = null;
 
     if (isStudent) {
-      const cId = r.class_id?.trim();
-      const yId = r.academic_year_id?.trim();
+      const rawClassName = r.class_name?.trim();
+      const rawClassId = r.class_id?.trim();
 
-      if (!cId) {
-        errors.push('Học sinh bắt buộc phải điền Mã lớp học (class_id).');
-      } else if (!classIds.has(cId)) {
-        errors.push(`Mã lớp học (class_id) '${cId}' không tồn tại trong hệ thống.`);
+      if (rawClassName) {
+        const matchedClasses = classes.filter(
+          (c) => c.name?.trim().toLowerCase() === rawClassName.toLowerCase()
+        );
+
+        if (matchedClasses.length > 1) {
+          errors.push(`Có nhiều lớp cùng tên ‘${rawClassName}’. Vui lòng kiểm tra cấu hình lớp học.`);
+        } else if (matchedClasses.length === 1) {
+          classId = matchedClasses[0].id;
+          className = matchedClasses[0].name;
+        } else {
+          // Fallback check to UUID if rawClassId exists and matches
+          const matchedClassById = rawClassId ? classes.find((c) => c.id === rawClassId) : null;
+          if (matchedClassById) {
+            classId = rawClassId;
+            className = matchedClassById.name;
+          } else {
+            errors.push(`Không tìm thấy lớp ‘${rawClassName}’ trong hệ thống.`);
+          }
+        }
+      } else if (rawClassId) {
+        const matchedClassById = classes.find((c) => c.id === rawClassId);
+        if (matchedClassById) {
+          classId = rawClassId;
+          className = matchedClassById.name;
+        } else {
+          errors.push(`Mã lớp học (class_id) '${rawClassId}' không tồn tại trong hệ thống.`);
+        }
       } else {
-        classId = cId;
+        errors.push('Học sinh bắt buộc phải điền Tên lớp học (class_name).');
       }
 
-      if (!yId) {
-        errors.push('Học sinh bắt buộc phải điền Mã năm học (academic_year_id).');
-      } else if (!yearIds.has(yId)) {
-        errors.push(`Mã năm học (academic_year_id) '${yId}' không tồn tại trong hệ thống.`);
+      const rawYearName = r.academic_year_name?.trim();
+      const rawYearId = r.academic_year_id?.trim();
+
+      if (rawYearName) {
+        const matchedYears = academicYears.filter(
+          (y) => y.name?.trim().toLowerCase() === rawYearName.toLowerCase()
+        );
+
+        if (matchedYears.length > 1) {
+          errors.push(`Có nhiều năm học cùng tên ‘${rawYearName}’. Vui lòng kiểm tra cấu hình.`);
+        } else if (matchedYears.length === 1) {
+          academicYearId = matchedYears[0].id;
+          academicYearName = matchedYears[0].name;
+        } else {
+          // Fallback check to UUID if rawYearId exists and matches
+          const matchedYearById = rawYearId ? academicYears.find((y) => y.id === rawYearId) : null;
+          if (matchedYearById) {
+            academicYearId = rawYearId;
+            academicYearName = matchedYearById.name;
+          } else {
+            errors.push(`Không tìm thấy năm học ‘${rawYearName}’ trong hệ thống.`);
+          }
+        }
+      } else if (rawYearId) {
+        const matchedYearById = academicYears.find((y) => y.id === rawYearId);
+        if (matchedYearById) {
+          academicYearId = rawYearId;
+          academicYearName = matchedYearById.name;
+        } else {
+          errors.push(`Mã năm học (academic_year_id) '${rawYearId}' không tồn tại trong hệ thống.`);
+        }
       } else {
-        academicYearId = yId;
+        errors.push('Học sinh bắt buộc phải điền Tên năm học (academic_year_name).');
       }
     }
 
@@ -216,6 +272,8 @@ export const validateImportRows = (
       roles: validRoles,
       class_id: classId,
       academic_year_id: academicYearId,
+      class_name: className || r.class_name || null,
+      academic_year_name: academicYearName || r.academic_year_name || null,
       isValid: errors.length === 0,
       errors
     };

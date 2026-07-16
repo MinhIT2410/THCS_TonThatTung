@@ -380,7 +380,8 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
                         <th className="px-4 py-3">Họ và tên</th>
                         <th className="px-4 py-3">Email</th>
                         <th className="px-4 py-3">Vai trò</th>
-                        <th className="px-4 py-3">Mã lớp / Năm học (UUID)</th>
+                        <th className="px-4 py-3">Lớp</th>
+                        <th className="px-4 py-3">Năm học</th>
                         <th className="px-4 py-3 text-center">Trạng thái</th>
                         <th className="px-4 py-3">Chi tiết lỗi</th>
                       </tr>
@@ -395,10 +396,11 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
                           <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-white truncate max-w-[150px]">{row.full_name}</td>
                           <td className="px-4 py-3.5 font-medium truncate max-w-[180px]">{row.email || <span className="text-slate-400 italic">Trống</span>}</td>
                           <td className="px-4 py-3.5 font-bold text-slate-500">{row.roles.join(', ')}</td>
-                          <td className="px-4 py-3.5 font-mono text-[10px] text-slate-400 leading-tight">
-                            {row.class_id ? `Lớp: ${row.class_id.substring(0,8)}...` : ''}
-                            {row.academic_year_id ? ` | Năm: ${row.academic_year_id.substring(0,8)}...` : ''}
-                            {!row.class_id && !row.academic_year_id && <span className="text-slate-300">-</span>}
+                          <td className="px-4 py-3.5 font-semibold text-slate-700 dark:text-slate-300">
+                            {row.class_name || <span className="text-slate-300">-</span>}
+                          </td>
+                          <td className="px-4 py-3.5 font-semibold text-slate-700 dark:text-slate-300">
+                            {row.academic_year_name || <span className="text-slate-300">-</span>}
                           </td>
                           <td className="px-4 py-3.5 text-center">
                             {row.isValid ? (
@@ -411,8 +413,16 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3.5 text-red-600 dark:text-red-450 font-bold leading-relaxed max-w-[220px] truncate" title={row.errors.join(' ')}>
-                            {row.errors.length > 0 ? row.errors[0] : <span className="text-emerald-500">-</span>}
+                          <td className="px-4 py-3.5 text-red-600 dark:text-red-400 font-bold leading-normal min-w-[200px] max-w-[300px]">
+                            {row.errors.length > 0 ? (
+                              <div className="max-h-20 overflow-y-auto whitespace-normal break-words pr-1 text-[11px]" title={row.errors.join('\n')}>
+                                {row.errors.map((err, i) => (
+                                  <div key={i} className="mb-0.5 last:mb-0">• {err}</div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-emerald-500 font-bold">-</span>
+                            )}
                           </td>
                         </tr>
                       ))}
