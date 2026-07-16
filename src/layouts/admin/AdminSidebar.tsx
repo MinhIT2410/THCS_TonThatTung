@@ -17,10 +17,14 @@ interface AdminSidebarProps {
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) => {
   const { hasRole } = useAuth();
   const isSuperAdmin = hasRole('SUPER_ADMIN');
+  const canManageUsers = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('VICE_PRINCIPAL') || hasRole('STAFF') || hasRole('TEACHER');
 
   const filteredMenuItems = ADMIN_MENU_ITEMS.filter((item) => {
-    if (!isSuperAdmin) {
-      return item.href !== '/quan-tri/nguoi-dung' && item.href !== '/quan-tri/cai-dat';
+    if (item.href === '/quan-tri/nguoi-dung') {
+      return canManageUsers;
+    }
+    if (item.href === '/quan-tri/cai-dat') {
+      return isSuperAdmin;
     }
     return true;
   });

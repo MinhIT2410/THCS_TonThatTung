@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Users, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Users, ArrowLeft, RefreshCw, UserPlus, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { userApi } from '../../features/users/userApi';
@@ -12,18 +12,27 @@ import { UserProfile } from '../../features/users/userTypes';
 import { AdminUsersTable } from '../../features/users/components/AdminUsersTable';
 import { RoleGuard } from '../../components/auth/RoleGuard';
 import { AccessDenied } from '../../components/auth/AccessDenied';
+import { CreateUserModal } from '../../features/users/components/CreateUserModal';
 
 export default function AdminUsersPage() {
   const navigate = useNavigate();
   const { profile: currentUserProfile, refreshProfile, hasRole } = useAuth();
   const isAdmin = hasRole('SUPER_ADMIN');
-  
+  const canCreateUser = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('VICE_PRINCIPAL') || hasRole('STAFF') || hasRole('TEACHER');
+
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchUsers = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin) {
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -44,6 +53,16 @@ export default function AdminUsersPage() {
       setLoading(false);
     }
   }, [isAdmin]);
+
+  const handleCreateSuccess = () => {
+    setSuccessMessage('Đã tạo tài khoản và gửi email mời thành công.');
+    if (isAdmin) {
+      fetchUsers();
+    }
+    setTimeout(() => {
+      setSuccessMessage(null);
+    }, 5000);
+  };
 
   const handleUpdateUser = async (id: string, data: { full_name: string; roles: string[]; is_active: boolean }) => {
     try {
@@ -76,33 +95,59 @@ export default function AdminUsersPage() {
 
   return (
     <RoleGuard 
-      allowedRoles={['SUPER_ADMIN']} 
-      fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Quản lý người dùng. Chỉ tài khoản Quản trị viên (SUPER_ADMIN) mới có thể xem và điều khiển phân quyền." />}
+      allowedRoles={['SUPER_ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'STAFF', 'TEACHER']} 
+      fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Quản lý người dùng. Chỉ tài khoản Quản trị viên và các vai trò quản lý cấp cao mới có thể xem và thực hiện điều khiển phân quyền." />}
     >
       <div className="space-y-6 py-4 font-sans animate-fade-in" id="admin-users-page">
+        {/* Success Alert */}
+        {successMessage && (
+          <div className="flex items-center gap-2.5 p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl text-xs text-emerald-800 dark:text-emerald-400 font-bold animate-fade-in" id="user-success-alert">
+            <CheckCircle2 className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-450 shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+        )}
+
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
           <div className="space-y-1">
             <div className="flex items-center space-x-2.5">
               <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              <h1 className="font-display text-xl font-bold text-slate-900 dark:text-white">Quản lý người dùng</h1>
+              <h1 className="font-display text-xl font-bold text-slate-900 dark:text-white">
+                {isAdmin ? 'Quản lý người dùng' : 'Tạo tài khoản'}
+              </h1>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Danh sách tài khoản cán bộ, giáo viên và điều khiển phân quyền vai trò (Role-based Access Control).
-            </p>
+            {isAdmin && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Danh sách tài khoản cán bộ, giáo viên và điều khiển phân quyền vai trò (Role-based Access Control).
+              </p>
+            )}
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={fetchUsers}
-              disabled={loading}
-              className="p-2 rounded-xl text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-all"
-              title="Làm mới"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+          <div className="flex items-center space-x-2 flex-wrap gap-2 sm:gap-0">
+            {canCreateUser && (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all w-fit shadow-sm hover:shadow-md cursor-pointer"
+                id="btn-open-create-user"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span>Tạo tài khoản</span>
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={fetchUsers}
+                disabled={loading}
+                className="p-2 rounded-xl text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-all cursor-pointer"
+                title="Làm mới"
+                id="btn-refresh-users"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            )}
             <button
               onClick={() => navigate('/quan-tri')}
-              className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all w-fit"
+              className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all w-fit cursor-pointer"
+              id="btn-back-to-admin"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Quay lại</span>
@@ -110,13 +155,35 @@ export default function AdminUsersPage() {
           </div>
         </div>
 
+        {/* Notice Info for non-admin users */}
+        {!isAdmin && (
+          <div className="p-6 bg-blue-50/40 dark:bg-blue-950/15 border border-blue-100 dark:border-blue-900/40 rounded-3xl flex gap-3" id="role-notice-banner">
+            <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Thông báo phân quyền</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                Bạn chỉ được tạo tài khoản trong phạm vi được hệ thống cho phép.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Users Table and Controls */}
-        <AdminUsersTable
-          users={users}
-          loading={loading}
-          error={error}
-          onUpdateUser={handleUpdateUser}
-          onToggleStatus={handleToggleStatus}
+        {isAdmin && (
+          <AdminUsersTable
+            users={users}
+            loading={loading}
+            error={error}
+            onUpdateUser={handleUpdateUser}
+            onToggleStatus={handleToggleStatus}
+          />
+        )}
+
+        {/* Create User Modal Popup */}
+        <CreateUserModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={handleCreateSuccess}
         />
       </div>
     </RoleGuard>
