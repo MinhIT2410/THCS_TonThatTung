@@ -66,12 +66,9 @@ export default function Header({
               </span>
             </div>
           )}
-          <div className="flex flex-col">
-            <span className="font-bold text-blue-800 dark:text-blue-400 leading-none tracking-tight uppercase text-sm sm:text-base">
+          <div className="flex flex-col justify-center">
+            <span className="font-bold text-blue-800 dark:text-blue-400 leading-none tracking-tight uppercase text-xs sm:text-sm md:text-base">
               {siteSettings.site_name || schoolName}
-            </span>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-widest leading-none mt-1">
-              {siteSettings.school_name || (schoolName.toLowerCase().startsWith('liên đội') ? schoolName.replace(/liên đội/i, 'Trường') : `Trường ${schoolName}`)}
             </span>
           </div>
         </div>
