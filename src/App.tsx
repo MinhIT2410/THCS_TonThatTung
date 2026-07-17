@@ -331,8 +331,8 @@ function AppContent() {
             path="cai-dat"
             element={
               <RoleGuard
-                allowedRoles={['SUPER_ADMIN']}
-                fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Cài đặt hệ thống." />}
+                allowedRoles={['SUPER_ADMIN', 'PRINCIPAL']}
+                fallback={<AccessDenied message="Bạn không có quyền truy cập khu vực Cài đặt cấu hình trường học. Quyền hạn hiện tại chỉ cho phép SUPER_ADMIN và PRINCIPAL toàn quyền quản trị. Với các vai trò khác (VICE_PRINCIPAL, STAFF), hệ thống cần được mở rộng thêm cấu hình Grant tài nguyên trong tương lai." />}
               >
                 <AdminSettingsPage />
               </RoleGuard>
