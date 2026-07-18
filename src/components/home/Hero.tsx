@@ -94,9 +94,17 @@ export default function Hero({ onNavigate }: HeroProps) {
                   </span>
                 </motion.div>
 
+                {/* Decorative script slogan */}
+                <motion.div
+                  variants={itemVariants}
+                  className="font-script text-2xl md:text-3xl text-yellow-300 font-bold tracking-wide -mb-3 pl-1 block drop-shadow-sm select-none"
+                >
+                  "Tuổi nhỏ làm việc nhỏ — Ươm mầm ước mơ"
+                </motion.div>
+
                 <motion.h1 
                   variants={itemVariants}
-                  className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl leading-tight"
+                  className="font-display text-3xl sm:text-4xl md:text-[46px] lg:text-[52px] font-extrabold tracking-tight text-white leading-[1.1] drop-shadow-sm"
                 >
                   {finalHeroData.title}
                 </motion.h1>
@@ -135,7 +143,7 @@ export default function Hero({ onNavigate }: HeroProps) {
                       }
                     }}
                     id="hero-primary-btn"
-                    className="group flex items-center space-x-2 rounded-xl bg-red-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-600/35 hover:bg-red-700 active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                    className="group flex items-center space-x-2 rounded-xl bg-red-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-red-600/35 hover:bg-red-700 hover:shadow-red-700/40 active:scale-[0.98] transition-all duration-200 cursor-pointer"
                   >
                     <span>{finalHeroData.primaryButton?.label || "Xem hoạt động nổi bật"}</span>
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -157,7 +165,7 @@ export default function Hero({ onNavigate }: HeroProps) {
                       }
                     }}
                     id="hero-secondary-btn"
-                    className="rounded-xl border border-white/20 bg-white/10 px-6 py-3.5 text-sm font-bold text-white hover:bg-white/25 hover:border-white/30 backdrop-blur-sm active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                    className="rounded-xl border border-white/20 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/25 hover:border-white/30 backdrop-blur-sm active:scale-[0.98] transition-all duration-200 cursor-pointer"
                   >
                     {finalHeroData.secondaryButton?.label || "Tìm hiểu truyền thống"}
                   </button>
@@ -182,11 +190,11 @@ export default function Hero({ onNavigate }: HeroProps) {
                         referrerPolicy="no-referrer"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-5">
-                        <div>
-                          <span className="text-[10px] uppercase bg-red-600 text-white font-bold px-2 py-0.5 rounded-full mb-1.5 inline-block">
+                        <div className="space-y-1">
+                          <span className="text-[10px] uppercase bg-red-600 text-white font-bold px-2.5 py-0.5 rounded-full inline-block">
                             Sinh hoạt Đội
                           </span>
-                          <h3 className="text-white text-sm font-bold font-sans">
+                          <h3 className="text-white text-sm font-bold font-sans drop-shadow-sm">
                             Hành trình rèn luyện phấn đấu lên Đoàn
                           </h3>
                         </div>
@@ -196,7 +204,7 @@ export default function Hero({ onNavigate }: HeroProps) {
 
                   {/* Float badge 1 */}
                   <motion.div 
-                    className="absolute -top-6 -left-6 rounded-2xl bg-slate-900/90 backdrop-blur-md p-3.5 shadow-2xl border border-white/10 flex items-center space-x-3 text-white"
+                    className="absolute -top-6 -left-6 rounded-[1.25rem] bg-slate-900/95 backdrop-blur-md p-3.5 shadow-2xl border border-white/10 flex items-center space-x-3 text-white"
                     animate={{ y: [0, -6, 0] }}
                     transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
                   >
@@ -204,14 +212,14 @@ export default function Hero({ onNavigate }: HeroProps) {
                       <Award className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <h4 className="text-[11px] font-bold text-white leading-tight">Bằng Khen TW Đoàn</h4>
-                      <p className="text-[9px] text-slate-300 leading-none mt-0.5">Năm học 2024 - 2025</p>
+                      <h4 className="text-[11px] font-bold text-white font-display tracking-tight leading-tight">Bằng Khen TW Đoàn</h4>
+                      <p className="text-[9px] text-slate-300 font-sans leading-none mt-1">Năm học 2024 - 2025</p>
                     </div>
                   </motion.div>
 
                   {/* Float badge 2 */}
                   <motion.div 
-                    className="absolute -bottom-6 -right-4 rounded-2xl bg-slate-900/90 backdrop-blur-md p-3.5 shadow-2xl border border-white/10 flex items-center space-x-3 text-white"
+                    className="absolute -bottom-6 -right-4 rounded-[1.25rem] bg-slate-900/95 backdrop-blur-md p-3.5 shadow-2xl border border-white/10 flex items-center space-x-3 text-white"
                     animate={{ y: [0, 6, 0] }}
                     transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut', delay: 1 }}
                   >
@@ -219,8 +227,8 @@ export default function Hero({ onNavigate }: HeroProps) {
                       <Users className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <h4 className="text-[11px] font-bold text-white leading-tight">100% Đội viên</h4>
-                      <p className="text-[9px] text-slate-300 leading-none mt-0.5">Rèn luyện đạt chuẩn</p>
+                      <h4 className="text-[11px] font-bold text-white font-display tracking-tight leading-tight">100% Đội viên</h4>
+                      <p className="text-[9px] text-slate-300 font-sans leading-none mt-1">Rèn luyện đạt chuẩn</p>
                     </div>
                   </motion.div>
                 </div>
@@ -247,10 +255,10 @@ export default function Hero({ onNavigate }: HeroProps) {
                       <IconComponent className="h-5 w-5" />
                     </div>
                     <div>
-                      <span className="block text-xl font-black text-white tracking-tight leading-none">
+                      <span className="block text-xl font-extrabold text-white font-display tracking-tight leading-none">
                         {stat.value}
                       </span>
-                      <span className="block text-[10px] font-semibold text-slate-300 uppercase tracking-wider mt-1">
+                      <span className="block text-[10px] font-semibold text-slate-300 uppercase tracking-wider mt-1 font-sans">
                         {stat.label}
                       </span>
                     </div>

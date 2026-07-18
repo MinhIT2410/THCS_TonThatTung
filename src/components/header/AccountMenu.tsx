@@ -45,8 +45,8 @@ export const AccountMenu: React.FC = () => {
   if (isCurrentlyLoading) {
     // Elegant skeleton / disabled state to prevent layout shift and flicker
     return (
-      <div className="flex items-center space-x-2 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/20 p-1.5 pr-3 select-none opacity-60 animate-pulse">
-        <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
+      <div className="flex h-11 items-center space-x-2 rounded-xl border border-blue-100/40 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-950/10 px-3 select-none opacity-60 animate-pulse">
+        <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
         <div className="flex flex-col space-y-1">
           <div className="h-3 w-16 bg-slate-200 dark:bg-slate-800 rounded" />
           <div className="h-2 w-10 bg-slate-200 dark:bg-slate-800 rounded" />
@@ -60,10 +60,10 @@ export const AccountMenu: React.FC = () => {
     return (
       <button
         onClick={() => navigate(ROUTES.LOGIN)}
-        className="flex items-center space-x-1.5 rounded-lg px-3 py-2 text-sm font-semibold bg-slate-100/80 text-slate-700 hover:bg-slate-200/80 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+        className="flex h-11 items-center space-x-1.5 rounded-xl px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 cursor-pointer"
       >
-        <UserIcon className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-        <span>Tài khoản</span>
+        <UserIcon className="h-4 w-4" />
+        <span>Đăng nhập</span>
       </button>
     );
   }
@@ -83,7 +83,11 @@ export const AccountMenu: React.FC = () => {
         aria-haspopup="menu"
         aria-controls="account-menu-popover"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 text-left rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-1.5 pr-3 hover:bg-slate-100/70 dark:hover:bg-slate-800/50 transition-all cursor-pointer"
+        className={`flex h-11 items-center space-x-2.5 text-left rounded-xl border p-1 px-3 hover:shadow-sm transition-all duration-200 cursor-pointer select-none ${
+          isOpen 
+            ? 'ring-2 ring-blue-500/20 border-blue-500 bg-blue-100/50 dark:bg-blue-900/40' 
+            : 'border-blue-100/50 bg-blue-50/50 hover:bg-blue-100/60 dark:border-blue-900/40 dark:bg-blue-950/20 dark:hover:bg-blue-900/30'
+        }`}
       >
         {/* User Avatar */}
         {profile?.avatar_url ? (
@@ -91,34 +95,34 @@ export const AccountMenu: React.FC = () => {
             src={profile.avatar_url}
             alt={fullName}
             referrerPolicy="no-referrer"
-            className="h-8 w-8 rounded-full object-cover shrink-0 border border-blue-500/10"
+            className="h-8 w-8 rounded-full object-cover shrink-0 border border-blue-500/20"
           />
         ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100/80 dark:bg-blue-950/80 border border-blue-200/50 dark:border-blue-800 text-blue-600 dark:text-blue-400 shrink-0">
             <UserIcon className="h-4 w-4" />
           </div>
         )}
 
-        {/* User Info (hidden on extreme small, shown on sm+) */}
+        {/* User Info (hidden on mobile, shown on sm+) */}
         <div className="hidden sm:flex flex-col select-none leading-none min-w-0 max-w-[140px] md:max-w-[180px]">
-          {/* Full Name (shown only on lg+ to prevent cluttering header) */}
-          <span className="hidden lg:block text-xs font-bold text-slate-700 dark:text-slate-200 truncate mb-1">
+          {/* Full Name */}
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate mb-1">
             {fullName}
           </span>
           {/* Role Label */}
-          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider truncate">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider truncate">
             {primaryRoleLabel}
           </span>
         </div>
 
         {/* Small role display on mobile (instead of name) */}
-        <span className="sm:hidden text-[10px] text-slate-500 dark:text-slate-400 font-bold max-w-[80px] truncate">
+        <span className="sm:hidden text-[10px] text-slate-400 dark:text-slate-500 font-bold max-w-[80px] truncate uppercase tracking-wider">
           {primaryRoleLabel}
         </span>
 
         {/* ChevronDown */}
         <ChevronDown 
-          className="h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200" 
+          className="h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200" 
           style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }}
         />
       </button>

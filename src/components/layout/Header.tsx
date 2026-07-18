@@ -75,7 +75,7 @@ export default function Header({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-1">
+        <nav className="hidden md:flex items-center md:space-x-0.5 lg:space-x-2">
           {navItems.map((item) => {
             const isActive = currentView === item.id;
             return (
@@ -83,17 +83,17 @@ export default function Header({
                 key={item.id}
                 id={`nav-${item.id}`}
                 onClick={() => handleNavClick(item.id)}
-                className={`relative px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`relative px-3.5 py-2 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 whitespace-nowrap ${
                   isActive 
-                    ? 'text-blue-700 dark:text-blue-400' 
-                    : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:text-blue-400 dark:hover:bg-slate-800/50'
+                    ? 'text-blue-700 bg-blue-50/50 dark:text-blue-400 dark:bg-blue-950/30' 
+                    : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:text-blue-400 dark:hover:bg-slate-800/40'
                 }`}
               >
                 {item.label}
                 {isActive && (
                   <motion.div 
                     layoutId="activeNavIndicator"
-                    className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-blue-600 dark:bg-blue-400"
+                    className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-blue-600 dark:bg-blue-400"
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -103,26 +103,29 @@ export default function Header({
         </nav>
 
         {/* Actions Toolbar */}
-        <div className="flex items-center space-x-2">
-          {/* Search Button */}
-          <button
-            onClick={onOpenSearch}
-            id="search-btn"
-            title="Tìm kiếm"
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-          >
-            <Search className="h-5 w-5" />
-          </button>
+        <div className="flex items-center space-x-3">
+          {/* Unified Utility Capsule (Search + Theme Switcher) */}
+          <div className="flex items-center space-x-1 rounded-xl bg-slate-50 dark:bg-slate-800/40 p-1">
+            {/* Search Button */}
+            <button
+              onClick={onOpenSearch}
+              id="search-btn"
+              title="Tìm kiếm"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+            >
+              <Search className="h-4.5 w-4.5" />
+            </button>
 
-          {/* Theme Switcher */}
-          <button
-            onClick={toggleDarkMode}
-            id="dark-mode-toggle"
-            title={isDarkMode ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối"}
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-          >
-            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
+            {/* Theme Switcher */}
+            <button
+              onClick={toggleDarkMode}
+              id="dark-mode-toggle"
+              title={isDarkMode ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối"}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+            >
+              {isDarkMode ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
+            </button>
+          </div>
 
           {/* Account Menu */}
           <AccountMenu />
