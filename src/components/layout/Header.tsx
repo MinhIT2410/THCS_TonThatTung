@@ -45,33 +45,74 @@ export default function Header({
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/95 transition-colors duration-300">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo and Brand Title */}
+        {/* Logo and Brand Title (Logo-Only, Modern, Elevated) */}
         <div 
-          className="flex cursor-pointer items-center space-x-3" 
+          className="group relative inline-flex shrink-0 items-center justify-center rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 select-none" 
           onClick={() => handleNavClick('home')}
           id="header-brand"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              handleNavClick('home');
+            }
+          }}
+          aria-label="Về trang chủ"
         >
-          {siteSettings.logo_url ? (
-            <img 
-              src={siteSettings.logo_url} 
-              alt="Logo" 
-              className="h-10 w-10 object-contain rounded-full bg-white p-0.5 shadow-md"
-              referrerPolicy="no-referrer"
+          <span
+            className="
+              relative flex items-center justify-center
+              h-[42px] w-[42px] sm:h-[48px] sm:w-[48px] md:h-[54px] md:w-[54px]
+              overflow-visible rounded-xl sm:rounded-2xl
+              border border-blue-500/15
+              bg-white/85
+              shadow-[0_8px_24px_rgba(15,23,42,0.10),0_2px_8px_rgba(37,99,235,0.08)]
+              backdrop-blur-sm
+              transition-all duration-300 ease-out
+              group-hover:-translate-y-0.5
+              group-hover:scale-105
+              group-hover:border-blue-500/30
+              group-hover:shadow-[0_12px_30px_rgba(15,23,42,0.14),0_4px_14px_rgba(37,99,235,0.16)]
+              dark:border-slate-300/20
+              dark:bg-slate-900/75
+              dark:shadow-[0_8px_24px_rgba(0,0,0,0.30)]
+            "
+          >
+            {/* Glow Background effect */}
+            <span
+              aria-hidden="true"
+              className="
+                pointer-events-none absolute inset-1
+                -z-10 rounded-xl sm:rounded-2xl
+                bg-[radial-gradient(circle,rgba(59,130,246,0.18),transparent_70%)]
+                opacity-50 blur-xl
+                transition-opacity duration-300
+                group-hover:opacity-80
+              "
             />
-          ) : (
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-red-600 shadow-md shadow-red-500/20">
-              <span className="-mt-1 text-yellow-300 font-extrabold text-xl select-none">★</span>
-              <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500"></span>
-              </span>
-            </div>
-          )}
-          <div className="flex flex-col justify-center">
-            <span className="font-bold text-blue-800 dark:text-blue-400 leading-none tracking-tight uppercase text-xs sm:text-sm md:text-base">
-              {siteSettings.site_name || schoolName}
-            </span>
-          </div>
+
+            {siteSettings.logo_url ? (
+              <img 
+                src={siteSettings.logo_url} 
+                alt="" 
+                className="
+                  h-[30px] w-[30px] sm:h-[36px] sm:w-[36px] md:h-[42px] md:w-[42px]
+                  object-contain
+                  transition-transform duration-300 ease-out
+                  [filter:drop-shadow(0_2px_2px_rgba(255,255,255,0.85))_drop-shadow(0_4px_8px_rgba(15,23,42,0.18))]
+                  group-hover:scale-[1.03]
+                "
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="relative flex h-[30px] w-[30px] sm:h-[36px] sm:w-[36px] md:h-[42px] md:w-[42px] items-center justify-center rounded-lg bg-red-600 shadow-md shadow-red-500/20">
+                <span className="-mt-1 text-yellow-300 font-extrabold text-base sm:text-lg md:text-xl select-none">★</span>
+              </div>
+            )}
+          </span>
+          <span className="sr-only">
+            {siteSettings.site_name || schoolName || "Liên đội THCS Tôn Thất Tùng"}
+          </span>
         </div>
 
         {/* Desktop Navigation */}
