@@ -83,7 +83,7 @@ export const AccountMenu: React.FC = () => {
         aria-haspopup="menu"
         aria-controls="account-menu-popover"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex h-11 items-center space-x-2.5 text-left rounded-xl border p-1 px-3 hover:shadow-sm transition-all duration-200 cursor-pointer select-none ${
+        className={`group inline-flex h-11 max-w-[220px] shrink-0 items-center gap-2 rounded-xl border p-1 px-2.5 hover:shadow-sm transition-all duration-200 cursor-pointer select-none xl:px-3 2xl:h-12 2xl:px-3.5 ${
           isOpen 
             ? 'ring-2 ring-blue-500/20 border-blue-500 bg-blue-100/50 dark:bg-blue-900/40' 
             : 'border-blue-100/50 bg-blue-50/50 hover:bg-blue-100/60 dark:border-blue-900/40 dark:bg-blue-950/20 dark:hover:bg-blue-900/30'
@@ -103,21 +103,16 @@ export const AccountMenu: React.FC = () => {
           </div>
         )}
 
-        {/* User Info (hidden on mobile, shown on sm+) */}
-        <div className="hidden sm:flex flex-col select-none leading-none min-w-0 max-w-[140px] md:max-w-[180px]">
+        {/* User Info */}
+        <span className="hidden min-w-0 xl:flex xl:flex-col xl:items-start select-none leading-none">
           {/* Full Name */}
-          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate mb-1">
+          <span className="max-w-[145px] truncate whitespace-nowrap text-xs font-semibold text-slate-700 dark:text-slate-200 mb-0.5">
             {fullName}
           </span>
           {/* Role Label */}
-          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider truncate">
+          <span className="hidden max-w-[145px] truncate whitespace-nowrap text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 2xl:block">
             {primaryRoleLabel}
           </span>
-        </div>
-
-        {/* Small role display on mobile (instead of name) */}
-        <span className="sm:hidden text-[10px] text-slate-400 dark:text-slate-500 font-bold max-w-[80px] truncate uppercase tracking-wider">
-          {primaryRoleLabel}
         </span>
 
         {/* ChevronDown */}
