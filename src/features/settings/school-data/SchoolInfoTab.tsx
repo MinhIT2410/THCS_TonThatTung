@@ -288,7 +288,7 @@ export default function SchoolInfoTab() {
                 name="managing_authority"
                 value={formData.managing_authority}
                 onChange={handleChange}
-                placeholder="Ví dụ: Phòng Giáo dục và Đào tạo Quận 1"
+                placeholder="Ví dụ: Sở Giáo dục và Đào tạo"
                 className="w-full px-3.5 py-2 text-xs border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
@@ -310,7 +310,7 @@ export default function SchoolInfoTab() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase">Phường/Xã</label>
                 <input
@@ -319,17 +319,6 @@ export default function SchoolInfoTab() {
                   value={formData.ward}
                   onChange={handleChange}
                   placeholder="Phường Bến Thành"
-                  className="w-full px-2.5 py-2 text-[11px] border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Quận/Huyện</label>
-                <input
-                  type="text"
-                  name="district"
-                  value={formData.district}
-                  onChange={handleChange}
-                  placeholder="Quận 1"
                   className="w-full px-2.5 py-2 text-[11px] border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
