@@ -104,7 +104,7 @@ export default function Gallery({ photos }: GalleryProps) {
         <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/40 px-3 py-1 rounded-full inline-block">
           Ghi lại những khoảnh khắc
         </span>
-        <h1 className="font-display text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-5xl">
+        <h1 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-4xl">
           Thư Viện Ảnh Đội
         </h1>
         <p className="font-sans text-sm text-slate-500 dark:text-slate-400">

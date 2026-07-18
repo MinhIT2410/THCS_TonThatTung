@@ -73,7 +73,7 @@ export default function Activities({
         <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest bg-red-50 dark:bg-red-950/40 px-3 py-1 rounded-full inline-block">
           Học tập chủ động - Rèn luyện tích cực
         </span>
-        <h1 className="font-display text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-5xl">
+        <h1 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-4xl">
           Phong Trào & Hoạt Động
         </h1>
         <p className="font-sans text-sm text-slate-500 dark:text-slate-400">
