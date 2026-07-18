@@ -69,7 +69,7 @@ export const AccountMenu: React.FC = () => {
   }
 
   // 2. Authenticated/Logged in state
-  const fullName = profile?.full_name || user?.email?.split('@')[0] || 'Thành viên';
+  const displayName = profile?.full_name || user?.email || 'Tài khoản';
   const mainRoleCode = getPrimaryRole(roles);
   const primaryRoleLabel = getRoleLabel(mainRoleCode);
 
@@ -83,7 +83,7 @@ export const AccountMenu: React.FC = () => {
         aria-haspopup="menu"
         aria-controls="account-menu-popover"
         onClick={() => setIsOpen(!isOpen)}
-        className={`group inline-flex h-12 max-w-[220px] shrink-0 items-center justify-center gap-2 rounded-xl border p-1 px-2.5 hover:shadow-sm transition-all duration-200 cursor-pointer select-none xl:px-3 2xl:px-3.5 ${
+        className={`group inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border p-1 px-2.5 hover:shadow-sm transition-all duration-200 cursor-pointer select-none xl:min-w-[190px] xl:max-w-[220px] xl:px-3 2xl:px-3.5 ${
           isOpen 
             ? 'ring-2 ring-blue-500/20 border-blue-500 bg-blue-100/50 dark:bg-blue-900/40' 
             : 'border-blue-100/50 bg-blue-50/50 hover:bg-blue-100/60 dark:border-blue-900/40 dark:bg-blue-950/20 dark:hover:bg-blue-900/30'
@@ -93,7 +93,7 @@ export const AccountMenu: React.FC = () => {
         {profile?.avatar_url ? (
           <img
             src={profile.avatar_url}
-            alt={fullName}
+            alt={displayName}
             referrerPolicy="no-referrer"
             className="h-8 w-8 rounded-full object-cover shrink-0 border border-blue-500/20"
           />
@@ -106,20 +106,22 @@ export const AccountMenu: React.FC = () => {
         {/* User Info */}
         <span className="hidden min-w-0 flex-1 flex-col items-center justify-center xl:flex select-none leading-none">
           {/* Full Name */}
-          <span className="max-w-[155px] truncate whitespace-nowrap text-center text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight">
-            {fullName}
+          <span className="block max-w-[150px] truncate whitespace-nowrap text-center text-[11px] font-semibold text-slate-700 dark:text-slate-200 leading-tight">
+            {displayName}
           </span>
           {/* Role Label */}
-          <span className="hidden max-w-[140px] truncate whitespace-nowrap text-center text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-1 leading-[1.15] 2xl:block">
+          <span className="hidden max-w-[140px] truncate whitespace-nowrap text-center text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-0.5 leading-[1.15] 2xl:block">
             {primaryRoleLabel}
           </span>
         </span>
 
         {/* ChevronDown */}
-        <ChevronDown 
-          className="h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200" 
-          style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }}
-        />
+        <span className="flex w-5 shrink-0 items-center justify-center">
+          <ChevronDown 
+            className="h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200" 
+            style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }}
+          />
+        </span>
       </button>
 
       {/* Popover Widget */}
