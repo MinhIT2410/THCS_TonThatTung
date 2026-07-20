@@ -86,10 +86,10 @@ export default function Hero({ onNavigate }: HeroProps) {
   };
 
   const stats = [
-    { id: 'stat-1', icon: Users, label: 'Đội viên tích cực', value: '1,250+', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/40' },
-    { id: 'stat-2', icon: ShieldCheck, label: 'Chi đội tự quản', value: '32', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/40' },
-    { id: 'stat-3', icon: Award, label: 'Công trình măng non', value: '05', color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-950/40' },
-    { id: 'stat-4', icon: Heart, label: 'Năm học dẫn đầu', value: '05+', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
+    { id: 'stat-1', icon: Users, label: 'Đội viên tích cực', value: '1,250+', color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-950/40' },
+    { id: 'stat-2', icon: ShieldCheck, label: 'Chi đội tự quản', value: '32', color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-950/40' },
+    { id: 'stat-3', icon: Award, label: 'Công trình măng non', value: '05', color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-950/40' },
+    { id: 'stat-4', icon: Heart, label: 'Năm học dẫn đầu', value: '05+', color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-950/40' },
   ];
 
   return (
@@ -306,14 +306,14 @@ export default function Hero({ onNavigate }: HeroProps) {
                     id={stat.id}
                     className="flex items-center space-x-3 p-2 rounded-xl hover:bg-white/5 transition-colors duration-200"
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white border border-white/10">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30">
                       <IconComponent className="h-5 w-5" />
                     </div>
                     <div>
-                      <span className="block text-xl font-extrabold text-white font-display tracking-tight leading-none">
+                      <span className="block text-xl font-extrabold text-teal-300 font-display tracking-tight leading-none">
                         {stat.value}
                       </span>
-                      <span className="block text-[10px] font-semibold text-slate-300 uppercase tracking-wider mt-1 font-sans">
+                      <span className="block text-[10px] font-semibold text-teal-100/70 uppercase tracking-wider mt-1 font-sans">
                         {stat.label}
                       </span>
                     </div>
