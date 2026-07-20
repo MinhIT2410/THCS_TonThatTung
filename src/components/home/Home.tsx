@@ -16,7 +16,7 @@ import { documentApi } from '../../features/documents/documentApi';
 import { albumApi } from '../../features/albums/albumApi';
 import { DEFAULT_IMAGES } from '../../config/defaults/images.defaults';
 import { usePageOverrides } from '../../features/cms/usePageOverrides';
-import { RADIO_PROGRAM_DEFAULT, GALLERY_BLOCK_DEFAULT } from '../../config/defaults/home.defaults';
+import { RADIO_PROGRAM_DEFAULT, GALLERY_BLOCK_DEFAULT, UNCLE_HO_BLOCK_DEFAULT, NEWS_BLOCK_DEFAULT, CAMPAIGNS_BLOCK_DEFAULT, DOCUMENTS_BLOCK_DEFAULT } from '../../config/defaults/home.defaults';
 import { deepMerge } from '../../utils/deepMerge';
 import RadioProgramBanner from './RadioProgramBanner';
 import RadioProgramPlayer from './RadioProgramPlayer';
@@ -49,6 +49,14 @@ export default function Home({
   const finalRadioData = deepMerge(RADIO_PROGRAM_DEFAULT, radioOverride?.data);
   const galleryOverride = overrides['galleryBlock'];
   const finalGalleryData = deepMerge(GALLERY_BLOCK_DEFAULT, galleryOverride?.data);
+  const uncleHoOverride = overrides['uncleHoBlock'];
+  const finalUncleHoData = deepMerge(UNCLE_HO_BLOCK_DEFAULT, uncleHoOverride?.data);
+  const newsOverride = overrides['newsBlock'];
+  const finalNewsData = deepMerge(NEWS_BLOCK_DEFAULT, newsOverride?.data);
+  const campaignsOverride = overrides['campaignsBlock'];
+  const finalCampaignsData = deepMerge(CAMPAIGNS_BLOCK_DEFAULT, campaignsOverride?.data);
+  const documentsOverride = overrides['documentsBlock'];
+  const finalDocumentsData = deepMerge(DOCUMENTS_BLOCK_DEFAULT, documentsOverride?.data);
 
   // Audio player state
   const [activeAudio, setActiveAudio] = useState<{
@@ -277,27 +285,38 @@ export default function Home({
 
       {/* 3. Featured News & Announcements Grid */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
-          <div>
-            <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest bg-red-50 dark:bg-red-950/40 px-3.5 py-1.5 rounded-full inline-block mb-3.5">
-              Măng non tin nhanh
-            </span>
-            <h2 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Tin tức măng non
-            </h2>
-            <p className="font-sans text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Cập nhật tin hoạt động Đội, gương sáng thiếu nhi và thông báo mới nhất.
-            </p>
+        <EditableBlock
+          pageKey="home"
+          blockKey="newsBlock"
+          title="Khối Tin Tức Măng Non"
+          defaultData={NEWS_BLOCK_DEFAULT}
+          overrideData={newsOverride}
+          onSave={saveOverride}
+          onReset={resetOverride}
+          error={error}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 p-2">
+            <div>
+              <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest bg-red-50 dark:bg-red-950/40 px-3.5 py-1.5 rounded-full inline-block mb-3.5">
+                {finalNewsData.eyebrow}
+              </span>
+              <h2 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                {finalNewsData.title}
+              </h2>
+              <p className="font-sans text-sm text-slate-500 dark:text-slate-400 mt-1">
+                {finalNewsData.description}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/tin-tuc')}
+              id="view-all-news-btn"
+              className="flex items-center space-x-1 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline mt-2 sm:mt-0 transition-colors"
+            >
+              <span>{finalNewsData.buttonLabel}</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={() => navigate('/tin-tuc')}
-            id="view-all-news-btn"
-            className="flex items-center space-x-1 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline mt-2 sm:mt-0 transition-colors"
-          >
-            <span>Xem tất cả tin tức</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        </EditableBlock>
 
         {isLoadingNews ? (
           <div className="flex justify-center items-center py-16">
@@ -371,16 +390,26 @@ export default function Home({
       {/* 4. Movements & Activities Tracker (Call to Action) */}
       <section className="bg-blue-900/5 dark:bg-blue-950/10 py-16 transition-colors duration-300">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
+        <EditableBlock
+          pageKey="home"
+          blockKey="campaignsBlock"
+          title="Khối Phong Trào Thi Đua"
+          defaultData={CAMPAIGNS_BLOCK_DEFAULT}
+          overrideData={campaignsOverride}
+          onSave={saveOverride}
+          onReset={resetOverride}
+          error={error}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 p-2">
             <div>
               <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/40 px-3.5 py-1.5 rounded-full inline-block mb-3.5">
-                Phong trào sôi nổi
+                {finalCampaignsData.eyebrow}
               </span>
               <h2 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                Phong trào thi đua đang diễn ra
+                {finalCampaignsData.title}
               </h2>
               <p className="font-sans text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Các bạn hãy tham gia tích cực để cùng hoàn thành phong trào Đội viên tốt nhé.
+                {finalCampaignsData.description}
               </p>
             </div>
             <button
@@ -388,10 +417,11 @@ export default function Home({
               id="view-all-activities-btn"
               className="flex items-center space-x-1 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline mt-2 sm:mt-0 transition-colors"
             >
-              <span>Xem toàn bộ kế hoạch</span>
+              <span>{finalCampaignsData.buttonLabel}</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
+        </EditableBlock>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {displayActivities.map((act, idx) => (
@@ -448,26 +478,37 @@ export default function Home({
 
       {/* 4.5. Featured Documents Section */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
-          <div>
-            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/40 px-3.5 py-1.5 rounded-full inline-block mb-3.5">
-              Học tập & Nghiệp vụ
-            </span>
-            <h2 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Văn bản - Tài liệu nổi bật
-            </h2>
-            <p className="font-sans text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Học sinh và phụ huynh có thể tra cứu nhanh các văn bản, kế hoạch thi đua mới của Liên đội.
-            </p>
+        <EditableBlock
+          pageKey="home"
+          blockKey="documentsBlock"
+          title="Khối Văn Bản - Tài Liệu"
+          defaultData={DOCUMENTS_BLOCK_DEFAULT}
+          overrideData={documentsOverride}
+          onSave={saveOverride}
+          onReset={resetOverride}
+          error={error}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 p-2">
+            <div>
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/40 px-3.5 py-1.5 rounded-full inline-block mb-3.5">
+                {finalDocumentsData.eyebrow}
+              </span>
+              <h2 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                {finalDocumentsData.title}
+              </h2>
+              <p className="font-sans text-sm text-slate-500 dark:text-slate-400 mt-1">
+                {finalDocumentsData.description}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/tai-lieu')}
+              className="flex items-center space-x-1 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline mt-2 sm:mt-0 transition-colors"
+            >
+              <span>{finalDocumentsData.buttonLabel}</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={() => navigate('/tai-lieu')}
-            className="flex items-center space-x-1 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline mt-2 sm:mt-0 transition-colors"
-          >
-            <span>Xem tất cả văn bản</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        </EditableBlock>
 
         {isLoadingDocs ? (
           <div className="flex justify-center items-center py-16">
@@ -555,60 +596,83 @@ export default function Home({
 
       {/* 5. Traditional Section / Lịch sử măng non */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white p-8 md:p-12 relative overflow-hidden shadow-2xl border border-white/5">
-          {/* Accent decoration */}
-          <div className="absolute right-0 top-0 w-1/3 h-full opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-red-600 via-blue-600 to-transparent pointer-events-none" />
+        <EditableBlock
+          pageKey="home"
+          blockKey="uncleHoBlock"
+          title="Khối Bác Hồ Với Thiếu Nhi"
+          defaultData={UNCLE_HO_BLOCK_DEFAULT}
+          overrideData={uncleHoOverride}
+          onSave={saveOverride}
+          onReset={resetOverride}
+          error={error}
+        >
+          <div className="rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white p-8 md:p-12 relative overflow-hidden shadow-2xl border border-white/5">
+            {/* Accent decoration */}
+            <div className="absolute right-0 top-0 w-1/3 h-full opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-red-600 via-blue-600 to-transparent pointer-events-none" />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-8 space-y-5 relative z-10">
-              <span className="inline-flex items-center space-x-1.5 rounded-full bg-red-600/30 border border-red-500/40 px-3.5 py-1.5 text-xs font-bold text-red-300 uppercase tracking-wider">
-                <Landmark className="h-3.5 w-3.5" />
-                <span>Phòng truyền thống</span>
-              </span>
-              <h2 className="font-display text-3xl font-extrabold tracking-tight md:text-4xl leading-tight">
-                Bác Hồ Với Thiếu Niên Nhi Đồng
-              </h2>
-              <p className="font-sans text-sm text-slate-300 leading-relaxed max-w-3xl">
-                "Ai yêu các nhi đồng bằng Bác Hồ Chí Minh". Cả cuộc đời Người luôn dành tình cảm sâu sắc, ấm áp nhất cho các thế hệ tương lai. Lời dạy "5 Điều Bác Hồ dạy" luôn là kim chỉ nam soi đường, khích lệ thiếu niên nhi đồng cả nước tu dưỡng đạo đức, rèn luyện tri thức để đưa non sông Việt Nam vươn vai sánh vai với các cường quốc năm châu.
-              </p>
-              <div className="flex flex-wrap gap-2.5 text-xs font-bold pt-2">
-                <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
-                  1. Yêu Tổ quốc, yêu đồng bào
-                </div>
-                <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
-                  2. Học tập tốt, lao động tốt
-                </div>
-                <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
-                  3. Đoàn kết tốt, kỷ luật tốt
-                </div>
-                <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
-                  4. Giữ gìn vệ sinh thật tốt
-                </div>
-                <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
-                  5. Khiêm tốn, thật thà, dũng cảm
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              <div className="lg:col-span-8 space-y-5 relative z-10">
+                <span className="inline-flex items-center space-x-1.5 rounded-full bg-red-600/30 border border-red-500/40 px-3.5 py-1.5 text-xs font-bold text-red-300 uppercase tracking-wider">
+                  <Landmark className="h-3.5 w-3.5" />
+                  <span>{finalUncleHoData.eyebrow}</span>
+                </span>
+                <h2 className="font-display text-3xl font-extrabold tracking-tight md:text-4xl leading-tight">
+                  {finalUncleHoData.title}
+                </h2>
+                <p className="font-sans text-sm text-slate-300 leading-relaxed max-w-3xl whitespace-pre-wrap">
+                  {finalUncleHoData.description}
+                </p>
+                <div className="flex flex-wrap gap-2.5 text-xs font-bold pt-2">
+                  {finalUncleHoData.rule1 && (
+                    <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
+                      {finalUncleHoData.rule1}
+                    </div>
+                  )}
+                  {finalUncleHoData.rule2 && (
+                    <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
+                      {finalUncleHoData.rule2}
+                    </div>
+                  )}
+                  {finalUncleHoData.rule3 && (
+                    <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
+                      {finalUncleHoData.rule3}
+                    </div>
+                  )}
+                  {finalUncleHoData.rule4 && (
+                    <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
+                      {finalUncleHoData.rule4}
+                    </div>
+                  )}
+                  {finalUncleHoData.rule5 && (
+                    <div className="rounded-xl bg-white/5 border border-white/10 px-3.5 py-2">
+                      {finalUncleHoData.rule5}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-            
-            <div className="lg:col-span-4 flex justify-center relative z-10">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-2 backdrop-blur-md max-w-[280px] shadow-2xl">
-                <div className="overflow-hidden rounded-2xl aspect-[4/5] bg-slate-800 relative">
-                  <img 
-                    src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&auto=format&fit=crop&q=80" 
-                    alt="Bác Hồ cùng thiếu nhi" 
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
-                    <p className="text-[10px] text-slate-300 italic text-center w-full">
-                      Bác Hồ phát kẹo cho các cháu nhi đồng
-                    </p>
+              
+              <div className="lg:col-span-4 flex justify-center relative z-10">
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-2 backdrop-blur-md max-w-[280px] shadow-2xl">
+                  <div className="overflow-hidden rounded-2xl aspect-[4/5] bg-slate-800 relative">
+                    <img 
+                      src={finalUncleHoData.imageUrl || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&auto=format&fit=crop&q=80"} 
+                      alt="Bác Hồ cùng thiếu nhi" 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    {finalUncleHoData.imageCaption && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
+                        <p className="text-[10px] text-slate-300 italic text-center w-full">
+                          {finalUncleHoData.imageCaption}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </EditableBlock>
       </section>
 
       {/* 6. Photo Gallery Highlights */}

@@ -9,6 +9,10 @@ import { X, Upload, AlertCircle, RefreshCw, Save } from 'lucide-react';
 import { isSupabaseConfigured } from '../../lib/supabase/client';
 import RadioProgramEditor from '../../features/cms/components/RadioProgramEditor';
 import GalleryBlockEditor from '../../features/cms/components/GalleryBlockEditor';
+import UncleHoBlockEditor from '../../features/cms/components/UncleHoBlockEditor';
+import NewsBlockEditor from '../../features/cms/components/NewsBlockEditor';
+import CampaignsBlockEditor from '../../features/cms/components/CampaignsBlockEditor';
+import DocumentsBlockEditor from '../../features/cms/components/DocumentsBlockEditor';
 
 interface EditModalProps {
   title: string;
@@ -46,6 +50,62 @@ export default function EditModal({
   if (blockKey === 'galleryBlock') {
     return (
       <GalleryBlockEditor
+        title={title}
+        pageKey={pageKey}
+        blockKey={blockKey}
+        defaultData={defaultData}
+        overrideData={overrideData}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    );
+  }
+
+  if (blockKey === 'uncleHoBlock') {
+    return (
+      <UncleHoBlockEditor
+        title={title}
+        pageKey={pageKey}
+        blockKey={blockKey}
+        defaultData={defaultData}
+        overrideData={overrideData}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    );
+  }
+
+  if (blockKey === 'newsBlock') {
+    return (
+      <NewsBlockEditor
+        title={title}
+        pageKey={pageKey}
+        blockKey={blockKey}
+        defaultData={defaultData}
+        overrideData={overrideData}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    );
+  }
+
+  if (blockKey === 'campaignsBlock') {
+    return (
+      <CampaignsBlockEditor
+        title={title}
+        pageKey={pageKey}
+        blockKey={blockKey}
+        defaultData={defaultData}
+        overrideData={overrideData}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    );
+  }
+
+  if (blockKey === 'documentsBlock') {
+    return (
+      <DocumentsBlockEditor
         title={title}
         pageKey={pageKey}
         blockKey={blockKey}
