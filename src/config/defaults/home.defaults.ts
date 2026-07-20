@@ -25,6 +25,19 @@ export type StatConfig = {
   value: string;
 };
 
+export type RadioProgramConfig = {
+  enabled: boolean;
+  eyebrow: string;
+  title: string;
+  buttonLabel: string;
+  audioUrl: string;
+  coverImageUrl: string;
+  description: string;
+  durationLabel: string;
+  publishedAt: string;
+  openMode: 'PLAYER' | 'NEW_TAB' | 'DOWNLOAD';
+};
+
 export type HomeHeroConfig = {
   title: string;
   subtitle: string;
@@ -84,4 +97,17 @@ export const HOME_HERO_DEFAULT: HomeHeroConfig = {
     value: "05+",
     label: "Năm học dẫn đầu",
   },
+};
+
+export const RADIO_PROGRAM_DEFAULT: RadioProgramConfig = {
+  enabled: true,
+  eyebrow: "PHÁT THANH MĂNG NON",
+  title: "Chương trình phát thanh kỳ này: “Thiếu nhi Thủ đô thi đua học tốt rèn ngoan”",
+  buttonLabel: "Nghe chương trình",
+  audioUrl: "",
+  coverImageUrl: "",
+  description: "",
+  durationLabel: "",
+  publishedAt: "",
+  openMode: "PLAYER"
 };

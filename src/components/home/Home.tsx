@@ -15,6 +15,11 @@ import { newsApi } from '../../features/news/newsApi';
 import { documentApi } from '../../features/documents/documentApi';
 import { albumApi } from '../../features/albums/albumApi';
 import { DEFAULT_IMAGES } from '../../config/defaults/images.defaults';
+import { usePageOverrides } from '../../features/cms/usePageOverrides';
+import { RADIO_PROGRAM_DEFAULT } from '../../config/defaults/home.defaults';
+import { deepMerge } from '../../utils/deepMerge';
+import RadioProgramBanner from './RadioProgramBanner';
+import RadioProgramPlayer from './RadioProgramPlayer';
 
 interface HomeProps {
   news: NewsItem[];
@@ -36,6 +41,88 @@ export default function Home({
   const navigate = useNavigate();
 
   const [publishedBanners, setPublishedBanners] = useState<HomeBanner[]>([]);
+  
+  // CMS overrides for radio program
+  const { overrides, saveOverride, resetOverride, error } = usePageOverrides('home');
+  const radioOverride = overrides['radioProgram'];
+  const finalRadioData = deepMerge(RADIO_PROGRAM_DEFAULT, radioOverride?.data);
+
+  // Audio player state
+  const [activeAudio, setActiveAudio] = useState<{
+    audioUrl: string;
+    title: string;
+    eyebrow: string;
+    coverImageUrl?: string;
+    durationLabel?: string;
+  } | null>(null);
+
+  const getSafeFilename = (titleText: string, defaultName: string = 'phat-thanh-mang-non.mp3') => {
+    if (!titleText) return defaultName;
+    const cleaned = titleText
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+    return cleaned ? `${cleaned}.mp3` : defaultName;
+  };
+
+  const isSameOrigin = (urlStr: string) => {
+    try {
+      const url = new URL(urlStr, window.location.origin);
+      return url.origin === window.location.origin;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const handleListenClick = () => {
+    if (!finalRadioData.audioUrl) {
+      return;
+    }
+
+    if (finalRadioData.openMode === 'DOWNLOAD') {
+      const isExternal = !isSameOrigin(finalRadioData.audioUrl);
+      if (isExternal) {
+        const newWindow = window.open(
+          finalRadioData.audioUrl,
+          '_blank',
+          'noopener,noreferrer'
+        );
+        if (newWindow) {
+          newWindow.opener = null;
+        }
+      } else {
+        const safeName = getSafeFilename(finalRadioData.title);
+        const link = document.createElement('a');
+        link.href = finalRadioData.audioUrl;
+        link.download = safeName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } else if (finalRadioData.openMode === 'NEW_TAB') {
+      const newWindow = window.open(
+        finalRadioData.audioUrl,
+        '_blank',
+        'noopener,noreferrer'
+      );
+      if (newWindow) {
+        newWindow.opener = null;
+      }
+    } else {
+      // PLAYER mode
+      setActiveAudio({
+        audioUrl: finalRadioData.audioUrl,
+        title: finalRadioData.title,
+        eyebrow: finalRadioData.eyebrow,
+        coverImageUrl: finalRadioData.coverImageUrl,
+        durationLabel: finalRadioData.durationLabel,
+      });
+    }
+  };
   const [isLoadingBanners, setIsLoadingBanners] = useState<boolean>(true);
 
   // Dynamic state for live sections
@@ -176,31 +263,14 @@ export default function Home({
       <Hero onNavigate={onNavigate} />
 
       {/* 2. Quick Broadcast / Phát thanh măng non strip */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row items-center justify-between rounded-[2rem] bg-gradient-to-r from-red-600 to-blue-700 p-5 md:p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full pointer-events-none blur-2xl" />
-          <div className="flex items-center space-x-4 mb-4 md:mb-0 relative z-10">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md animate-bounce">
-              <Volume2 className="h-6 w-6 text-yellow-300" />
-            </div>
-            <div>
-              <span className="text-[10px] uppercase font-extrabold bg-white/20 px-2.5 py-0.5 rounded-full inline-block mb-1 tracking-wider text-yellow-200">
-                Phát thanh Măng non
-              </span>
-              <h3 className="text-sm md:text-base font-bold font-sans">
-                Chương trình phát thanh kỳ này: "Thiếu nhi Thủ đô thi đua học tốt rèn ngoan"
-              </h3>
-            </div>
-          </div>
-          <button 
-            onClick={() => onNavigate('news')}
-            className="flex items-center space-x-1.5 rounded-xl bg-white text-blue-700 px-5 py-3 text-xs font-bold shadow-md hover:bg-slate-50 active:scale-95 transition-all duration-200 relative z-10 shrink-0"
-          >
-            <span>Nghe chương trình</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </section>
+      <RadioProgramBanner
+        data={finalRadioData}
+        overrideData={radioOverride}
+        onSave={saveOverride}
+        onReset={resetOverride}
+        error={error}
+        onListenClick={handleListenClick}
+      />
 
       {/* 3. Featured News & Announcements Grid */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -618,6 +688,18 @@ export default function Home({
           </div>
         )}
       </section>
+
+      {/* Floating Radio Program Player */}
+      {activeAudio && (
+        <RadioProgramPlayer
+          audioUrl={activeAudio.audioUrl}
+          title={activeAudio.title}
+          eyebrow={activeAudio.eyebrow}
+          coverImageUrl={activeAudio.coverImageUrl}
+          durationLabel={activeAudio.durationLabel}
+          onClose={() => setActiveAudio(null)}
+        />
+      )}
     </div>
   );
 }

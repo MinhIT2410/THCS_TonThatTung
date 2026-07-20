@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Upload, AlertCircle, RefreshCw, Save } from 'lucide-react';
 import { isSupabaseConfigured } from '../../lib/supabase/client';
+import RadioProgramEditor from '../../features/cms/components/RadioProgramEditor';
 
 interface EditModalProps {
   title: string;
@@ -27,6 +28,20 @@ export default function EditModal({
   onClose,
   onSave,
 }: EditModalProps) {
+  if (blockKey === 'radioProgram') {
+    return (
+      <RadioProgramEditor
+        title={title}
+        pageKey={pageKey}
+        blockKey={blockKey}
+        defaultData={defaultData}
+        overrideData={overrideData}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    );
+  }
+
   // Merge default fields and overridden fields to pre-populate form
   const initialData = {
     title: overrideData?.title ?? defaultData?.title ?? '',
