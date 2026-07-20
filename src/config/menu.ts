@@ -14,12 +14,6 @@ export interface MenuItem {
 
 export const NAV_MENU: MenuItem[] = [
   {
-    title: 'Trang chủ',
-    path: ROUTES.HOME,
-    id: 'home',
-    showInNavbar: true,
-  },
-  {
     title: 'Giới thiệu',
     path: ROUTES.ABOUT,
     id: 'about',
