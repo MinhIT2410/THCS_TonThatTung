@@ -162,9 +162,24 @@ export default function Header({
               onClick={toggleDarkMode}
               id="dark-mode-toggle"
               title={isDarkMode ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối"}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
             >
-              {isDarkMode ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={isDarkMode ? "dark" : "light"}
+                  initial={{ y: -12, opacity: 0, scale: 0.6, rotate: -45 }}
+                  animate={{ y: 0, opacity: 1, scale: 1, rotate: 0 }}
+                  exit={{ y: 12, opacity: 0, scale: 0.6, rotate: 45 }}
+                  transition={{ duration: 0.18, ease: "easeInOut" }}
+                  className="flex items-center justify-center"
+                >
+                  {isDarkMode ? (
+                    <Sun className="h-4.5 w-4.5 text-yellow-500" />
+                  ) : (
+                    <Moon className="h-4.5 w-4.5 text-slate-600 dark:text-slate-300" />
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </button>
           </div>
 
