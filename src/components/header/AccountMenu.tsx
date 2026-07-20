@@ -45,11 +45,14 @@ export const AccountMenu: React.FC = () => {
   if (isCurrentlyLoading) {
     // Elegant skeleton / disabled state to prevent layout shift and flicker
     return (
-      <div className="flex h-11 items-center space-x-2 rounded-xl border border-blue-100/40 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-950/10 px-3 select-none opacity-60 animate-pulse">
-        <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
-        <div className="flex flex-col space-y-1">
-          <div className="h-3 w-16 bg-slate-200 dark:bg-slate-800 rounded" />
-          <div className="h-2 w-10 bg-slate-200 dark:bg-slate-800 rounded" />
+      <div className="flex h-11 items-center space-x-2 rounded-xl border border-blue-100/40 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-950/10 px-2.5 select-none opacity-60 animate-pulse xl:h-[52px] xl:min-w-[205px] xl:max-w-[220px] xl:w-[220px] xl:rounded-[14px]">
+        <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
+        <div className="hidden xl:flex flex-col space-y-1.5 flex-1 items-center justify-center">
+          <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
+          <div className="h-2 w-12 bg-slate-200 dark:bg-slate-800 rounded" />
+        </div>
+        <div className="flex h-full w-[18px] shrink-0 items-center justify-center">
+          <div className="h-3 w-3 bg-slate-200 dark:bg-slate-800 rounded-full" />
         </div>
       </div>
     );
@@ -60,9 +63,9 @@ export const AccountMenu: React.FC = () => {
     return (
       <button
         onClick={() => navigate(ROUTES.LOGIN)}
-        className="flex h-11 items-center space-x-1.5 rounded-xl px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 cursor-pointer"
+        className="flex h-11 items-center justify-center space-x-1.5 rounded-xl px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 cursor-pointer xl:h-[52px] xl:w-[220px] xl:rounded-[14px]"
       >
-        <UserIcon className="h-4 w-4" />
+        <UserIcon className="h-4 w-4 shrink-0" />
         <span>Đăng nhập</span>
       </button>
     );

@@ -63,7 +63,7 @@ export default function Header({
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo and Brand Title (Unified Brand Component, Modern, Elevated) */}
         <div 
-          className="group relative inline-flex shrink-0 items-center justify-start rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 select-none" 
+          className="group relative inline-flex shrink-0 items-center justify-start rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 select-none md:w-[170px] xl:w-[310px]" 
           onClick={() => handleNavClick('home')}
           onMouseEnter={prefetchHomeData}
           id="header-brand"
@@ -149,7 +149,7 @@ export default function Header({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center md:space-x-0.5 lg:space-x-2">
+        <nav className="hidden md:flex flex-1 items-center justify-center md:space-x-0.5 lg:space-x-2">
           {navItems.map((item) => {
             const isActive = currentView === item.id;
             return (
@@ -179,7 +179,7 @@ export default function Header({
         </nav>
 
         {/* Actions Toolbar */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-end md:w-[170px] xl:w-[310px] shrink-0 space-x-3">
           {/* Unified Utility Capsule (Search + Theme Switcher) */}
           <div className="flex items-center space-x-1 rounded-xl bg-slate-50 dark:bg-slate-800/40 p-1">
             {/* Search Button */}
