@@ -16,10 +16,11 @@ import { documentApi } from '../../features/documents/documentApi';
 import { albumApi } from '../../features/albums/albumApi';
 import { DEFAULT_IMAGES } from '../../config/defaults/images.defaults';
 import { usePageOverrides } from '../../features/cms/usePageOverrides';
-import { RADIO_PROGRAM_DEFAULT } from '../../config/defaults/home.defaults';
+import { RADIO_PROGRAM_DEFAULT, GALLERY_BLOCK_DEFAULT } from '../../config/defaults/home.defaults';
 import { deepMerge } from '../../utils/deepMerge';
 import RadioProgramBanner from './RadioProgramBanner';
 import RadioProgramPlayer from './RadioProgramPlayer';
+import EditableBlock from '../editable/EditableBlock';
 
 interface HomeProps {
   news: NewsItem[];
@@ -46,6 +47,8 @@ export default function Home({
   const { overrides, saveOverride, resetOverride, error } = usePageOverrides('home');
   const radioOverride = overrides['radioProgram'];
   const finalRadioData = deepMerge(RADIO_PROGRAM_DEFAULT, radioOverride?.data);
+  const galleryOverride = overrides['galleryBlock'];
+  const finalGalleryData = deepMerge(GALLERY_BLOCK_DEFAULT, galleryOverride?.data);
 
   // Audio player state
   const [activeAudio, setActiveAudio] = useState<{
@@ -610,27 +613,38 @@ export default function Home({
 
       {/* 6. Photo Gallery Highlights */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
-          <div>
-            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-50 dark:bg-amber-950/40 px-3.5 py-1.5 rounded-full inline-block mb-3.5">
-              Ghi dấu kỷ niệm
-            </span>
-            <h2 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Khoảnh khắc đẹp Liên đội
-            </h2>
-            <p className="font-sans text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Ghi lại những khoảnh khắc tươi đẹp đầy sức trẻ dưới mái trường của chúng mình.
-            </p>
+        <EditableBlock
+          pageKey="home"
+          blockKey="galleryBlock"
+          title="Khối Thư Viện Ảnh"
+          defaultData={GALLERY_BLOCK_DEFAULT}
+          overrideData={galleryOverride}
+          onSave={saveOverride}
+          onReset={resetOverride}
+          error={error}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 p-2">
+            <div>
+              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-50 dark:bg-amber-950/40 px-3.5 py-1.5 rounded-full inline-block mb-3.5">
+                {finalGalleryData.eyebrow}
+              </span>
+              <h2 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                {finalGalleryData.title}
+              </h2>
+              <p className="font-sans text-sm text-slate-500 dark:text-slate-400 mt-1">
+                {finalGalleryData.description}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/thu-vien')}
+              id="view-all-gallery-btn"
+              className="flex items-center space-x-1 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline mt-2 sm:mt-0 transition-colors"
+            >
+              <span>{finalGalleryData.buttonLabel}</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={() => navigate('/thu-vien')}
-            id="view-all-gallery-btn"
-            className="flex items-center space-x-1 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline mt-2 sm:mt-0 transition-colors"
-          >
-            <span>Mở thư viện ảnh</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        </EditableBlock>
 
         {isLoadingAlbums ? (
           <div className="flex justify-center items-center py-16">

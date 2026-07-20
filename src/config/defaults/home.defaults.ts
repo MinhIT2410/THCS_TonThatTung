@@ -111,3 +111,17 @@ export const RADIO_PROGRAM_DEFAULT: RadioProgramConfig = {
   publishedAt: "",
   openMode: "PLAYER"
 };
+
+export type GalleryBlockConfig = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  buttonLabel: string;
+};
+
+export const GALLERY_BLOCK_DEFAULT: GalleryBlockConfig = {
+  eyebrow: "Ghi dấu kỷ niệm",
+  title: "Khoảnh khắc đẹp Liên đội",
+  description: "Ghi lại những khoảnh khắc tươi đẹp đầy sức trẻ dưới mái trường của chúng mình.",
+  buttonLabel: "Mở thư viện ảnh",
+};
