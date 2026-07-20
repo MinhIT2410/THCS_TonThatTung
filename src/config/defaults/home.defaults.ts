@@ -8,6 +8,18 @@ export type HeroButtonConfig = {
   href: string;
 };
 
+export type BadgeConfig = {
+  title: string;
+  description: string;
+};
+
+export type DecorativeImageConfig = {
+  url: string;
+  alt: string;
+  tag: string;
+  title: string;
+};
+
 export type HomeHeroConfig = {
   title: string;
   subtitle: string;
@@ -15,6 +27,9 @@ export type HomeHeroConfig = {
   backgroundImage: string;
   primaryButton: HeroButtonConfig;
   secondaryButton: HeroButtonConfig;
+  badge1: BadgeConfig;
+  badge2: BadgeConfig;
+  decorImage: DecorativeImageConfig;
 };
 
 export const HOME_HERO_DEFAULT: HomeHeroConfig = {
@@ -29,5 +44,19 @@ export const HOME_HERO_DEFAULT: HomeHeroConfig = {
   secondaryButton: {
     label: "Tìm hiểu truyền thống",
     href: "/gioi-thieu",
+  },
+  badge1: {
+    title: "Liên đội mạnh",
+    description: "Năm học 2025 - 2026",
+  },
+  badge2: {
+    title: "100% Đội viên",
+    description: "Rèn luyện đạt chuẩn",
+  },
+  decorImage: {
+    url: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&auto=format&fit=crop&q=80",
+    alt: "Pioneer Activities",
+    tag: "Sinh hoạt Đội",
+    title: "Hành trình rèn luyện phấn đấu lên Đoàn",
   },
 };

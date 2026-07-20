@@ -41,6 +41,20 @@ export default function EditModal({
       label: overrideData?.secondaryButton?.label ?? defaultData?.secondaryButton?.label ?? '',
       href: overrideData?.secondaryButton?.href ?? defaultData?.secondaryButton?.href ?? '',
     },
+    badge1: {
+      title: overrideData?.badge1?.title ?? defaultData?.badge1?.title ?? '',
+      description: overrideData?.badge1?.description ?? defaultData?.badge1?.description ?? '',
+    },
+    badge2: {
+      title: overrideData?.badge2?.title ?? defaultData?.badge2?.title ?? '',
+      description: overrideData?.badge2?.description ?? defaultData?.badge2?.description ?? '',
+    },
+    decorImage: {
+      url: overrideData?.decorImage?.url ?? defaultData?.decorImage?.url ?? '',
+      alt: overrideData?.decorImage?.alt ?? defaultData?.decorImage?.alt ?? '',
+      tag: overrideData?.decorImage?.tag ?? defaultData?.decorImage?.tag ?? '',
+      title: overrideData?.decorImage?.title ?? defaultData?.decorImage?.title ?? '',
+    },
   };
 
   const [formData, setFormData] = useState(initialData);
@@ -65,7 +79,27 @@ export default function EditModal({
     }));
   };
 
-  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNestedBadgeChange = (badge: 'badge1' | 'badge2', field: 'title' | 'description', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [badge]: {
+        ...prev[badge],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleNestedDecorImageChange = (field: 'url' | 'alt' | 'tag' | 'title', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      decorImage: {
+        ...prev.decorImage,
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>, targetField: 'backgroundImage' | 'decorImage' = 'backgroundImage') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -82,13 +116,21 @@ export default function EditModal({
       if (isSupabaseConfigured) {
         const { uploadImage } = await import('../../services/storageService');
         const url = await uploadImage(file, 'cms/hero');
-        handleInputChange('backgroundImage', url);
+        if (targetField === 'backgroundImage') {
+          handleInputChange('backgroundImage', url);
+        } else {
+          handleNestedDecorImageChange('url', url);
+        }
       } else {
         // Fallback for local development and mock environments: convert to Base64
         const reader = new FileReader();
         reader.onloadend = () => {
           if (reader.result) {
-            handleInputChange('backgroundImage', reader.result as string);
+            if (targetField === 'backgroundImage') {
+              handleInputChange('backgroundImage', reader.result as string);
+            } else {
+              handleNestedDecorImageChange('url', reader.result as string);
+            }
           }
         };
         reader.readAsDataURL(file);
@@ -145,10 +187,59 @@ export default function EditModal({
       };
     }
 
+    // Check badge1 changes
+    const badge1Delta: any = {};
+    if (formData.badge1.title !== defaultData?.badge1?.title) {
+      badge1Delta.title = formData.badge1.title;
+    }
+    if (formData.badge1.description !== defaultData?.badge1?.description) {
+      badge1Delta.description = formData.badge1.description;
+    }
+    if (Object.keys(badge1Delta).length > 0) {
+      delta.badge1 = {
+        ...defaultData?.badge1,
+        ...badge1Delta,
+      };
+    }
+
+    // Check badge2 changes
+    const badge2Delta: any = {};
+    if (formData.badge2.title !== defaultData?.badge2?.title) {
+      badge2Delta.title = formData.badge2.title;
+    }
+    if (formData.badge2.description !== defaultData?.badge2?.description) {
+      badge2Delta.description = formData.badge2.description;
+    }
+    if (Object.keys(badge2Delta).length > 0) {
+      delta.badge2 = {
+        ...defaultData?.badge2,
+        ...badge2Delta,
+      };
+    }
+
+    // Check decorImage changes
+    const decorImageDelta: any = {};
+    if (formData.decorImage.url !== defaultData?.decorImage?.url) {
+      decorImageDelta.url = formData.decorImage.url;
+    }
+    if (formData.decorImage.alt !== defaultData?.decorImage?.alt) {
+      decorImageDelta.alt = formData.decorImage.alt;
+    }
+    if (formData.decorImage.tag !== defaultData?.decorImage?.tag) {
+      decorImageDelta.tag = formData.decorImage.tag;
+    }
+    if (formData.decorImage.title !== defaultData?.decorImage?.title) {
+      decorImageDelta.title = formData.decorImage.title;
+    }
+    if (Object.keys(decorImageDelta).length > 0) {
+      delta.decorImage = {
+        ...defaultData?.decorImage,
+        ...decorImageDelta,
+      };
+    }
+
     try {
       // If nothing has changed, we can either save empty delta or save the complete fields.
-      // The instructions mention: "upsertOverride chỉ lưu phần thay đổi, không lưu toàn bộ default."
-      // So saving the delta fulfills this. If no changes, we can save an empty object or skip.
       await onSave(delta);
     } catch (err: any) {
       console.error('Failed to save CMS overrides:', err);
@@ -340,6 +431,131 @@ export default function EditModal({
                       type="text"
                       value={formData.secondaryButton.href}
                       onChange={e => handleNestedChange('secondaryButton', 'href', e.target.value)}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Decorative Image Customization */}
+            <div className="border border-slate-200 dark:border-slate-850 p-4 rounded-xl space-y-4">
+              <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                Ảnh minh họa bên phải (Main Decorative Image)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                <div className="md:col-span-9 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Đường dẫn ảnh</span>
+                  <input
+                    type="text"
+                    value={formData.decorImage.url}
+                    onChange={e => handleNestedDecorImageChange('url', e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    placeholder="URL hình ảnh..."
+                  />
+                </div>
+                <div className="md:col-span-3 pt-4">
+                  <label className="flex items-center justify-center space-x-2 border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg p-2 cursor-pointer text-[11px] font-bold text-slate-600 dark:text-slate-300 transition-colors">
+                    {isUploading ? (
+                      <RefreshCw className="h-3 w-3 animate-spin text-indigo-500" />
+                    ) : (
+                      <Upload className="h-3 w-3 text-slate-400" />
+                    )}
+                    <span>{isUploading ? 'Tải...' : 'Tải ảnh'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => handleImageFileChange(e, 'decorImage')}
+                      className="hidden"
+                      disabled={isUploading}
+                    />
+                  </label>
+                </div>
+              </div>
+              
+              {formData.decorImage.url && (
+                <div className="relative rounded-lg overflow-hidden aspect-[4/3] max-w-[150px] border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                  <img
+                    src={formData.decorImage.url}
+                    alt="Preview decor"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold">Nhãn thẻ (Tag)</span>
+                  <input
+                    type="text"
+                    value={formData.decorImage.tag}
+                    onChange={e => handleNestedDecorImageChange('tag', e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold">Tiêu đề ảnh (Overlay Title)</span>
+                  <input
+                    type="text"
+                    value={formData.decorImage.title}
+                    onChange={e => handleNestedDecorImageChange('title', e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Badges Customization */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {/* Badge 1 */}
+              <div className="border border-slate-200 dark:border-slate-850 p-4 rounded-xl space-y-3">
+                <h4 className="text-xs font-bold text-red-500 dark:text-red-400 uppercase tracking-wider">
+                  Huy hiệu 1 (Floating Badge 1)
+                </h4>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold">Tiêu đề</span>
+                    <input
+                      type="text"
+                      value={formData.badge1.title}
+                      onChange={e => handleNestedBadgeChange('badge1', 'title', e.target.value)}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold">Mô tả</span>
+                    <input
+                      type="text"
+                      value={formData.badge1.description}
+                      onChange={e => handleNestedBadgeChange('badge1', 'description', e.target.value)}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Badge 2 */}
+              <div className="border border-slate-200 dark:border-slate-850 p-4 rounded-xl space-y-3">
+                <h4 className="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">
+                  Huy hiệu 2 (Floating Badge 2)
+                </h4>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold">Tiêu đề</span>
+                    <input
+                      type="text"
+                      value={formData.badge2.title}
+                      onChange={e => handleNestedBadgeChange('badge2', 'title', e.target.value)}
+                      className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold">Mô tả</span>
+                    <input
+                      type="text"
+                      value={formData.badge2.description}
+                      onChange={e => handleNestedBadgeChange('badge2', 'description', e.target.value)}
                       className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
                     />
                   </div>

@@ -239,18 +239,18 @@ export default function Hero({ onNavigate }: HeroProps) {
                   <div className="overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-2 shadow-2xl relative">
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden relative group">
                       <img 
-                        src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&auto=format&fit=crop&q=80" 
-                        alt="Pioneer Activities" 
+                        src={finalHeroData.decorImage?.url || "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&auto=format&fit=crop&q=80"} 
+                        alt={finalHeroData.decorImage?.alt || "Pioneer Activities"} 
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         referrerPolicy="no-referrer"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-5">
                         <div className="space-y-1">
                           <span className="text-[10px] uppercase bg-red-600 text-white font-bold px-2.5 py-0.5 rounded-full inline-block">
-                            Sinh hoạt Đội
+                            {finalHeroData.decorImage?.tag || "Sinh hoạt Đội"}
                           </span>
                           <h3 className="text-white text-sm font-bold font-sans drop-shadow-sm">
-                            Hành trình rèn luyện phấn đấu lên Đoàn
+                            {finalHeroData.decorImage?.title || "Hành trình rèn luyện phấn đấu lên Đoàn"}
                           </h3>
                         </div>
                       </div>
@@ -267,8 +267,12 @@ export default function Hero({ onNavigate }: HeroProps) {
                       <Award className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <h4 className="text-[11px] font-bold text-white font-display tracking-tight leading-tight">Liên đội mạnh</h4>
-                      <p className="text-[9px] text-slate-300 font-sans leading-none mt-1">Năm học 2025 - 2026</p>
+                      <h4 className="text-[11px] font-bold text-white font-display tracking-tight leading-tight">
+                        {finalHeroData.badge1?.title || "Liên đội mạnh"}
+                      </h4>
+                      <p className="text-[9px] text-slate-300 font-sans leading-none mt-1">
+                        {finalHeroData.badge1?.description || "Năm học 2025 - 2026"}
+                      </p>
                     </div>
                   </motion.div>
 
@@ -282,8 +286,12 @@ export default function Hero({ onNavigate }: HeroProps) {
                       <Users className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <h4 className="text-[11px] font-bold text-white font-display tracking-tight leading-tight">100% Đội viên</h4>
-                      <p className="text-[9px] text-slate-300 font-sans leading-none mt-1">Rèn luyện đạt chuẩn</p>
+                      <h4 className="text-[11px] font-bold text-white font-display tracking-tight leading-tight">
+                        {finalHeroData.badge2?.title || "100% Đội viên"}
+                      </h4>
+                      <p className="text-[9px] text-slate-300 font-sans leading-none mt-1">
+                        {finalHeroData.badge2?.description || "Rèn luyện đạt chuẩn"}
+                      </p>
                     </div>
                   </motion.div>
                 </div>
