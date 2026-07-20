@@ -20,6 +20,51 @@ export default function Hero({ onNavigate }: HeroProps) {
   const heroOverride = overrides['hero'];
   const finalHeroData = deepMerge(HOME_HERO_DEFAULT, heroOverride?.data);
 
+  const isDefaultBg = !finalHeroData.backgroundImage || finalHeroData.backgroundImage === HOME_HERO_DEFAULT.backgroundImage;
+  const isCustomBrightBg = !isDefaultBg && (() => {
+    const url = finalHeroData.backgroundImage.toLowerCase();
+    return (
+      url.includes('pastel') ||
+      url.includes('bright') ||
+      url.includes('light') ||
+      url.includes('cloud') ||
+      url.includes('may') ||
+      url.includes('sky') ||
+      url.includes('white') ||
+      url.includes('bg-') ||
+      url.includes('vector') ||
+      url.includes('illustration') ||
+      url.includes('graphic') ||
+      url.includes('banner') ||
+      url.includes('png') ||
+      url.includes('drawing') ||
+      url.includes('pattern') ||
+      url.includes('gradient') ||
+      (!url.includes('dark') && !url.includes('night') && !url.includes('black'))
+    );
+  })();
+
+  // Define overlays
+  let overlayClass = '';
+  let leftGradientClass = '';
+
+  if (finalHeroData.backgroundImage) {
+    if (isDefaultBg) {
+      overlayClass = 'bg-black/12';
+      leftGradientClass = 'bg-gradient-to-r from-black/25 via-black/5 to-transparent';
+    } else if (isCustomBrightBg) {
+      overlayClass = 'bg-black/2';
+      leftGradientClass = 'bg-gradient-to-r from-black/15 via-black/2 to-transparent';
+    } else {
+      overlayClass = 'bg-black/8';
+      leftGradientClass = 'bg-gradient-to-r from-black/20 via-black/4 to-transparent';
+    }
+  }
+
+  const textShadowStyle = finalHeroData.backgroundImage 
+    ? { textShadow: '0 2px 8px rgba(15, 23, 42, 0.65), 0 1px 3px rgba(15, 23, 42, 0.45)' }
+    : undefined;
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -62,17 +107,31 @@ export default function Hero({ onNavigate }: HeroProps) {
           error={error}
         >
           {/* Sleek Blue/Indigo Gradient Main Hero Card */}
-          <div 
-            className="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white rounded-[2rem] p-6 sm:p-10 md:p-12 shadow-2xl relative overflow-hidden bg-cover bg-center"
-            style={finalHeroData.backgroundImage ? { backgroundImage: `url(${finalHeroData.backgroundImage})` } : {}}
-          >
-            {/* Decorative Background Glows */}
-            <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-red-500/20 blur-3xl pointer-events-none" />
-            <div className="absolute top-1/2 -left-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl pointer-events-none" />
-
-            {/* Dark Overlay for customized hero backgrounds */}
+          <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white p-6 sm:p-10 md:p-12 shadow-2xl transition-all duration-300">
+            {/* Background Image Layer */}
             {finalHeroData.backgroundImage && (
-              <div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] pointer-events-none" />
+              <div className="absolute inset-0">
+                <img 
+                  src={finalHeroData.backgroundImage} 
+                  alt="" 
+                  className="h-full w-full object-cover select-none pointer-events-none"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
+
+            {/* Decorative Background Glows */}
+            <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-red-500/20 blur-3xl pointer-events-none z-0" />
+            <div className="absolute top-1/2 -left-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl pointer-events-none z-0" />
+
+            {/* Base Overlay Layer */}
+            {finalHeroData.backgroundImage && overlayClass && (
+              <div className={`absolute inset-0 ${overlayClass} pointer-events-none z-0`} />
+            )}
+
+            {/* Left-to-Right Reader Gradient Overlay */}
+            {finalHeroData.backgroundImage && leftGradientClass && (
+              <div className={`absolute inset-0 ${leftGradientClass} pointer-events-none z-0`} />
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10">
@@ -98,6 +157,7 @@ export default function Hero({ onNavigate }: HeroProps) {
                 <motion.div
                   variants={itemVariants}
                   className="font-script text-2xl md:text-3xl text-yellow-300 font-bold tracking-wide -mb-3 pl-1 block drop-shadow-sm select-none"
+                  style={textShadowStyle}
                 >
                   "Tuổi nhỏ làm việc nhỏ — Ươm mầm ước mơ"
                 </motion.div>
@@ -105,20 +165,23 @@ export default function Hero({ onNavigate }: HeroProps) {
                 <motion.h1 
                   variants={itemVariants}
                   className="font-display text-3xl sm:text-4xl md:text-[46px] lg:text-[52px] font-extrabold tracking-tight text-white leading-[1.1] drop-shadow-sm"
+                  style={textShadowStyle}
                 >
                   {finalHeroData.title}
                 </motion.h1>
 
                 <motion.p 
                   variants={itemVariants}
-                  className="font-sans text-base text-blue-100 max-w-2xl font-medium leading-relaxed"
+                  className={`font-sans text-base max-w-2xl font-medium leading-relaxed ${finalHeroData.backgroundImage ? 'text-white font-semibold' : 'text-blue-100'}`}
+                  style={textShadowStyle}
                 >
                   {finalHeroData.subtitle}
                 </motion.p>
 
                 <motion.p 
                   variants={itemVariants}
-                  className="font-sans text-xs text-slate-300 max-w-xl leading-relaxed"
+                  className={`font-sans text-xs max-w-xl leading-relaxed ${finalHeroData.backgroundImage ? 'text-slate-100 font-medium' : 'text-slate-300'}`}
+                  style={textShadowStyle}
                 >
                   {finalHeroData.description}
                 </motion.p>
@@ -238,7 +301,7 @@ export default function Hero({ onNavigate }: HeroProps) {
 
             {/* Statistics Row embedded inside Hero Card */}
             <motion.div 
-              className="mt-12 md:mt-16 pt-8 border-t border-white/10 grid grid-cols-2 gap-4 sm:grid-cols-4"
+              className="mt-12 md:mt-16 pt-8 border-t border-white/10 grid grid-cols-2 gap-4 sm:grid-cols-4 relative z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
