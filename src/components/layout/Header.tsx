@@ -149,7 +149,7 @@ export default function Header({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex flex-1 items-center justify-center md:space-x-0.5 lg:space-x-2">
+        <nav className="hidden md:flex flex-1 items-center justify-start md:pl-2 lg:pl-6 xl:pl-12 md:space-x-1 lg:space-x-1.5">
           {navItems.map((item) => {
             const isActive = currentView === item.id;
             return (
