@@ -10,6 +10,9 @@ import { NAV_MENU } from '../../config/menu';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 import { AccountMenu } from '../header/AccountMenu';
+import { fetchAndCacheHomeOverrides, preloadImage } from '../../features/cms/cache/homeDataCache';
+import { HOME_HERO_DEFAULT } from '../../config/defaults/home.defaults';
+import { deepMerge } from '../../utils/deepMerge';
 
 interface HeaderProps {
   currentView: string;
@@ -32,6 +35,19 @@ export default function Header({
   const { isAuthenticated, isAdminUser } = useAuth();
   const { siteSettings } = useSiteSettings();
 
+  const prefetchHomeData = async () => {
+    try {
+      const fetched = await fetchAndCacheHomeOverrides();
+      const heroOverride = fetched['hero'];
+      const finalHero = deepMerge(HOME_HERO_DEFAULT, heroOverride?.data);
+      if (finalHero?.backgroundImage) {
+        preloadImage(finalHero.backgroundImage);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
   const navItems = NAV_MENU.filter(item => item.showInNavbar).map(item => ({
     id: item.id,
     label: item.title
@@ -49,6 +65,7 @@ export default function Header({
         <div 
           className="group relative inline-flex shrink-0 items-center justify-center rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 select-none" 
           onClick={() => handleNavClick('home')}
+          onMouseEnter={prefetchHomeData}
           id="header-brand"
           role="button"
           tabIndex={0}
@@ -124,6 +141,8 @@ export default function Header({
                 key={item.id}
                 id={`nav-${item.id}`}
                 onClick={() => handleNavClick(item.id)}
+                onMouseEnter={item.id === 'home' ? prefetchHomeData : undefined}
+                onFocus={item.id === 'home' ? prefetchHomeData : undefined}
                 className={`relative px-3.5 py-2 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 whitespace-nowrap ${
                   isActive 
                     ? 'text-blue-700 bg-blue-50/50 dark:text-blue-400 dark:bg-blue-950/30' 
@@ -216,6 +235,8 @@ export default function Header({
                     key={item.id}
                     id={`mobile-nav-${item.id}`}
                     onClick={() => handleNavClick(item.id)}
+                    onMouseEnter={item.id === 'home' ? prefetchHomeData : undefined}
+                    onFocus={item.id === 'home' ? prefetchHomeData : undefined}
                     className={`block w-full text-left rounded-lg px-4 py-2.5 text-base font-semibold transition-all ${
                       isActive
                         ? 'bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'

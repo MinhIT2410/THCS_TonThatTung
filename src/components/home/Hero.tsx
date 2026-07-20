@@ -6,17 +6,41 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Award, Users, ShieldCheck, Heart, ArrowRight } from 'lucide-react';
-import { usePageOverrides } from '../../features/cms/usePageOverrides';
 import { HOME_HERO_DEFAULT } from '../../config/defaults/home.defaults';
 import { deepMerge } from '../../utils/deepMerge';
 import EditableBlock from '../editable/EditableBlock';
+import { CmsOverride } from '../../features/cms/cmsTypes';
 
 interface HeroProps {
   onNavigate: (viewId: string) => void;
+  overrides: Record<string, CmsOverride>;
+  saveOverride: (blockKey: string, data: object) => Promise<void>;
+  resetOverride: (blockKey: string) => Promise<void>;
+  error: string | null;
+  status: 'idle' | 'loading' | 'ready' | 'error';
 }
 
-export default function Hero({ onNavigate }: HeroProps) {
-  const { overrides, saveOverride, resetOverride, error } = usePageOverrides('home');
+export default function Hero({ 
+  onNavigate,
+  overrides,
+  saveOverride,
+  resetOverride,
+  error,
+  status
+}: HeroProps) {
+  if (status === 'loading') {
+    return (
+      <section className="relative overflow-hidden bg-slate-50 py-8 dark:bg-slate-950 sm:py-12 md:py-16 transition-colors duration-300">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div 
+            className="w-full min-h-[420px] sm:min-h-[480px] md:min-h-[520px] rounded-[2rem] bg-gradient-to-br from-slate-200/50 via-blue-50/50 to-slate-200/50 dark:from-slate-900/50 dark:via-blue-950/20 dark:to-slate-900/50 animate-pulse border border-slate-200/20 shadow-lg"
+            aria-label="Đang tải nội dung trang chủ"
+          />
+        </div>
+      </section>
+    );
+  }
+
   const heroOverride = overrides['hero'];
   const finalHeroData = deepMerge(HOME_HERO_DEFAULT, heroOverride?.data);
 

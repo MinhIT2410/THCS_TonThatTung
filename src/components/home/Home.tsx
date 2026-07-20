@@ -15,7 +15,7 @@ import { newsApi } from '../../features/news/newsApi';
 import { documentApi } from '../../features/documents/documentApi';
 import { albumApi } from '../../features/albums/albumApi';
 import { DEFAULT_IMAGES } from '../../config/defaults/images.defaults';
-import { usePageOverrides } from '../../features/cms/usePageOverrides';
+import { useHomeCmsData } from '../../features/cms/hooks/useHomeCmsData';
 import { RADIO_PROGRAM_DEFAULT, GALLERY_BLOCK_DEFAULT, UNCLE_HO_BLOCK_DEFAULT, NEWS_BLOCK_DEFAULT, CAMPAIGNS_BLOCK_DEFAULT, DOCUMENTS_BLOCK_DEFAULT } from '../../config/defaults/home.defaults';
 import { deepMerge } from '../../utils/deepMerge';
 import RadioProgramBanner from './RadioProgramBanner';
@@ -44,7 +44,7 @@ export default function Home({
   const [publishedBanners, setPublishedBanners] = useState<HomeBanner[]>([]);
   
   // CMS overrides for radio program
-  const { overrides, saveOverride, resetOverride, error } = usePageOverrides('home');
+  const { overrides, status, saveOverride, resetOverride, error } = useHomeCmsData();
   const radioOverride = overrides['radioProgram'];
   const finalRadioData = deepMerge(RADIO_PROGRAM_DEFAULT, radioOverride?.data);
   const galleryOverride = overrides['galleryBlock'];
@@ -271,7 +271,14 @@ export default function Home({
   return (
     <div className="space-y-16 pb-16">
       {/* 1. Hero Banner Component */}
-      <Hero onNavigate={onNavigate} />
+      <Hero 
+        onNavigate={onNavigate}
+        overrides={overrides}
+        saveOverride={saveOverride}
+        resetOverride={resetOverride}
+        error={error}
+        status={status}
+      />
 
       {/* 2. Quick Broadcast / Phát thanh măng non strip */}
       <RadioProgramBanner
