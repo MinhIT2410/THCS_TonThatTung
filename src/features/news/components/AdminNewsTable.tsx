@@ -8,6 +8,7 @@ import { NewsItem } from '../newsTypes';
 import { NewsStatusBadge } from './NewsStatusBadge';
 import { formatDate } from '../../../utils/formatDate';
 import { Edit2, Trash2, Globe, Archive, ExternalLink, RefreshCw } from 'lucide-react';
+import { NEWS_CATEGORY_CONFIG, DEFAULT_CATEGORY_INFO } from '../newsCategories';
 
 interface AdminNewsTableProps {
   newsList: NewsItem[];
@@ -59,6 +60,7 @@ export const AdminNewsTable: React.FC<AdminNewsTableProps> = ({
           <tr>
             <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tiêu đề / Ảnh</th>
             <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">Slug</th>
+            <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Chuyên mục</th>
             <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Trạng thái</th>
             <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">Ngày đăng</th>
             <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Thao tác</th>
@@ -104,6 +106,19 @@ export const AdminNewsTable: React.FC<AdminNewsTableProps> = ({
                   <span className="line-clamp-1 max-w-[150px]" title={news.slug}>
                     {news.slug}
                   </span>
+                </td>
+
+                {/* Category Badge */}
+                <td className="px-6 py-4">
+                  {news.category_code && NEWS_CATEGORY_CONFIG[news.category_code] ? (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${NEWS_CATEGORY_CONFIG[news.category_code].badgeClass}`}>
+                      {NEWS_CATEGORY_CONFIG[news.category_code].label}
+                    </span>
+                  ) : (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${DEFAULT_CATEGORY_INFO.badgeClass}`}>
+                      {DEFAULT_CATEGORY_INFO.label}
+                    </span>
+                  )}
                 </td>
 
                 {/* Status Badge */}

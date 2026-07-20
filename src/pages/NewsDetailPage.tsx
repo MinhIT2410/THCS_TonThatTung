@@ -11,6 +11,7 @@ import { NewsItem } from '../features/news/newsTypes';
 import LoadingState from '../components/common/LoadingState';
 import ErrorState from '../components/common/ErrorState';
 import EmptyState from '../components/common/EmptyState';
+import { NEWS_CATEGORY_CONFIG } from '../features/news/newsCategories';
 
 export default function NewsDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -100,9 +101,15 @@ export default function NewsDetailPage() {
       <article className="space-y-6">
         {/* Title and Metadata */}
         <div className="space-y-4">
-          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/40 px-3 py-1 rounded-full inline-block">
-            Tin Hoạt Động Liên Đội
-          </span>
+          {post.category_code && NEWS_CATEGORY_CONFIG[post.category_code] ? (
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${NEWS_CATEGORY_CONFIG[post.category_code].badgeClass}`}>
+              {NEWS_CATEGORY_CONFIG[post.category_code].label}
+            </span>
+          ) : (
+            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/40 px-3 py-1 rounded-full inline-block">
+              Tin tức
+            </span>
+          )}
           <h1 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white sm:text-4xl leading-tight tracking-tight">
             {post.title}
           </h1>

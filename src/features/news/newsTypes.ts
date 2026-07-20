@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { NewsCategoryCode } from './newsCategories';
+
 export type NewsStatus = "draft" | "published" | "archived";
 
 export interface NewsItem {
@@ -13,6 +15,7 @@ export interface NewsItem {
   content?: string | null;
   thumbnail_url?: string | null;
   status: NewsStatus;
+  category_code?: NewsCategoryCode | null;
   published_at?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
@@ -27,6 +30,7 @@ export type CreateNewsInput = {
   content?: string | null;
   thumbnail_url?: string | null;
   status?: NewsStatus;
+  category_code?: NewsCategoryCode | null;
 };
 
 export type UpdateNewsInput = Partial<CreateNewsInput>;

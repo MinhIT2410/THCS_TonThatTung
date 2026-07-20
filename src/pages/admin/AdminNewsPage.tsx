@@ -10,6 +10,7 @@ import { NewsItem, CreateNewsInput } from '../../features/news/newsTypes';
 import { newsApi } from '../../features/news/newsApi';
 import { AdminNewsTable } from '../../features/news/components/AdminNewsTable';
 import { AdminNewsForm } from '../../features/news/components/AdminNewsForm';
+import { NEWS_CATEGORY_CONFIG } from '../../features/news/newsCategories';
 
 export default function AdminNewsPage() {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ export default function AdminNewsPage() {
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   const fetchNews = async () => {
     setIsLoading(true);
@@ -122,8 +124,16 @@ export default function AdminNewsPage() {
     
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesCategory = categoryFilter === 'all'
+      ? true
+      : categoryFilter === 'unclassified'
+        ? !item.category_code
+        : item.category_code === categoryFilter;
+
+    return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  const unclassifiedCount = newsList.filter(item => !item.category_code).length;
 
   return (
     <div className="space-y-6 py-4 font-sans" id="admin-news-management-page">
@@ -184,11 +194,25 @@ export default function AdminNewsPage() {
         </div>
       )}
 
+      {unclassifiedCount > 0 && view === 'list' && (
+        <div className="flex gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-2xl shadow-sm">
+          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-xs text-amber-800 dark:text-amber-300 font-bold">
+              Có {unclassifiedCount} bài viết chưa được phân loại chuyên mục!
+            </p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 font-medium leading-relaxed">
+              Vui lòng bấm vào nút chỉnh sửa trên từng bài viết để gán chuyên mục thích hợp (Học tập, Rèn luyện, Sự kiện, Gương sáng).
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Area */}
       {view === 'list' ? (
         <div className="space-y-4">
           {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
             {/* Search Input */}
             <div className="relative w-full sm:max-w-xs">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -201,21 +225,44 @@ export default function AdminNewsPage() {
               />
             </div>
 
-            {/* Status Filter */}
-            <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0 justify-end">
-              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 hidden md:inline">
-                Trạng thái:
-              </span>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent outline-none text-slate-800 dark:text-white min-w-[120px]"
-              >
-                <option value="all">Tất cả</option>
-                <option value="draft">Bản nháp</option>
-                <option value="published">Đã xuất bản</option>
-                <option value="archived">Đã lưu trữ</option>
-              </select>
+            {/* Filters */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-4 w-full sm:w-auto shrink-0 justify-end">
+              {/* Category Filter */}
+              <div className="flex items-center space-x-2">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                  Chuyên mục:
+                </span>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent outline-none text-slate-800 dark:text-white min-w-[140px] cursor-pointer"
+                >
+                  <option value="all">Tất cả chuyên mục</option>
+                  {Object.values(NEWS_CATEGORY_CONFIG).map((cat) => (
+                    <option key={cat.code} value={cat.code}>
+                      {cat.label}
+                    </option>
+                  ))}
+                  <option value="unclassified">Chưa phân loại</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex items-center space-x-2">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                  Trạng thái:
+                </span>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent outline-none text-slate-800 dark:text-white min-w-[120px] cursor-pointer"
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="draft">Bản nháp</option>
+                  <option value="published">Đã xuất bản</option>
+                  <option value="archived">Đã lưu trữ</option>
+                </select>
+              </div>
             </div>
           </div>
 

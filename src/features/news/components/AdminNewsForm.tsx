@@ -9,6 +9,7 @@ import { slugify } from '../../../utils/slugify';
 import { uploadImage } from '../../../services/storageService';
 import { isSupabaseConfigured } from '../../../services/supabaseClient';
 import { Image as ImageIcon, Link as LinkIcon, Upload, AlertCircle, RefreshCw } from 'lucide-react';
+import { NewsCategoryCode, NEWS_CATEGORY_CONFIG } from '../newsCategories';
 
 interface AdminNewsFormProps {
   initialData?: NewsItem | null;
@@ -29,6 +30,7 @@ export const AdminNewsForm: React.FC<AdminNewsFormProps> = ({
   const [content, setContent] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [status, setStatus] = useState<NewsStatus>('draft');
+  const [categoryCode, setCategoryCode] = useState<NewsCategoryCode | ''>('');
 
   const [isSlugManual, setIsSlugManual] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
@@ -42,6 +44,7 @@ export const AdminNewsForm: React.FC<AdminNewsFormProps> = ({
       setContent(initialData.content || '');
       setThumbnailUrl(initialData.thumbnail_url || '');
       setStatus(initialData.status || 'draft');
+      setCategoryCode(initialData.category_code || '');
       setIsSlugManual(true);
     } else {
       setTitle('');
@@ -50,6 +53,7 @@ export const AdminNewsForm: React.FC<AdminNewsFormProps> = ({
       setContent('');
       setThumbnailUrl('');
       setStatus('draft');
+      setCategoryCode('');
       setIsSlugManual(false);
     }
   }, [initialData]);
@@ -111,6 +115,11 @@ export const AdminNewsForm: React.FC<AdminNewsFormProps> = ({
       return;
     }
 
+    if (!categoryCode) {
+      setFormError('Vui lòng chọn chuyên mục bài viết.');
+      return;
+    }
+
     const payload: CreateNewsInput = {
       title: title.trim(),
       slug: slug.trim(),
@@ -118,6 +127,7 @@ export const AdminNewsForm: React.FC<AdminNewsFormProps> = ({
       content: content.trim() || null,
       thumbnail_url: thumbnailUrl.trim() || null,
       status,
+      category_code: categoryCode,
     };
 
     try {
@@ -217,6 +227,33 @@ export const AdminNewsForm: React.FC<AdminNewsFormProps> = ({
             <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider pb-2 border-b border-slate-100 dark:border-slate-900">
               Trạng thái & Lưu
             </h3>
+
+            {/* Category Selector */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Chuyên mục bài viết <span className="text-red-500">*</span>
+              </label>
+              <select
+                required
+                value={categoryCode}
+                onChange={(e) => setCategoryCode(e.target.value as NewsCategoryCode | '')}
+                className="w-full px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-800 dark:text-white font-medium cursor-pointer"
+              >
+                <option value="">-- Chọn chuyên mục --</option>
+                {Object.values(NEWS_CATEGORY_CONFIG).map((cat) => (
+                  <option key={cat.code} value={cat.code}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+              {initialData && !initialData.category_code && (
+                <div className="p-2.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-xl mt-1.5">
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold leading-relaxed">
+                    Bài viết này chưa được phân loại. Vui lòng chọn chuyên mục trước khi lưu.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Status Selector */}
             <div className="space-y-2">

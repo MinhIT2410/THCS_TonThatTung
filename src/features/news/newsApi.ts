@@ -18,6 +18,7 @@ const MOCK_NEWS: NewsItem[] = [
     content: "<p>Đại hội đã diễn ra trong không khí trang nghiêm và đầy nhiệt huyết của các Đội viên học sinh...</p>",
     thumbnail_url: "https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800",
     status: "published",
+    category_code: "EVENT",
     published_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -178,6 +179,7 @@ export const newsApi = {
           content: input.content,
           thumbnail_url: input.thumbnail_url,
           status: input.status || 'draft',
+          category_code: input.category_code || null,
           published_at: input.status === 'published' ? new Date().toISOString() : null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -199,6 +201,7 @@ export const newsApi = {
           content: input.content,
           thumbnail_url: input.thumbnail_url,
           status: input.status || 'draft',
+          category_code: input.category_code || null,
           published_at: input.status === 'published' ? now : null,
           created_at: now,
           updated_at: now

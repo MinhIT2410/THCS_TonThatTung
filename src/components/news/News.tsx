@@ -183,9 +183,10 @@ export default function News({
                       referrerPolicy="no-referrer"
                     />
                     <span className={`absolute top-3 left-3 rounded-md px-2.5 py-1 text-[10px] font-bold text-white ${
-                      item.category === 'Sự kiện' ? 'bg-red-600' :
+                      item.category === 'Sự kiện' ? 'bg-amber-600' :
                       item.category === 'Học tập' ? 'bg-blue-600' :
-                      item.category === 'Gương sáng' ? 'bg-amber-500' : 'bg-emerald-600'
+                      item.category === 'Gương sáng' ? 'bg-purple-600' :
+                      item.category === 'Rèn luyện' ? 'bg-emerald-600' : 'bg-slate-500'
                     }`}>
                       {item.category}
                     </span>
@@ -283,9 +284,10 @@ export default function News({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-6">
                     <div>
                       <span className={`inline-block rounded-md px-2.5 py-1 text-[10px] font-bold text-white mb-2 shadow ${
-                        selectedItem.category === 'Sự kiện' ? 'bg-red-600' :
+                        selectedItem.category === 'Sự kiện' ? 'bg-amber-600' :
                         selectedItem.category === 'Học tập' ? 'bg-blue-600' :
-                        selectedItem.category === 'Gương sáng' ? 'bg-amber-500' : 'bg-emerald-600'
+                        selectedItem.category === 'Gương sáng' ? 'bg-purple-600' :
+                        selectedItem.category === 'Rèn luyện' ? 'bg-emerald-600' : 'bg-slate-500'
                       }`}>
                         {selectedItem.category}
                       </span>

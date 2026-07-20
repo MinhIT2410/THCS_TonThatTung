@@ -7,7 +7,7 @@ export interface NewsItem {
   id: string;
   title: string;
   slug?: string;
-  category: 'Học tập' | 'Rèn luyện' | 'Sự kiện' | 'Gương sáng';
+  category: 'Học tập' | 'Rèn luyện' | 'Sự kiện' | 'Gương sáng' | 'Tin tức';
   date: string;
   summary: string;
   content: string;

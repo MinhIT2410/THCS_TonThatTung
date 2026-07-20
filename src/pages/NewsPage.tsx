@@ -10,6 +10,7 @@ import { NewsItem } from '../types';
 import { newsApi } from '../features/news/newsApi';
 import LoadingState from '../components/common/LoadingState';
 import ErrorState from '../components/common/ErrorState';
+import { NEWS_CATEGORY_CONFIG } from '../features/news/newsCategories';
 
 export default function NewsPage() {
   const navigate = useNavigate();
@@ -22,17 +23,21 @@ export default function NewsPage() {
       setLoading(true);
       setError(null);
       const posts = await newsApi.getPublishedNews();
-      const mappedNews = posts.map(post => ({
-        id: post.id,
-        title: post.title,
-        slug: post.slug,
-        category: 'Sự kiện' as const, // Match the visual layout filter
-        date: post.published_at ? new Date(post.published_at).toLocaleDateString('vi-VN') : new Date(post.created_at).toLocaleDateString('vi-VN'),
-        summary: post.summary || '',
-        content: post.content || '',
-        image: post.thumbnail_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80',
-        views: 0
-      }));
+      const mappedNews = posts.map(post => {
+        const catConfig = post.category_code && NEWS_CATEGORY_CONFIG[post.category_code];
+        const categoryLabel = catConfig ? catConfig.label : 'Tin tức';
+        return {
+          id: post.id,
+          title: post.title,
+          slug: post.slug,
+          category: categoryLabel as any,
+          date: post.published_at ? new Date(post.published_at).toLocaleDateString('vi-VN') : new Date(post.created_at).toLocaleDateString('vi-VN'),
+          summary: post.summary || '',
+          content: post.content || '',
+          image: post.thumbnail_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80',
+          views: 0
+        };
+      });
       setNews(mappedNews);
     } catch (err) {
       console.error('Error loading news:', err);
