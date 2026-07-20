@@ -61,9 +61,9 @@ export default function Header({
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/95 transition-colors duration-300">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo and Brand Title (Logo-Only, Modern, Elevated) */}
+        {/* Logo and Brand Title (Unified Brand Component, Modern, Elevated) */}
         <div 
-          className="group relative inline-flex shrink-0 items-center justify-center rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 select-none" 
+          className="group relative inline-flex shrink-0 items-center justify-start rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 select-none" 
           onClick={() => handleNavClick('home')}
           onMouseEnter={prefetchHomeData}
           id="header-brand"
@@ -79,7 +79,7 @@ export default function Header({
           <span
             className="
               relative flex items-center justify-center
-              h-[42px] w-[42px] sm:h-[48px] sm:w-[48px] md:h-[54px] md:w-[54px]
+              h-[42px] w-[42px] sm:h-[48px] sm:w-[48px] md:h-[50px] md:w-[50px]
               overflow-visible rounded-xl sm:rounded-2xl
               border border-blue-500/15
               bg-white/85
@@ -113,7 +113,7 @@ export default function Header({
                 src={siteSettings.logo_url} 
                 alt="" 
                 className="
-                  h-[30px] w-[30px] sm:h-[36px] sm:w-[36px] md:h-[42px] md:w-[42px]
+                  h-[30px] w-[30px] sm:h-[34px] sm:w-[34px] md:h-[38px] md:w-[38px]
                   object-contain
                   transition-transform duration-300 ease-out
                   [filter:drop-shadow(0_2px_2px_rgba(255,255,255,0.85))_drop-shadow(0_4px_8px_rgba(15,23,42,0.18))]
@@ -122,11 +122,27 @@ export default function Header({
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="relative flex h-[30px] w-[30px] sm:h-[36px] sm:w-[36px] md:h-[42px] md:w-[42px] items-center justify-center rounded-lg bg-red-600 shadow-md shadow-red-500/20">
+              <div className="relative flex h-[30px] w-[30px] sm:h-[34px] sm:w-[34px] md:h-[38px] md:w-[38px] items-center justify-center rounded-lg bg-red-600 shadow-md shadow-red-500/20">
                 <span className="-mt-1 text-yellow-300 font-extrabold text-base sm:text-lg md:text-xl select-none">★</span>
               </div>
             )}
           </span>
+          
+          {/* Brand Titles: 2-line layout on 'lg', 1-line on 'xl', hidden below 'lg' */}
+          <span className="hidden lg:flex flex-col text-left font-sans font-bold tracking-tight ml-2.5 xl:hidden select-none">
+            <span className="text-[11px] leading-[1.15] uppercase font-bold bg-gradient-to-r from-red-600 via-purple-700 to-blue-700 bg-clip-text text-transparent group-hover:from-red-500 group-hover:via-purple-600 group-hover:to-blue-600 transition-all duration-300">
+              LIÊN ĐỘI THCS
+            </span>
+            <span className="text-[11px] leading-[1.15] uppercase font-bold bg-gradient-to-r from-red-600 via-purple-700 to-blue-700 bg-clip-text text-transparent group-hover:from-red-500 group-hover:via-purple-600 group-hover:to-blue-600 transition-all duration-300">
+              TÔN THẤT TÙNG
+            </span>
+          </span>
+          <span className="hidden xl:block text-left font-sans font-bold tracking-[-0.010em] ml-3 whitespace-nowrap select-none">
+            <span className="text-[13px] leading-none uppercase font-bold bg-gradient-to-r from-red-600 via-purple-700 to-blue-700 bg-clip-text text-transparent group-hover:from-red-500 group-hover:via-purple-600 group-hover:to-blue-600 transition-all duration-300">
+              LIÊN ĐỘI THCS TÔN THẤT TÙNG
+            </span>
+          </span>
+
           <span className="sr-only">
             {siteSettings.site_name || schoolName || "Liên đội THCS Tôn Thất Tùng"}
           </span>
