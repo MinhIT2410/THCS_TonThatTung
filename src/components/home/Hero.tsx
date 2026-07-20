@@ -259,7 +259,7 @@ export default function Hero({ onNavigate }: HeroProps) {
 
                   {/* Float badge 1 */}
                   <motion.div 
-                    className="absolute -top-6 -left-6 rounded-[1.25rem] bg-slate-900/95 backdrop-blur-md p-3.5 shadow-2xl border border-white/10 flex items-center space-x-3 text-white"
+                    className="absolute -top-6 -left-6 rounded-[1.25rem] bg-transparent p-3.5 flex items-center space-x-3 text-white"
                     animate={{ y: [0, -6, 0] }}
                     transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
                   >
@@ -278,7 +278,7 @@ export default function Hero({ onNavigate }: HeroProps) {
 
                   {/* Float badge 2 */}
                   <motion.div 
-                    className="absolute -bottom-6 -right-4 rounded-[1.25rem] bg-slate-900/95 backdrop-blur-md p-3.5 shadow-2xl border border-white/10 flex items-center space-x-3 text-white"
+                    className="absolute -bottom-6 -right-4 rounded-[1.25rem] bg-transparent p-3.5 flex items-center space-x-3 text-white"
                     animate={{ y: [0, 6, 0] }}
                     transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut', delay: 1 }}
                   >
