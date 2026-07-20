@@ -267,10 +267,10 @@ export default function Hero({ onNavigate }: HeroProps) {
                       <Award className="h-3.5 w-3.5" />
                     </div>
                     <div className="pr-1">
-                      <h4 className="text-[10px] font-bold text-slate-950 font-display tracking-tight leading-tight">
+                      <h4 className="text-xs font-medium text-slate-800 font-sans tracking-normal leading-tight">
                         {finalHeroData.badge1?.title || "Liên đội mạnh"}
                       </h4>
-                      <p className="text-[8px] text-slate-800 font-sans leading-none mt-0.5">
+                      <p className="text-[10px] text-slate-700 font-sans leading-none mt-1">
                         {finalHeroData.badge1?.description || "Năm học 2025 - 2026"}
                       </p>
                     </div>
@@ -286,10 +286,10 @@ export default function Hero({ onNavigate }: HeroProps) {
                       <Users className="h-3.5 w-3.5" />
                     </div>
                     <div className="pr-1">
-                      <h4 className="text-[10px] font-bold text-slate-950 font-display tracking-tight leading-tight">
+                      <h4 className="text-xs font-medium text-slate-800 font-sans tracking-normal leading-tight">
                         {finalHeroData.badge2?.title || "100% Đội viên"}
                       </h4>
-                      <p className="text-[8px] text-slate-800 font-sans leading-none mt-0.5">
+                      <p className="text-[10px] text-slate-700 font-sans leading-none mt-1">
                         {finalHeroData.badge2?.description || "Rèn luyện đạt chuẩn"}
                       </p>
                     </div>
