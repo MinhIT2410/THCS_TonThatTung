@@ -86,10 +86,10 @@ export default function Hero({ onNavigate }: HeroProps) {
   };
 
   const stats = [
-    { id: 'stat-1', icon: Users, label: 'Đội viên tích cực', value: '1,250+', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
-    { id: 'stat-2', icon: ShieldCheck, label: 'Chi đội tự quản', value: '32', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
-    { id: 'stat-3', icon: Award, label: 'Công trình măng non', value: '05', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
-    { id: 'stat-4', icon: Heart, label: 'Năm học dẫn đầu', value: '05+', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
+    { id: 'stat-1', icon: Users, label: finalHeroData.stat1?.label || 'Đội viên tích cực', value: finalHeroData.stat1?.value || '1,250+', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
+    { id: 'stat-2', icon: ShieldCheck, label: finalHeroData.stat2?.label || 'Chi đội tự quản', value: finalHeroData.stat2?.value || '32', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
+    { id: 'stat-3', icon: Award, label: finalHeroData.stat3?.label || 'Công trình măng non', value: finalHeroData.stat3?.value || '05', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
+    { id: 'stat-4', icon: Heart, label: finalHeroData.stat4?.label || 'Năm học dẫn đầu', value: finalHeroData.stat4?.value || '05+', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
   ];
 
   return (

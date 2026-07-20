@@ -55,6 +55,22 @@ export default function EditModal({
       tag: overrideData?.decorImage?.tag ?? defaultData?.decorImage?.tag ?? '',
       title: overrideData?.decorImage?.title ?? defaultData?.decorImage?.title ?? '',
     },
+    stat1: {
+      value: overrideData?.stat1?.value ?? defaultData?.stat1?.value ?? '',
+      label: overrideData?.stat1?.label ?? defaultData?.stat1?.label ?? '',
+    },
+    stat2: {
+      value: overrideData?.stat2?.value ?? defaultData?.stat2?.value ?? '',
+      label: overrideData?.stat2?.label ?? defaultData?.stat2?.label ?? '',
+    },
+    stat3: {
+      value: overrideData?.stat3?.value ?? defaultData?.stat3?.value ?? '',
+      label: overrideData?.stat3?.label ?? defaultData?.stat3?.label ?? '',
+    },
+    stat4: {
+      value: overrideData?.stat4?.value ?? defaultData?.stat4?.value ?? '',
+      label: overrideData?.stat4?.label ?? defaultData?.stat4?.label ?? '',
+    },
   };
 
   const [formData, setFormData] = useState(initialData);
@@ -84,6 +100,16 @@ export default function EditModal({
       ...prev,
       [badge]: {
         ...prev[badge],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleNestedStatChange = (statKey: 'stat1' | 'stat2' | 'stat3' | 'stat4', field: 'value' | 'label', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [statKey]: {
+        ...prev[statKey],
         [field]: value,
       },
     }));
@@ -235,6 +261,66 @@ export default function EditModal({
       delta.decorImage = {
         ...defaultData?.decorImage,
         ...decorImageDelta,
+      };
+    }
+
+    // Check stat1 changes
+    const stat1Delta: any = {};
+    if (formData.stat1.value !== defaultData?.stat1?.value) {
+      stat1Delta.value = formData.stat1.value;
+    }
+    if (formData.stat1.label !== defaultData?.stat1?.label) {
+      stat1Delta.label = formData.stat1.label;
+    }
+    if (Object.keys(stat1Delta).length > 0) {
+      delta.stat1 = {
+        ...defaultData?.stat1,
+        ...stat1Delta,
+      };
+    }
+
+    // Check stat2 changes
+    const stat2Delta: any = {};
+    if (formData.stat2.value !== defaultData?.stat2?.value) {
+      stat2Delta.value = formData.stat2.value;
+    }
+    if (formData.stat2.label !== defaultData?.stat2?.label) {
+      stat2Delta.label = formData.stat2.label;
+    }
+    if (Object.keys(stat2Delta).length > 0) {
+      delta.stat2 = {
+        ...defaultData?.stat2,
+        ...stat2Delta,
+      };
+    }
+
+    // Check stat3 changes
+    const stat3Delta: any = {};
+    if (formData.stat3.value !== defaultData?.stat3?.value) {
+      stat3Delta.value = formData.stat3.value;
+    }
+    if (formData.stat3.label !== defaultData?.stat3?.label) {
+      stat3Delta.label = formData.stat3.label;
+    }
+    if (Object.keys(stat3Delta).length > 0) {
+      delta.stat3 = {
+        ...defaultData?.stat3,
+        ...stat3Delta,
+      };
+    }
+
+    // Check stat4 changes
+    const stat4Delta: any = {};
+    if (formData.stat4.value !== defaultData?.stat4?.value) {
+      stat4Delta.value = formData.stat4.value;
+    }
+    if (formData.stat4.label !== defaultData?.stat4?.label) {
+      stat4Delta.label = formData.stat4.label;
+    }
+    if (Object.keys(stat4Delta).length > 0) {
+      delta.stat4 = {
+        ...defaultData?.stat4,
+        ...stat4Delta,
       };
     }
 
@@ -558,6 +644,114 @@ export default function EditModal({
                       onChange={e => handleNestedBadgeChange('badge2', 'description', e.target.value)}
                       className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
                     />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Customization */}
+            <div className="border border-slate-200 dark:border-slate-850 p-4 rounded-xl space-y-4 pt-4">
+              <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                Chỉ số thống kê (Stats Counters)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Stat 1 */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/40 rounded-xl space-y-2 border border-slate-100 dark:border-slate-850">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Thống kê 1</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Giá trị</span>
+                      <input
+                        type="text"
+                        value={formData.stat1.value}
+                        onChange={e => handleNestedStatChange('stat1', 'value', e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Nhãn</span>
+                      <input
+                        type="text"
+                        value={formData.stat1.label}
+                        onChange={e => handleNestedStatChange('stat1', 'label', e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stat 2 */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/40 rounded-xl space-y-2 border border-slate-100 dark:border-slate-850">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Thống kê 2</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Giá trị</span>
+                      <input
+                        type="text"
+                        value={formData.stat2.value}
+                        onChange={e => handleNestedStatChange('stat2', 'value', e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Nhãn</span>
+                      <input
+                        type="text"
+                        value={formData.stat2.label}
+                        onChange={e => handleNestedStatChange('stat2', 'label', e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stat 3 */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/40 rounded-xl space-y-2 border border-slate-100 dark:border-slate-850">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Thống kê 3</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Giá trị</span>
+                      <input
+                        type="text"
+                        value={formData.stat3.value}
+                        onChange={e => handleNestedStatChange('stat3', 'value', e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Nhãn</span>
+                      <input
+                        type="text"
+                        value={formData.stat3.label}
+                        onChange={e => handleNestedStatChange('stat3', 'label', e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stat 4 */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/40 rounded-xl space-y-2 border border-slate-100 dark:border-slate-850">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Thống kê 4</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Giá trị</span>
+                      <input
+                        type="text"
+                        value={formData.stat4.value}
+                        onChange={e => handleNestedStatChange('stat4', 'value', e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Nhãn</span>
+                      <input
+                        type="text"
+                        value={formData.stat4.label}
+                        onChange={e => handleNestedStatChange('stat4', 'label', e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

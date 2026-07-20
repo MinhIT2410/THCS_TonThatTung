@@ -20,6 +20,11 @@ export type DecorativeImageConfig = {
   title: string;
 };
 
+export type StatConfig = {
+  label: string;
+  value: string;
+};
+
 export type HomeHeroConfig = {
   title: string;
   subtitle: string;
@@ -30,6 +35,10 @@ export type HomeHeroConfig = {
   badge1: BadgeConfig;
   badge2: BadgeConfig;
   decorImage: DecorativeImageConfig;
+  stat1: StatConfig;
+  stat2: StatConfig;
+  stat3: StatConfig;
+  stat4: StatConfig;
 };
 
 export const HOME_HERO_DEFAULT: HomeHeroConfig = {
@@ -58,5 +67,21 @@ export const HOME_HERO_DEFAULT: HomeHeroConfig = {
     alt: "Pioneer Activities",
     tag: "Sinh hoạt Đội",
     title: "Hành trình rèn luyện phấn đấu lên Đoàn",
+  },
+  stat1: {
+    value: "1,250+",
+    label: "Đội viên tích cực",
+  },
+  stat2: {
+    value: "32",
+    label: "Chi đội tự quản",
+  },
+  stat3: {
+    value: "05",
+    label: "Công trình măng non",
+  },
+  stat4: {
+    value: "05+",
+    label: "Năm học dẫn đầu",
   },
 };
