@@ -45,13 +45,13 @@ export const AccountMenu: React.FC = () => {
   if (isCurrentlyLoading) {
     // Elegant skeleton / disabled state to prevent layout shift and flicker
     return (
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-blue-100/40 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-950/10 select-none opacity-60 animate-pulse xl:h-[52px] xl:w-[220px] xl:px-2.5 xl:rounded-[14px]">
+      <div className="flex h-11 w-[58px] 2xl:w-[200px] items-center justify-center 2xl:justify-between rounded-xl border border-blue-100/40 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-950/10 px-2 select-none opacity-60 animate-pulse shrink-0">
         <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
-        <div className="hidden xl:flex flex-col space-y-1.5 flex-1 items-center justify-center min-w-0">
+        <div className="hidden 2xl:flex flex-col space-y-1 flex-1 items-center justify-center min-w-0 px-2">
           <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
           <div className="h-2 w-12 bg-slate-200 dark:bg-slate-800 rounded" />
         </div>
-        <div className="hidden xl:flex h-full w-[18px] shrink-0 items-center justify-center">
+        <div className="hidden 2xl:flex h-full w-[18px] shrink-0 items-center justify-center">
           <div className="h-3 w-3 bg-slate-200 dark:bg-slate-800 rounded-full" />
         </div>
       </div>
@@ -64,10 +64,10 @@ export const AccountMenu: React.FC = () => {
       <button
         onClick={() => navigate(ROUTES.LOGIN)}
         title="Đăng nhập"
-        className="flex h-11 w-11 xl:w-[220px] xl:h-[52px] items-center justify-center space-x-1.5 rounded-xl xl:rounded-[14px] bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 cursor-pointer text-sm font-semibold"
+        className="flex h-11 w-[58px] 2xl:w-[200px] items-center justify-center space-x-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 cursor-pointer text-sm font-semibold shrink-0"
       >
         <UserIcon className="h-4.5 w-4.5 shrink-0" />
-        <span className="hidden xl:inline">Đăng nhập</span>
+        <span className="hidden 2xl:inline">Đăng nhập</span>
       </button>
     );
   }
@@ -78,7 +78,7 @@ export const AccountMenu: React.FC = () => {
   const primaryRoleLabel = getRoleLabel(mainRoleCode);
 
   return (
-    <div className="relative inline-block text-left" ref={containerRef}>
+    <div className="relative inline-block text-left shrink-0" ref={containerRef}>
       {/* Trigger Button */}
       <button
         ref={triggerRef}
@@ -87,7 +87,7 @@ export const AccountMenu: React.FC = () => {
         aria-haspopup="menu"
         aria-controls="account-menu-popover"
         onClick={() => setIsOpen(!isOpen)}
-        className={`group flex h-11 w-11 xl:w-[220px] xl:h-[52px] shrink-0 items-center justify-center xl:gap-2 rounded-xl xl:rounded-[14px] border hover:shadow-sm transition-all duration-200 cursor-pointer select-none ${
+        className={`group flex h-11 w-[58px] 2xl:w-[200px] shrink-0 items-center justify-center 2xl:justify-between px-2 rounded-xl border hover:shadow-sm transition-all duration-200 cursor-pointer select-none ${
           isOpen 
             ? 'ring-2 ring-blue-500/20 border-blue-500 bg-blue-100/50 dark:bg-blue-900/40' 
             : 'border-blue-100/50 bg-blue-50/50 hover:bg-blue-100/60 dark:border-blue-900/40 dark:bg-blue-950/20 dark:hover:bg-blue-900/30'
@@ -108,7 +108,7 @@ export const AccountMenu: React.FC = () => {
         )}
 
         {/* User Info */}
-        <span className="hidden xl:flex h-full min-w-0 flex-1 flex-col items-center justify-center overflow-hidden text-center select-none leading-none">
+        <span className="hidden 2xl:flex h-full min-w-0 flex-1 flex-col items-center justify-center overflow-hidden text-center select-none leading-none px-2">
           {/* Full Name / Email */}
           <span 
             title={displayName}
@@ -123,7 +123,7 @@ export const AccountMenu: React.FC = () => {
         </span>
 
         {/* ChevronDown */}
-        <span className="hidden xl:flex h-full w-[18px] shrink-0 items-center justify-center">
+        <span className="hidden 2xl:flex h-full w-[18px] shrink-0 items-center justify-center">
           <ChevronDown 
             className="h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200" 
             style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }}

@@ -60,10 +60,10 @@ export default function Header({
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/95 transition-colors duration-300">
-      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr_auto] md:grid-cols-[170px_1fr_170px] lg:grid-cols-[210px_1fr_210px] xl:grid-cols-[320px_1fr_320px] items-center px-4 sm:px-6 lg:px-8 gap-4">
+      <div className="mx-auto flex h-16 w-full max-w-[1280px] items-center px-4 sm:px-6 gap-3">
         {/* Logo and Brand Title (Unified Brand Component, Modern, Elevated) */}
         <div 
-          className="group relative inline-flex shrink-0 items-center justify-start rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 select-none md:w-[170px] lg:w-[210px] xl:w-[320px]" 
+          className="group relative inline-flex shrink-0 items-center justify-start rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 select-none gap-2" 
           onClick={() => handleNavClick('home')}
           onMouseEnter={prefetchHomeData}
           id="header-brand"
@@ -128,16 +128,8 @@ export default function Header({
             )}
           </span>
           
-          {/* Brand Titles: 2-line layout on 'lg', 1-line on 'xl', hidden below 'lg' */}
-          <span className="hidden lg:flex flex-col text-left font-sans font-bold tracking-tight ml-2.5 xl:hidden select-none">
-            <span className="text-[11px] leading-[1.15] uppercase font-bold bg-gradient-to-r from-red-600 via-purple-700 to-blue-700 bg-clip-text text-transparent group-hover:from-red-500 group-hover:via-purple-600 group-hover:to-blue-600 transition-all duration-300">
-              LIÊN ĐỘI THCS
-            </span>
-            <span className="text-[11px] leading-[1.15] uppercase font-bold bg-gradient-to-r from-red-600 via-purple-700 to-blue-700 bg-clip-text text-transparent group-hover:from-red-500 group-hover:via-purple-600 group-hover:to-blue-600 transition-all duration-300">
-              TÔN THẤT TÙNG
-            </span>
-          </span>
-          <span className="hidden xl:block text-left font-sans font-bold tracking-[-0.010em] ml-3 whitespace-nowrap select-none">
+          {/* Brand Title: only display logo under 2xl, from 2xl display logo + brand title */}
+          <span className="hidden 2xl:block text-left font-sans font-bold tracking-[-0.010em] ml-2.5 whitespace-nowrap select-none">
             <span className="text-[13px] leading-none uppercase font-bold bg-gradient-to-r from-red-600 via-purple-700 to-blue-700 bg-clip-text text-transparent group-hover:from-red-500 group-hover:via-purple-600 group-hover:to-blue-600 transition-all duration-300">
               LIÊN ĐỘI THCS TÔN THẤT TÙNG
             </span>
@@ -149,7 +141,7 @@ export default function Header({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex min-w-0 items-center justify-start md:pl-2 lg:pl-4 xl:pl-8 md:space-x-0.5 lg:space-x-1 xl:space-x-1.5">
+        <nav className="hidden xl:flex min-w-0 flex-1 items-center justify-center gap-1">
           {navItems.map((item) => {
             const isActive = currentView === item.id;
             return (
@@ -159,7 +151,7 @@ export default function Header({
                 onClick={() => handleNavClick(item.id)}
                 onMouseEnter={item.id === 'home' ? prefetchHomeData : undefined}
                 onFocus={item.id === 'home' ? prefetchHomeData : undefined}
-                className={`relative px-2.5 xl:px-3.5 py-2 rounded-xl text-[13px] xl:text-sm font-semibold tracking-wide transition-all duration-200 whitespace-nowrap ${
+                className={`relative px-2.5 py-2 rounded-lg text-[13px] font-semibold tracking-wide transition-all duration-200 whitespace-nowrap 2xl:px-3.5 2xl:text-sm ${
                   isActive 
                     ? 'text-blue-700 bg-blue-50/50 dark:text-blue-400 dark:bg-blue-950/30' 
                     : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:text-blue-400 dark:hover:bg-slate-800/40'
@@ -179,7 +171,7 @@ export default function Header({
         </nav>
 
         {/* Actions Toolbar */}
-        <div className="flex items-center justify-end md:w-[170px] lg:w-[210px] xl:w-[320px] shrink-0 space-x-3">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
           {/* Unified Utility Capsule (Search + Theme Switcher) */}
           <div className="flex items-center space-x-1 rounded-xl bg-slate-50 dark:bg-slate-800/40 p-1">
             {/* Search Button */}
