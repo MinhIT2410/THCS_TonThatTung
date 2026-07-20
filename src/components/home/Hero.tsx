@@ -259,18 +259,18 @@ export default function Hero({ onNavigate }: HeroProps) {
 
                   {/* Float badge 1 */}
                   <motion.div 
-                    className="absolute -top-10 -left-8 md:-top-12 md:-left-16 rounded-[1.25rem] bg-transparent p-3 flex items-center space-x-3 text-slate-950 z-20"
+                    className="absolute -top-6 -left-2 md:-top-8 md:-left-4 rounded-xl bg-white/20 backdrop-blur-md p-2 shadow-md border border-white/20 flex items-center space-x-2 text-slate-950 z-20"
                     animate={{ y: [0, -6, 0] }}
                     transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
                   >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500 text-white shadow-md">
-                      <Award className="h-4.5 w-4.5" />
+                    <div className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm">
+                      <Award className="h-3.5 w-3.5" />
                     </div>
-                    <div>
-                      <h4 className="text-[11px] font-bold text-slate-950 font-display tracking-tight leading-tight">
+                    <div className="pr-1">
+                      <h4 className="text-[10px] font-bold text-slate-950 font-display tracking-tight leading-tight">
                         {finalHeroData.badge1?.title || "Liên đội mạnh"}
                       </h4>
-                      <p className="text-[9px] text-slate-800 font-sans leading-none mt-1">
+                      <p className="text-[8px] text-slate-800 font-sans leading-none mt-0.5">
                         {finalHeroData.badge1?.description || "Năm học 2025 - 2026"}
                       </p>
                     </div>
@@ -278,18 +278,18 @@ export default function Hero({ onNavigate }: HeroProps) {
 
                   {/* Float badge 2 */}
                   <motion.div 
-                    className="absolute -bottom-10 -right-8 md:-bottom-12 md:-right-16 rounded-[1.25rem] bg-transparent p-3 flex items-center space-x-3 text-slate-950 z-20"
+                    className="absolute -bottom-6 -right-2 md:-bottom-8 md:-right-4 rounded-xl bg-white/20 backdrop-blur-md p-2 shadow-md border border-white/20 flex items-center space-x-2 text-slate-950 z-20"
                     animate={{ y: [0, 6, 0] }}
                     transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut', delay: 1 }}
                   >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white shadow-md">
-                      <Users className="h-4.5 w-4.5" />
+                    <div className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-white shadow-sm">
+                      <Users className="h-3.5 w-3.5" />
                     </div>
-                    <div>
-                      <h4 className="text-[11px] font-bold text-slate-950 font-display tracking-tight leading-tight">
+                    <div className="pr-1">
+                      <h4 className="text-[10px] font-bold text-slate-950 font-display tracking-tight leading-tight">
                         {finalHeroData.badge2?.title || "100% Đội viên"}
                       </h4>
-                      <p className="text-[9px] text-slate-800 font-sans leading-none mt-1">
+                      <p className="text-[8px] text-slate-800 font-sans leading-none mt-0.5">
                         {finalHeroData.badge2?.description || "Rèn luyện đạt chuẩn"}
                       </p>
                     </div>
