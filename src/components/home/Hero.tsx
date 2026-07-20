@@ -313,7 +313,7 @@ export default function Hero({ onNavigate }: HeroProps) {
                       <span className="block text-xl font-extrabold text-emerald-400 font-display tracking-tight leading-none">
                         {stat.value}
                       </span>
-                      <span className="block text-[10px] font-semibold text-emerald-300 uppercase tracking-wider mt-1 font-sans">
+                      <span className="block text-[10px] font-semibold text-black uppercase tracking-wider mt-1 font-sans">
                         {stat.label}
                       </span>
                     </div>
