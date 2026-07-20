@@ -148,15 +148,15 @@ export default function Hero({ onNavigate }: HeroProps) {
                 {/* Decorative script slogan */}
                 <motion.div
                   variants={itemVariants}
-                  className="font-script text-2xl md:text-3xl text-yellow-300 font-bold tracking-wide -mb-3 pl-1 block drop-shadow-sm select-none"
+                  className="font-script text-2xl md:text-3xl text-yellow-300 font-bold tracking-wide mb-3 pl-1 block drop-shadow-sm select-none"
                   style={textShadowStyle}
                 >
-                  "Tuổi nhỏ làm việc nhỏ — Ươm mầm ước mơ"
+                  "Tuổi nhỏ làm việc nhỏ, tùy theo sức của mình"
                 </motion.div>
 
                 <motion.h1 
                   variants={itemVariants}
-                  className="font-display text-3xl sm:text-4xl md:text-[46px] lg:text-[52px] font-extrabold tracking-tight text-white leading-[1.1] drop-shadow-sm"
+                  className="font-display text-[21px] sm:text-[25px] md:text-[32px] lg:text-[36px] font-extrabold tracking-tight text-white leading-[1.1] drop-shadow-sm"
                   style={textShadowStyle}
                 >
                   {finalHeroData.title}
@@ -267,8 +267,8 @@ export default function Hero({ onNavigate }: HeroProps) {
                       <Award className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <h4 className="text-[11px] font-bold text-white font-display tracking-tight leading-tight">Bằng Khen TW Đoàn</h4>
-                      <p className="text-[9px] text-slate-300 font-sans leading-none mt-1">Năm học 2024 - 2025</p>
+                      <h4 className="text-[11px] font-bold text-white font-display tracking-tight leading-tight">Liên đội mạnh</h4>
+                      <p className="text-[9px] text-slate-300 font-sans leading-none mt-1">Năm học 2025 - 2026</p>
                     </div>
                   </motion.div>
 
