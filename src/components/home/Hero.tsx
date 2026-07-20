@@ -143,15 +143,7 @@ export default function Hero({ onNavigate }: HeroProps) {
                 initial="hidden"
                 animate="visible"
               >
-                <motion.div 
-                  variants={itemVariants}
-                  className="inline-flex items-center space-x-2 rounded-full border border-red-500/30 bg-red-500/20 px-3.5 py-1.5"
-                >
-                  <Award className="h-4 w-4 text-red-300" />
-                  <span className="text-xs font-bold text-red-200 uppercase tracking-wide">
-                    Liên đội mạnh xuất sắc cấp thành phố
-                  </span>
-                </motion.div>
+
 
                 {/* Decorative script slogan */}
                 <motion.div
