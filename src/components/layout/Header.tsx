@@ -58,8 +58,36 @@ export default function Header({
     setIsMobileMenuOpen(false);
   };
 
+  // Click outside handler for mobile menu
+  const headerRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    if (isMobileMenuOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMobileMenuOpen]);
+
+  React.useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (isMobileMenuOpen && headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isMobileMenuOpen]);
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/95 transition-colors duration-300">
+    <header ref={headerRef} className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/95 transition-colors duration-300">
       <div className="mx-auto flex h-16 w-full max-w-[1280px] items-center px-4 sm:px-6 gap-3">
         {/* Logo and Brand Title (Unified Brand Component, Modern, Elevated) */}
         <div 
@@ -140,6 +168,9 @@ export default function Header({
           </span>
         </div>
 
+        {/* Responsive spacer for mobile/tablet layout below xl breakpoint */}
+        <div className="flex-1 xl:hidden" />
+
         {/* Desktop Navigation */}
         <nav className="hidden xl:flex min-w-0 flex-1 items-center justify-center gap-1">
           {navItems.map((item) => {
@@ -173,13 +204,13 @@ export default function Header({
         {/* Actions Toolbar */}
         <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
           {/* Unified Utility Capsule (Search + Theme Switcher) */}
-          <div className="flex items-center space-x-1 rounded-xl bg-slate-50 dark:bg-slate-800/40 p-1">
+          <div className="flex items-center gap-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 p-1 max-[390px]:bg-transparent max-[390px]:p-0">
             {/* Search Button */}
             <button
               onClick={onOpenSearch}
               id="search-btn"
               title="Tìm kiếm"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+              className="flex h-[42px] w-[42px] xl:h-9 xl:w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
             >
               <Search className="h-4.5 w-4.5" />
             </button>
@@ -189,7 +220,7 @@ export default function Header({
               onClick={toggleDarkMode}
               id="dark-mode-toggle"
               title={isDarkMode ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối"}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+              className="hidden min-[391px]:flex h-[42px] w-[42px] xl:h-9 xl:w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -217,7 +248,7 @@ export default function Header({
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             id="mobile-menu-toggle"
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 md:hidden transition-colors"
+            className="flex h-[42px] w-[42px] items-center justify-center rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 xl:hidden transition-colors"
           >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -233,10 +264,10 @@ export default function Header({
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="border-t border-slate-100 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 md:hidden shadow-lg"
+            className="border-t border-slate-100 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 xl:hidden shadow-lg"
           >
             <div className="space-y-1 pb-3 pt-2">
-              {navItems.map((item) => {
+              {navItems.filter(item => item.id !== 'home').map((item) => {
                 const isActive = currentView === item.id;
                 return (
                   <button
@@ -255,6 +286,18 @@ export default function Header({
                   </button>
                 );
               })}
+              
+              {/* Dark mode toggle inside mobile menu for screens < 390px */}
+              <div className="hidden max-[390px]:block border-t border-slate-100 pt-3 dark:border-slate-800">
+                <button
+                  onClick={toggleDarkMode}
+                  className="flex w-full items-center justify-center space-x-2 rounded-lg px-4 py-2.5 text-base font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  {isDarkMode ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-slate-600 dark:text-slate-300" />}
+                  <span>{isDarkMode ? 'Chế độ sáng' : 'Chế độ tối'}</span>
+                </button>
+              </div>
+
               <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
                 <button
                   onClick={() => handleNavClick('cms')}

@@ -118,7 +118,7 @@ export default function Hero({
 
   return (
     <section className="relative overflow-hidden bg-slate-50 py-8 dark:bg-slate-950 sm:py-12 md:py-16 transition-colors duration-300">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="mx-auto max-w-7xl px-0 sm:px-6 lg:px-8 relative z-10">
         
         <EditableBlock
           pageKey="home"
@@ -131,7 +131,7 @@ export default function Hero({
           error={error}
         >
           {/* Sleek Blue/Indigo Gradient Main Hero Card */}
-          <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white p-6 sm:p-10 md:p-12 shadow-2xl transition-all duration-300">
+          <div className="relative overflow-hidden max-sm:w-[calc(100%-24px)] max-sm:mx-3 max-sm:p-[24px_18px] max-sm:rounded-[22px] rounded-[2rem] bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white p-6 sm:p-10 md:p-12 shadow-2xl transition-all duration-300">
             {/* Background Image Layer */}
             {finalHeroData.backgroundImage && (
               <div className="absolute inset-0">
@@ -180,7 +180,7 @@ export default function Hero({
 
                 <motion.h1 
                   variants={itemVariants}
-                  className="font-display text-[21px] sm:text-[25px] md:text-[32px] lg:text-[36px] font-extrabold tracking-tight text-white leading-[1.1] drop-shadow-sm"
+                  className="font-display text-[32px] max-[430px]:text-[30px] max-[390px]:text-[26px] max-[360px]:text-[24px] sm:text-[25px] md:text-[32px] lg:text-[32px] xl:text-[36px] font-extrabold tracking-tight text-white leading-[1.12] xl:leading-[1.1] drop-shadow-sm"
                   style={textShadowStyle}
                 >
                   {finalHeroData.title}
@@ -204,7 +204,7 @@ export default function Hero({
 
                 <motion.div 
                   variants={itemVariants}
-                  className="flex flex-wrap gap-4 pt-4"
+                  className="flex flex-col gap-3 w-full sm:flex-row sm:gap-4 pt-4"
                 >
                   <button
                     onClick={() => {
@@ -222,7 +222,7 @@ export default function Hero({
                       }
                     }}
                     id="hero-primary-btn"
-                    className="group flex items-center space-x-2 rounded-xl bg-red-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-red-600/35 hover:bg-red-700 hover:shadow-red-700/40 active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                    className="group flex items-center justify-center space-x-2 w-full sm:w-auto rounded-xl bg-red-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-red-600/35 hover:bg-red-700 hover:shadow-red-700/40 active:scale-[0.98] transition-all duration-200 cursor-pointer"
                   >
                     <span>{finalHeroData.primaryButton?.label || "Xem hoạt động nổi bật"}</span>
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -244,7 +244,7 @@ export default function Hero({
                       }
                     }}
                     id="hero-secondary-btn"
-                    className="rounded-xl border border-white/20 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/25 hover:border-white/30 backdrop-blur-sm active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                    className="flex items-center justify-center w-full sm:w-auto rounded-xl border border-white/20 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/25 hover:border-white/30 backdrop-blur-sm active:scale-[0.98] transition-all duration-200 cursor-pointer"
                   >
                     {finalHeroData.secondaryButton?.label || "Tìm hiểu truyền thống"}
                   </button>
@@ -253,12 +253,12 @@ export default function Hero({
 
               {/* Visual Element / Grid of Badges Column */}
               <motion.div 
-                className="lg:col-span-5 relative"
+                className="lg:col-span-5 relative w-full"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}
               >
-                <div className="relative mx-auto max-w-[380px] lg:mr-0">
+                <div className="relative mx-auto w-full max-w-[360px] lg:max-w-[380px] lg:mr-0 mt-6 lg:mt-0">
                   {/* Main Decorative Image */}
                   <div className="overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-2 shadow-2xl relative">
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden relative group">
@@ -283,7 +283,7 @@ export default function Hero({
 
                   {/* Float badge 1 */}
                   <motion.div 
-                    className="absolute -top-6 -left-2 md:-top-8 md:-left-4 rounded-xl bg-white/20 backdrop-blur-md p-2 shadow-md border border-white/20 flex items-center space-x-2 text-slate-950 z-20"
+                    className="absolute -top-3 -left-1 sm:-top-4 sm:-left-2 xl:-top-8 xl:-left-4 rounded-xl bg-white/20 backdrop-blur-md p-2 shadow-md border border-white/20 flex items-center space-x-2 text-slate-950 z-20"
                     animate={{ y: [0, -6, 0] }}
                     transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
                   >
@@ -302,7 +302,7 @@ export default function Hero({
 
                   {/* Float badge 2 */}
                   <motion.div 
-                    className="absolute -bottom-6 -right-2 md:-bottom-8 md:-right-4 rounded-xl bg-white/20 backdrop-blur-md p-2 shadow-md border border-white/20 flex items-center space-x-2 text-slate-950 z-20"
+                    className="absolute -bottom-3 -right-1 sm:-bottom-4 sm:-right-2 xl:-bottom-8 xl:-right-4 rounded-xl bg-white/20 backdrop-blur-md p-2 shadow-md border border-white/20 flex items-center space-x-2 text-slate-950 z-20"
                     animate={{ y: [0, 6, 0] }}
                     transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut', delay: 1 }}
                   >
@@ -325,7 +325,7 @@ export default function Hero({
 
             {/* Statistics Row embedded inside Hero Card */}
             <motion.div 
-              className="mt-12 md:mt-16 pt-8 border-t border-white/10 grid grid-cols-2 gap-4 sm:grid-cols-4 relative z-10"
+              className="mt-12 md:mt-16 pt-8 border-t border-white/10 grid grid-cols-2 max-[360px]:grid-cols-1 lg:grid-cols-4 gap-4 relative z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}

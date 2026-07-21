@@ -122,7 +122,7 @@ export const AccountMenuPopover: React.FC<AccountMenuPopoverProps> = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
-      className="absolute right-0 mt-2 w-[310px] max-w-[calc(100vw-24px)] rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xl z-50 text-slate-800 dark:text-slate-100"
+      className="max-sm:fixed max-sm:left-[12px] max-sm:right-[12px] max-sm:top-[68px] max-sm:w-auto max-sm:max-h-[calc(100dvh-88px)] max-sm:overflow-y-auto sm:absolute sm:right-0 sm:mt-2 sm:w-[310px] sm:max-w-[calc(100vw-24px)] rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xl z-50 text-slate-800 dark:text-slate-100"
     >
       {/* A. User Info Section */}
       <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100 dark:border-slate-800/60">
@@ -148,7 +148,7 @@ export const AccountMenuPopover: React.FC<AccountMenuPopoverProps> = ({
         <h3 className="font-sans text-sm font-semibold text-slate-800 dark:text-slate-100 truncate w-full px-2">
           {fullName}
         </h3>
-        <p className="text-[11px] font-sans text-slate-400 dark:text-slate-500 truncate w-full px-2 mb-3">
+        <p className="text-[11px] font-sans text-slate-400 dark:text-slate-500 break-all [overflow-wrap:anywhere] w-full px-2 mb-3">
           {email}
         </p>
 
