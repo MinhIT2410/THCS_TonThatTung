@@ -247,6 +247,43 @@ export async function uploadAlbumImage(file: File, albumId?: string): Promise<{
   }
 }
 
+/**
+ * Upload an image to an exact path under school-media bucket
+ */
+export async function uploadImageToExactPath(file: File, exactPath: string, options?: { upsert?: boolean }): Promise<string> {
+  const validationError = validateImageFile(file);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  try {
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(exactPath, file, {
+        cacheControl: '3600',
+        upsert: options?.upsert ?? true
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      throw new Error(`Tải ảnh lên Supabase thất bại: ${error.message}`);
+    }
+
+    const { data } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(exactPath);
+
+    if (!data || !data.publicUrl) {
+      throw new Error('Không thể lấy public URL cho file vừa upload.');
+    }
+
+    return data.publicUrl;
+  } catch (err: any) {
+    console.error('Error during uploadImageToExactPath:', err);
+    throw new Error(err.message || 'Có lỗi xảy ra khi tải ảnh lên hệ thống.');
+  }
+}
+
 export const storageService = {
   validateImageFile,
   uploadImage,
@@ -254,4 +291,49 @@ export const storageService = {
   validateDocumentFile,
   uploadDocument,
   uploadAlbumImage,
+  uploadImageToExactPath,
+  generateSafeAboutImagePath,
+  generateUUID,
 };
+
+export function generateUUID(): string {
+  if (typeof window !== 'undefined' && window.crypto) {
+    if (typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    if (typeof window.crypto.getRandomValues === 'function') {
+      const bytes = new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40; // set version to 4
+      bytes[8] = (bytes[8] & 0x3f) | 0x80; // set variant to RFC4122
+      const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+  }
+  throw new Error('Web Crypto API is not available');
+}
+
+export function getSafeExtension(file: File): string {
+  const mimeType = file.type;
+  if (mimeType === 'image/jpeg') return 'jpeg';
+  if (mimeType === 'image/png') return 'png';
+  if (mimeType === 'image/webp') return 'webp';
+  if (mimeType === 'image/gif') return 'gif';
+  
+  const parts = file.name.split('.');
+  const ext = parts.length > 1 ? parts.pop()?.toLowerCase() : '';
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext || '')) {
+    return ext!;
+  }
+  return 'jpg';
+}
+
+export function generateSafeAboutImagePath(
+  tempId: string,
+  type: 'logo' | 'cover' | 'gallery',
+  file: File
+): string {
+  const uuid = generateUUID();
+  const ext = getSafeExtension(file);
+  return `about/${tempId}/${type}/${uuid}.${ext}`;
+}

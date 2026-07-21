@@ -29,10 +29,12 @@ import AdminNewsPage from './pages/admin/AdminNewsPage';
 import AdminDocumentsPage from './pages/admin/AdminDocumentsPage';
 import AdminAlbumsPage from './pages/admin/AdminAlbumsPage';
 import AdminCmsPage from './pages/admin/AdminCmsPage';
+import AdminAboutPage from './pages/admin/AdminAboutPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import NewsDetailPage from './pages/NewsDetailPage';
 import AlbumDetailPage from './pages/AlbumDetailPage';
+import AboutDetailPage from './pages/AboutDetailPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { RoleGuard } from './components/auth/RoleGuard';
 import { AccessDenied } from './components/auth/AccessDenied';
@@ -287,6 +289,7 @@ function AppContent() {
         <Route element={<Layout />}>
           <Route path={ROUTES.HOME} element={<HomePage />} />
           <Route path={ROUTES.ABOUT} element={<AboutPage />} />
+          <Route path={`${ROUTES.ABOUT}/:slug`} element={<AboutDetailPage />} />
           <Route path={ROUTES.NEWS} element={<NewsPage />} />
           <Route path={`${ROUTES.NEWS}/:slug`} element={<NewsDetailPage />} />
           <Route path={ROUTES.ACTIVITIES} element={<ActivitiesPage />} />
@@ -315,6 +318,7 @@ function AppContent() {
           <Route path="tin-tuc" element={<AdminNewsPage />} />
           <Route path="tai-lieu" element={<AdminDocumentsPage />} />
           <Route path="album" element={<AdminAlbumsPage />} />
+          <Route path="gioi-thieu" element={<AdminAboutPage />} />
           <Route path="cms" element={<AdminCmsPage />} />
           <Route
             path="nguoi-dung"

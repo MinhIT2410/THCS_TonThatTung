@@ -11,7 +11,8 @@ import {
   Paintbrush,
   Users,
   Settings,
-  LucideIcon
+  LucideIcon,
+  Info
 } from 'lucide-react';
 
 export interface AdminMenuItem {
@@ -40,6 +41,11 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     label: 'Album ảnh',
     href: '/quan-tri/album',
     icon: ImageIcon,
+  },
+  {
+    label: 'Giới thiệu',
+    href: '/quan-tri/gioi-thieu',
+    icon: Info,
   },
   {
     label: 'CMS giao diện',
