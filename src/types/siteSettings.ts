@@ -24,6 +24,8 @@ export interface SiteSettings {
   updated_by: string | null;
   created_at?: string;
   updated_at?: string;
+  reception_hours?: string;
+  faqs?: { id: string; question: string; answer: string }[];
 }
 
 export type SiteSettingsInput = Omit<SiteSettings, 'id' | 'created_at' | 'updated_at'>;

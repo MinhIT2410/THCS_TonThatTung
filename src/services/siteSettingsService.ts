@@ -30,7 +30,30 @@ export const fallbackSiteSettings: SiteSettings = {
   home_hero_background_url: null,
   home_hero_button_text: "Xem hoạt động",
   home_hero_button_url: "/tin-tuc",
-  updated_by: null
+  updated_by: null,
+  reception_hours: "Giờ ra chơi các ngày từ Thứ Hai đến Thứ Bảy",
+  faqs: [
+    {
+      id: "faq-1",
+      question: "Làm thế nào để được kết nạp vào Đội Thiếu niên Tiền phong Hồ Chí Minh?",
+      answer: "Để được kết nạp vào Đội, em cần đạt độ tuổi từ 9 đến 15 tuổi, tích cực rèn luyện đạo đức học tập tốt, viết Đơn xin vào Đội tự nguyện, được một Chi đội hoặc Ban chỉ huy Liên đội giới thiệu và thông qua ban đại diện dưới sự đồng ý của Tổng phụ trách."
+    },
+    {
+      id: "faq-2",
+      question: "Nghi lễ thắt khăn quàng đỏ đúng chuẩn nghi thức Đội thực hiện như thế nào?",
+      answer: "Em gấp chéo khăn từ đỉnh xuống khoảng 1/3, so hai đầu khăn bằng nhau, đặt khăn vào cổ áo đứng, gấp cổ áo lại. Sau đó thắt nút khăn: đặt đuôi khăn phải đè lên đuôi khăn trái, luồn đuôi khăn phải từ dưới lên tạo thành nút lỏng, rồi luồn đuôi khăn phải vào nút thắt đó kéo chặt vừa phải để tạo dáng thắt nơ đỏ vuông vức, cân đối hai dải khăn."
+    },
+    {
+      id: "faq-3",
+      question: "Phong trào 'Kế hoạch nhỏ' là gì và được thu gom những nguyên liệu nào?",
+      answer: "Đây là phong trào truyền thống lớn của Đội viên nhằm tiết kiệm bảo vệ môi trường và quyên góp quỹ từ thiện. Các em được thu gom: Giấy vụn (sách vở cũ, báo chí, bìa carton) và vỏ lon nhôm sạch. Không thu gom thủy tinh, rác thải nhựa dơ hay rác y tế."
+    },
+    {
+      id: "faq-4",
+      question: "Ban Chỉ huy Liên đội hoạt động, tiếp nhận ý kiến của học sinh vào thời gian nào?",
+      answer: "Văn phòng Liên đội hoạt động thường trực vào giờ ra chơi các ngày trong tuần (Thứ Hai đến Thứ Bảy). Ngoài ra, các em có thể gửi thư giấy trực tiếp vào Hòm thư măng non đặt tại sảnh chính trường hoặc gửi góp ý trực tiếp qua website này bất cứ lúc nào."
+    }
+  ]
 };
 
 export const siteSettingsService = {

@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle, ChevronDown, ChevronUp, Clock, ShieldAlert } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle, ChevronDown, ChevronUp, Clock, ShieldAlert, Inbox } from 'lucide-react';
 import { ContactSubmission } from '../../types';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
@@ -32,28 +32,7 @@ export default function Contact({ onSubmitContact }: ContactProps) {
   // FAQ state
   const [expandedFaqId, setExpandedFaqId] = useState<string | null>('faq-1');
 
-  const faqs: FaqItem[] = [
-    {
-      id: "faq-1",
-      question: "Làm thế nào để được kết nạp vào Đội Thiếu niên Tiền phong Hồ Chí Minh?",
-      answer: "Để được kết nạp vào Đội, em cần đạt độ tuổi từ 9 đến 15 tuổi, tích cực rèn luyện đạo đức học tập tốt, viết Đơn xin vào Đội tự nguyện, được một Chi đội hoặc Ban chỉ huy Liên đội giới thiệu và thông qua ban đại diện dưới sự đồng ý của Tổng phụ trách."
-    },
-    {
-      id: "faq-2",
-      question: "Nghi lễ thắt khăn quàng đỏ đúng chuẩn nghi thức Đội thực hiện như thế nào?",
-      answer: "Em gấp chéo khăn từ đỉnh xuống khoảng 1/3, so hai đầu khăn bằng nhau, đặt khăn vào cổ áo đứng, gấp cổ áo lại. Sau đó thắt nút khăn: đặt đuôi khăn phải đè lên đuôi khăn trái, luồn đuôi khăn phải từ dưới lên tạo thành nút lỏng, rồi luồn đuôi khăn phải vào nút thắt đó kéo chặt vừa phải để tạo dáng thắt nơ đỏ vuông vức, cân đối hai dải khăn."
-    },
-    {
-      id: "faq-3",
-      question: "Phong trào 'Kế hoạch nhỏ' là gì và được thu gom những nguyên liệu nào?",
-      answer: "Đây là phong trào truyền thống lớn của Đội viên nhằm tiết kiệm bảo vệ môi trường và quyên góp quỹ từ thiện. Các em được thu gom: Giấy vụn (sách vở cũ, báo chí, bìa carton) và vỏ lon nhôm sạch. Không thu gom thủy tinh, rác thải nhựa dơ hay rác y tế."
-    },
-    {
-      id: "faq-4",
-      question: "Ban Chỉ huy Liên đội hoạt động, tiếp nhận ý kiến của học sinh vào thời gian nào?",
-      answer: "Văn phòng Liên đội hoạt động thường trực vào giờ ra chơi các ngày trong tuần (Thứ Hai đến Thứ Bảy). Ngoài ra, các em có thể gửi thư giấy trực tiếp vào Hòm thư măng non đặt tại sảnh chính trường hoặc gửi góp ý trực tiếp qua website này bất cứ lúc nào."
-    }
-  ];
+  const faqs: FaqItem[] = siteSettings.faqs || [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,14 +67,14 @@ export default function Contact({ onSubmitContact }: ContactProps) {
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-16 pb-24">
       
       {/* Page Header */}
-      <div className="text-center max-w-2xl mx-auto space-y-2">
-        <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/40 px-3 py-1 rounded-full inline-block">
+      <div className="text-center max-w-2xl mx-auto space-y-4">
+        <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest bg-indigo-50 dark:bg-indigo-950/40 px-3.5 py-1.5 rounded-full inline-block border border-indigo-200/30">
           Lắng nghe - Thấu hiểu - Đồng hành
         </span>
         <h1 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-4xl">
-          Liên Hệ Ban Chỉ Huy
+          Hộp thư "Điều em muốn nói"
         </h1>
-        <p className="font-sans text-sm text-slate-500 dark:text-slate-400">
+        <p className="font-sans text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           {siteSettings.contact_intro || "Hãy gửi thắc mắc, hiến kế hoạt động Đội hoặc báo cáo sự cố để Liên đội hỗ trợ em nhanh nhất."}
         </p>
       </div>
@@ -225,7 +204,7 @@ export default function Contact({ onSubmitContact }: ContactProps) {
               </div>
               <div className="flex items-center space-x-3">
                 <Clock className="h-4.5 w-4.5 text-yellow-500 shrink-0" />
-                <span>Giờ tiếp đón: Giờ ra chơi các ngày từ Thứ Hai đến Thứ Bảy</span>
+                <span>Giờ tiếp đón: {siteSettings.reception_hours || "Giờ ra chơi các ngày từ Thứ Hai đến Thứ Bảy"}</span>
               </div>
             </div>
           </div>
