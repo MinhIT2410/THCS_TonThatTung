@@ -85,7 +85,7 @@ export default function Contact({ onSubmitContact }: ContactProps) {
         <div className="lg:col-span-7 rounded-3xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 p-6 sm:p-8 shadow-sm space-y-6">
           <div className="space-y-1">
             <h2 className="font-display text-xl font-bold text-slate-900 dark:text-white">Gửi thư liên hệ trực tiếp</h2>
-            <p className="font-sans text-xs text-slate-500 dark:text-slate-400">Điền thông tin và câu hỏi dưới đây, cô Tổng phụ trách và Ban chỉ huy sẽ hồi âm sớm cho em.</p>
+            <p className="font-sans text-xs text-slate-500 dark:text-slate-400">Gửi thông tin theo biểu mẫu dưới đây, bộ phận quản trị sẽ sớm phản hồi nhé!</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 font-sans text-xs">
@@ -187,7 +187,7 @@ export default function Contact({ onSubmitContact }: ContactProps) {
           
           {/* Quick info details */}
           <div className="rounded-3xl bg-slate-50 dark:bg-slate-900/40 p-6 border border-slate-100 dark:border-slate-800 space-y-4">
-            <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">Thông tin văn phòng liên đội</h3>
+            <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">Thông tin liên hệ</h3>
             
             <div className="space-y-3 font-sans text-xs text-slate-600 dark:text-slate-400 font-medium">
               <div className="flex items-start space-x-3">
