@@ -8,7 +8,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   Flag,
-  Search,
   Calendar,
   Sparkles,
   AlertCircle,
@@ -32,7 +31,6 @@ export default function MovementsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<CampaignType | 'all'>('all');
   const [selectedGroup, setSelectedGroup] = useState<'all' | 'thuong_xuyen' | 'dang_dien_ra' | 'sap_dien_ra' | 'da_ket_thuc'>('all');
 
@@ -57,14 +55,6 @@ export default function MovementsPage() {
   // Filtered campaigns
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter(c => {
-      // Search
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = c.title.toLowerCase().includes(q);
-        const matchSummary = c.summary?.toLowerCase().includes(q) || false;
-        if (!matchTitle && !matchSummary) return false;
-      }
-
       // Type filter
       if (selectedType !== 'all' && c.campaign_type !== selectedType) {
         return false;
@@ -86,7 +76,7 @@ export default function MovementsPage() {
 
       return true;
     });
-  }, [campaigns, searchQuery, selectedType, selectedGroup]);
+  }, [campaigns, selectedType, selectedGroup]);
 
   // Grouped datasets
   const regularCampaigns = useMemo(() => {
@@ -123,273 +113,270 @@ export default function MovementsPage() {
   const getStatusBadgeClass = (status: CampaignStatus) => {
     switch (status) {
       case 'dang_dien_ra':
-        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
+        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-800/50';
       case 'sap_dien_ra':
-        return 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+        return 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border-amber-200/50 dark:border-amber-800/50';
       case 'da_ket_thuc':
-        return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+        return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200/50 dark:border-slate-700/50';
       default:
-        return 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+        return 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border-blue-200/50 dark:border-blue-800/50';
     }
   };
 
   const getTypeBadgeClass = (type: CampaignType) => {
     switch (type) {
       case 'thuong_xuyen':
-        return 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border-red-200 dark:border-red-800';
+        return 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border-red-200/50 dark:border-red-800/50';
       case 'cao_diem':
-        return 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400 border-purple-200 dark:border-purple-800';
+        return 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400 border-purple-200/50 dark:border-purple-800/50';
       case 'cuoc_thi':
-        return 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+        return 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border-blue-200/50 dark:border-blue-800/50';
       default:
-        return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800';
+        return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400 border-indigo-200/50 dark:border-indigo-800/50';
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900/60 pb-16">
-      {/* Hero Header Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-red-600 via-red-700 to-blue-800 text-white py-10 md:py-14 px-4 sm:px-6 text-center">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.15),transparent_60%)]" />
-        <div className="relative mx-auto max-w-3xl space-y-3">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
-            Phong trào & Hoạt động
-          </h1>
-          <p className="text-red-100 text-sm sm:text-base leading-relaxed">
-            Nơi quản lý, theo dõi các chương trình thi đua, đợt vận động và hoạt động trọng tâm trong năm học của Liên đội THCS Tôn Thất Tùng.
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-10 pb-24 font-sans relative min-h-[60vh]">
+      {/* Page Header / Hero Area (Aligned with AboutPage) */}
+      <div className="text-center max-w-3xl mx-auto space-y-3">
+        <span className="text-xs font-extrabold text-red-600 dark:text-red-400 uppercase tracking-widest bg-red-50 dark:bg-red-950/40 px-3.5 py-1.5 rounded-full inline-block border border-red-200/30">
+          HOẠT ĐỘNG ĐỘI & PHONG TRÀO THIẾU NHI
+        </span>
+        <h1 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-4xl">
+          Phong trào & Hoạt động
+        </h1>
+        <p className="font-sans text-sm text-slate-500 dark:text-slate-400">
+          Nơi cập nhật các chương trình thi đua, đợt vận động và hoạt động trọng tâm của Liên đội THCS Tôn Thất Tùng.
+        </p>
+      </div>
+
+      {/* Filter Toolbar */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+        <div className="flex items-center justify-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          <button
+            onClick={() => setSelectedGroup('all')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              selectedGroup === 'all'
+                ? 'bg-red-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            Tất cả ({campaigns.length})
+          </button>
+          <button
+            onClick={() => setSelectedGroup('thuong_xuyen')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              selectedGroup === 'thuong_xuyen'
+                ? 'bg-red-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            Thường xuyên ({regularCampaigns.length})
+          </button>
+          <button
+            onClick={() => setSelectedGroup('dang_dien_ra')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              selectedGroup === 'dang_dien_ra'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            Đang diễn ra ({ongoingCampaigns.length})
+          </button>
+          <button
+            onClick={() => setSelectedGroup('sap_dien_ra')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              selectedGroup === 'sap_dien_ra'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            Sắp diễn ra ({upcomingCampaigns.length})
+          </button>
+          <button
+            onClick={() => setSelectedGroup('da_ket_thuc')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              selectedGroup === 'da_ket_thuc'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            Đã kết thúc ({completedCampaigns.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Loading Skeleton State */}
+      {loading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="h-96 bg-slate-100 dark:bg-slate-900 rounded-3xl border border-slate-200/60 dark:border-slate-800/60"
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="text-center py-12 border border-dashed border-red-300 dark:border-red-900 rounded-[2.5rem] max-w-xl mx-auto space-y-4 bg-red-50/10 dark:bg-red-950/20 p-8">
+          <AlertCircle className="h-10 w-10 mx-auto text-red-500 opacity-80" />
+          <h3 className="font-display text-base font-bold text-red-800 dark:text-red-400">
+            Không thể tải dữ liệu hoạt động phong trào.
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Có lỗi xảy ra trong quá trình kết nối với cơ sở dữ liệu. Vui lòng tải lại trang hoặc thử lại sau.
+          </p>
+          <button
+            onClick={loadCampaigns}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white font-semibold text-xs hover:bg-red-700 transition-colors shadow-sm"
+          >
+            <span>Thử lại</span>
+          </button>
+        </div>
+      )}
+
+      {/* Empty State - No Campaigns At All */}
+      {!loading && !error && campaigns.length === 0 && (
+        <div className="max-w-xl mx-auto border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl p-12 text-center bg-white/50 dark:bg-slate-900/50 space-y-3">
+          <Flag className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto" />
+          <h3 className="font-display text-base font-bold text-slate-700 dark:text-slate-200">
+            Các hoạt động phong trào đang được cập nhật.
+          </h3>
+        </div>
+      )}
+
+      {/* Empty Search / Filter State */}
+      {!loading && !error && campaigns.length > 0 && filteredCampaigns.length === 0 && (
+        <div className="max-w-xl mx-auto border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl p-12 text-center bg-white/50 dark:bg-slate-900/50 space-y-3">
+          <Flag className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto" />
+          <h3 className="font-display text-base font-bold text-slate-700 dark:text-slate-200">
+            Không có hoạt động nào phù hợp với bộ lọc hiện tại.
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Thử thay đổi từ khóa tìm kiếm hoặc chọn bộ lọc trạng thái khác.
           </p>
         </div>
-      </section>
+      )}
 
-      {/* Main Content Area */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-8 space-y-8">
-        
-        {/* Search & Filter Toolbar */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm tên phong trào, từ khóa..."
-                className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
-              />
-            </div>
+      {/* Campaign List Grid */}
+      {!loading && !error && filteredCampaigns.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCampaigns.map((campaign) => {
+            const progress = getProgressPercentage(campaign.start_date, campaign.end_date);
 
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-              <button
-                onClick={() => setSelectedGroup('all')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  selectedGroup === 'all'
-                    ? 'bg-red-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
+            return (
+              <motion.article
+                key={campaign.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="group cursor-pointer flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-lg hover:border-red-500/30 transition-all duration-300 relative"
               >
-                Tất cả ({campaigns.length})
-              </button>
-              <button
-                onClick={() => setSelectedGroup('thuong_xuyen')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  selectedGroup === 'thuong_xuyen'
-                    ? 'bg-red-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                Thường xuyên ({regularCampaigns.length})
-              </button>
-              <button
-                onClick={() => setSelectedGroup('dang_dien_ra')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  selectedGroup === 'dang_dien_ra'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                Đang diễn ra ({ongoingCampaigns.length})
-              </button>
-              <button
-                onClick={() => setSelectedGroup('sap_dien_ra')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  selectedGroup === 'sap_dien_ra'
-                    ? 'bg-amber-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                Sắp diễn ra ({upcomingCampaigns.length})
-              </button>
-              <button
-                onClick={() => setSelectedGroup('da_ket_thuc')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  selectedGroup === 'da_ket_thuc'
-                    ? 'bg-slate-800 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                Đã kết thúc ({completedCampaigns.length})
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-16 space-y-3">
-            <div className="w-8 h-8 border-3 border-red-600 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-slate-500 dark:text-slate-400">Đang tải danh sách phong trào...</p>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
-          <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 text-sm flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0" />
-            <span>Không thể tải dữ liệu hoạt động phong trào.</span>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && !error && campaigns.length === 0 && (
-          <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 space-y-3">
-            <Flag className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
-            <h3 className="text-base font-bold text-slate-700 dark:text-slate-200">
-              Các hoạt động phong trào đang được cập nhật.
-            </h3>
-          </div>
-        )}
-
-        {/* Empty Search Filter State */}
-        {!loading && !error && campaigns.length > 0 && filteredCampaigns.length === 0 && (
-          <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 space-y-3">
-            <Flag className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
-            <h3 className="text-base font-bold text-slate-700 dark:text-slate-200">Không tìm thấy phong trào phù hợp</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              Thử thay đổi từ khóa tìm kiếm hoặc chọn bộ lọc trạng thái khác.
-            </p>
-          </div>
-        )}
-
-        {/* Campaign List Grid */}
-        {!loading && !error && filteredCampaigns.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCampaigns.map((campaign) => {
-              const progress = getProgressPercentage(campaign.start_date, campaign.end_date);
-
-              return (
-                <motion.article
-                  key={campaign.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="group cursor-pointer flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <Link to={`/hoat-dong/${campaign.slug}`} className="flex flex-col h-full justify-between">
-                    <div>
-                      {/* Cover Image Container */}
-                      <div className="aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800 relative">
-                        {campaign.cover_image_url ? (
-                          <img
-                            src={campaign.cover_image_url}
-                            alt={campaign.title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-500/10 to-blue-500/10">
-                            <Flag className="w-12 h-12 text-red-500/40" />
-                          </div>
-                        )}
-
-                        {/* Top Badges */}
-                        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
-                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold border backdrop-blur-md shadow-sm ${getTypeBadgeClass(campaign.campaign_type)}`}>
-                            {CAMPAIGN_TYPE_LABELS[campaign.campaign_type]}
-                          </span>
-                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold border backdrop-blur-md shadow-sm ${getStatusBadgeClass(campaign.status)}`}>
-                            {CAMPAIGN_STATUS_LABELS[campaign.status]}
-                          </span>
+                <Link to={`/hoat-dong/${campaign.slug}`} className="flex flex-col h-full justify-between">
+                  <div>
+                    {/* Cover Image Container */}
+                    <div className="aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800 relative">
+                      {campaign.cover_image_url ? (
+                        <img
+                          src={campaign.cover_image_url}
+                          alt={campaign.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-500/10 to-blue-500/10">
+                          <Flag className="w-12 h-12 text-red-500/40" />
                         </div>
+                      )}
 
-                        {campaign.is_featured && (
-                          <div className="absolute bottom-3 left-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-400 text-slate-900 text-[10px] font-extrabold uppercase shadow-sm">
-                            <Sparkles className="w-3 h-3" />
-                            Trọng tâm
-                          </div>
-                        )}
+                      {/* Top Badges */}
+                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border backdrop-blur-md shadow-sm ${getTypeBadgeClass(campaign.campaign_type)}`}>
+                          {CAMPAIGN_TYPE_LABELS[campaign.campaign_type]}
+                        </span>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border backdrop-blur-md shadow-sm ${getStatusBadgeClass(campaign.status)}`}>
+                          {CAMPAIGN_STATUS_LABELS[campaign.status]}
+                        </span>
                       </div>
 
-                      {/* Body Content */}
-                      <div className="p-5 space-y-3">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                          <span className="flex items-center space-x-1">
-                            <Calendar className="h-3.5 w-3.5 text-red-500" />
-                            <span>
-                              {campaign.start_date ? new Date(campaign.start_date).toLocaleDateString('vi-VN') : '---'}
-                              {campaign.end_date ? ` - ${new Date(campaign.end_date).toLocaleDateString('vi-VN')}` : ''}
-                            </span>
-                          </span>
-                          <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded text-[10px] font-bold">
-                            Năm học {campaign.academic_year}
-                          </span>
+                      {campaign.is_featured && (
+                        <div className="absolute bottom-3 left-3 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-900 text-[10px] font-extrabold uppercase shadow-sm">
+                          <Sparkles className="w-3 h-3" />
+                          Trọng tâm
                         </div>
-
-                        <h3 className="font-display font-bold text-base text-slate-950 group-hover:text-red-600 dark:text-slate-100 dark:group-hover:text-red-400 leading-tight line-clamp-2 transition-colors">
-                          {campaign.title}
-                        </h3>
-
-                        {campaign.summary && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed font-sans">
-                            {campaign.summary}
-                          </p>
-                        )}
-
-                        {/* Time Progress Bar */}
-                        {progress !== null && campaign.status === 'dang_dien_ra' && (
-                          <div className="space-y-1 pt-1">
-                            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                              <span>Tiến độ thời gian</span>
-                              <span className="text-red-600 dark:text-red-400 font-bold">{progress}%</span>
-                            </div>
-                            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-red-500 to-amber-500 rounded-full"
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
 
-                    {/* Card Footer */}
-                    <div className="px-5 pb-5 pt-3 border-t border-slate-50 dark:border-slate-800/60 flex items-center justify-between text-xs font-semibold">
-                      <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium">
-                        <span className="inline-flex items-center gap-1">
-                          <Layers className="w-3.5 h-3.5 text-blue-500" />
-                          {campaign.events?.length || 0} hoạt động
+                    {/* Body Content */}
+                    <div className="p-5 space-y-3">
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+                        <span className="flex items-center space-x-1">
+                          <Calendar className="h-3.5 w-3.5 text-red-500" />
+                          <span>
+                            {campaign.start_date ? new Date(campaign.start_date).toLocaleDateString('vi-VN') : '---'}
+                            {campaign.end_date ? ` - ${new Date(campaign.end_date).toLocaleDateString('vi-VN')}` : ''}
+                          </span>
                         </span>
-                        <span className="inline-flex items-center gap-1">
-                          <FileCheck className="w-3.5 h-3.5 text-emerald-500" />
-                          {campaign.evidence?.length || 0} minh chứng
+                        <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                          Năm học {campaign.academic_year}
                         </span>
                       </div>
 
-                      <span className="inline-flex items-center space-x-1 text-red-600 dark:text-red-400 font-bold group-hover:underline">
-                        <span>Chi tiết</span>
-                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                      <h3 className="font-display font-bold text-base text-slate-900 group-hover:text-red-600 dark:text-white dark:group-hover:text-red-400 leading-tight line-clamp-2 transition-colors">
+                        {campaign.title}
+                      </h3>
+
+                      {campaign.summary && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed font-sans">
+                          {campaign.summary}
+                        </p>
+                      )}
+
+                      {/* Time Progress Bar */}
+                      {progress !== null && campaign.status === 'dang_dien_ra' && (
+                        <div className="space-y-1 pt-1">
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                            <span>Tiến độ thời gian</span>
+                            <span className="text-red-600 dark:text-red-400 font-bold">{progress}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-red-500 to-amber-500 rounded-full"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Footer */}
+                  <div className="px-5 pb-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-semibold">
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium">
+                      <span className="inline-flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5 text-blue-500" />
+                        {campaign.events?.length || 0} hoạt động
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <FileCheck className="w-3.5 h-3.5 text-emerald-500" />
+                        {campaign.evidence?.length || 0} minh chứng
                       </span>
                     </div>
-                  </Link>
-                </motion.article>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+                    <span className="inline-flex items-center space-x-1 text-red-600 dark:text-red-400 font-bold group-hover:underline">
+                      <span>Chi tiết</span>
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                    </span>
+                  </div>
+                </Link>
+              </motion.article>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
