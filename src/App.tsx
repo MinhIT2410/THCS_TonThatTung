@@ -32,9 +32,12 @@ import AdminCmsPage from './pages/admin/AdminCmsPage';
 import AdminAboutPage from './pages/admin/AdminAboutPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminMovementsPage from './pages/admin/AdminMovementsPage';
 import NewsDetailPage from './pages/NewsDetailPage';
 import AlbumDetailPage from './pages/AlbumDetailPage';
 import AboutDetailPage from './pages/AboutDetailPage';
+import MovementsPage from './pages/MovementsPage';
+import MovementDetailPage from './pages/MovementDetailPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { RoleGuard } from './components/auth/RoleGuard';
 import { AccessDenied } from './components/auth/AccessDenied';
@@ -65,6 +68,7 @@ function AppContent() {
     if (pathname === ROUTES.ABOUT) return 'about';
     if (pathname === ROUTES.NEWS) return 'news';
     if (pathname === ROUTES.ACTIVITIES) return 'activities';
+    if (pathname === ROUTES.MOVEMENTS || pathname.startsWith('/hoat-dong-phong-trao')) return 'movements';
     if (pathname === ROUTES.GALLERY) return 'gallery';
     if (pathname === ROUTES.DOCUMENTS) return 'documents';
     if (pathname === ROUTES.CONTACT) return 'contact';
@@ -213,6 +217,7 @@ function AppContent() {
     else if (viewId === 'about') navigate(ROUTES.ABOUT);
     else if (viewId === 'news') navigate(ROUTES.NEWS);
     else if (viewId === 'activities') navigate(ROUTES.ACTIVITIES);
+    else if (viewId === 'movements') navigate(ROUTES.MOVEMENTS);
     else if (viewId === 'gallery') navigate(ROUTES.GALLERY);
     else if (viewId === 'documents') navigate(ROUTES.DOCUMENTS);
     else if (viewId === 'contact') navigate(ROUTES.CONTACT);
@@ -293,6 +298,8 @@ function AppContent() {
           <Route path={ROUTES.NEWS} element={<NewsPage />} />
           <Route path={`${ROUTES.NEWS}/:slug`} element={<NewsDetailPage />} />
           <Route path={ROUTES.ACTIVITIES} element={<ActivitiesPage />} />
+          <Route path={ROUTES.MOVEMENTS} element={<MovementsPage />} />
+          <Route path={`${ROUTES.MOVEMENTS}/:slug`} element={<MovementDetailPage />} />
           <Route path={ROUTES.GALLERY} element={<GalleryPage />} />
           <Route path={`${ROUTES.GALLERY}/:id`} element={<AlbumDetailPage />} />
           <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
@@ -316,6 +323,7 @@ function AppContent() {
         >
           <Route index element={<AdminDashboardPage />} />
           <Route path="tin-tuc" element={<AdminNewsPage />} />
+          <Route path="hoat-dong-phong-trao" element={<AdminMovementsPage />} />
           <Route path="tai-lieu" element={<AdminDocumentsPage />} />
           <Route path="album" element={<AdminAlbumsPage />} />
           <Route path="gioi-thieu" element={<AdminAboutPage />} />

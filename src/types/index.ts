@@ -77,3 +77,5 @@ export interface AchievementItem {
   description: string;
   badge: string;
 }
+
+export * from './movement';
