@@ -309,9 +309,7 @@ export default function Header({
                   }`}
                 >
                   <Settings className="h-5 w-5" />
-                  <span>
-                    {isAuthenticated ? (isAdminUser ? 'Mở trang quản trị' : 'Mở trang tài khoản') : 'Vào Chế độ quản trị'}
-                  </span>
+                  <span>Quản trị</span>
                 </button>
               </div>
             </div>

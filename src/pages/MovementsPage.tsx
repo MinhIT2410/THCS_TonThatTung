@@ -153,7 +153,7 @@ export default function MovementsPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.15),transparent_60%)]" />
         <div className="relative mx-auto max-w-3xl space-y-3">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
-            Hoạt Động Phong Trào
+            Phong trào & Hoạt động
           </h1>
           <p className="text-red-100 text-sm sm:text-base leading-relaxed">
             Nơi quản lý, theo dõi các chương trình thi đua, đợt vận động và hoạt động trọng tâm trong năm học của Liên đội THCS Tôn Thất Tùng.
@@ -287,7 +287,7 @@ export default function MovementsPage() {
                   transition={{ duration: 0.3 }}
                   className="group cursor-pointer flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm hover:shadow-md transition-all duration-200"
                 >
-                  <Link to={`/hoat-dong-phong-trao/${campaign.slug}`} className="flex flex-col h-full justify-between">
+                  <Link to={`/hoat-dong/${campaign.slug}`} className="flex flex-col h-full justify-between">
                     <div>
                       {/* Cover Image Container */}
                       <div className="aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800 relative">

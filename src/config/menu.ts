@@ -32,12 +32,6 @@ export const NAV_MENU: MenuItem[] = [
     showInNavbar: true,
   },
   {
-    title: 'Phong trào',
-    path: ROUTES.MOVEMENTS,
-    id: 'movements',
-    showInNavbar: true,
-  },
-  {
     title: 'Thư viện ảnh',
     path: ROUTES.GALLERY,
     id: 'gallery',

@@ -109,11 +109,11 @@ export default function MovementDetailPage() {
             Vui lòng kiểm tra lại đường dẫn hoặc quay lại danh sách phong trào Đội.
           </p>
           <Link
-            to="/hoat-dong-phong-trao"
+            to="/hoat-dong"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Trở về Hoạt động phong trào</span>
+            <span>Trở về Hoạt động</span>
           </Link>
         </div>
       </div>
@@ -131,7 +131,7 @@ export default function MovementDetailPage() {
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 overflow-hidden">
             <Link to="/" className="hover:text-red-600 transition-colors shrink-0">Trang chủ</Link>
             <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            <Link to="/hoat-dong-phong-trao" className="hover:text-red-600 transition-colors shrink-0">Phong trào</Link>
+            <Link to="/hoat-dong" className="hover:text-red-600 transition-colors shrink-0">Hoạt động</Link>
             <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
             <span className="truncate font-medium text-slate-800 dark:text-slate-200">{campaign.title}</span>
           </div>
@@ -380,11 +380,11 @@ export default function MovementDetailPage() {
         {/* Back Link */}
         <div className="pt-4 text-center">
           <Link
-            to="/hoat-dong-phong-trao"
+            to="/hoat-dong"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Quay lại Danh sách phong trào</span>
+            <span>Quay lại Danh sách hoạt động</span>
           </Link>
         </div>
 

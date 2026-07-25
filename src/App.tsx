@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, X, FileText, Calendar, FileCode, ArrowRight, AlertCircle 
@@ -67,8 +67,7 @@ function AppContent() {
     if (pathname === ROUTES.HOME) return 'home';
     if (pathname === ROUTES.ABOUT) return 'about';
     if (pathname === ROUTES.NEWS) return 'news';
-    if (pathname === ROUTES.ACTIVITIES) return 'activities';
-    if (pathname === ROUTES.MOVEMENTS || pathname.startsWith('/hoat-dong-phong-trao')) return 'movements';
+    if (pathname === ROUTES.ACTIVITIES || pathname.startsWith('/hoat-dong') || pathname === ROUTES.MOVEMENTS || pathname.startsWith('/hoat-dong-phong-trao')) return 'activities';
     if (pathname === ROUTES.GALLERY) return 'gallery';
     if (pathname === ROUTES.DOCUMENTS) return 'documents';
     if (pathname === ROUTES.CONTACT) return 'contact';
@@ -297,8 +296,9 @@ function AppContent() {
           <Route path={`${ROUTES.ABOUT}/:slug`} element={<AboutDetailPage />} />
           <Route path={ROUTES.NEWS} element={<NewsPage />} />
           <Route path={`${ROUTES.NEWS}/:slug`} element={<NewsDetailPage />} />
-          <Route path={ROUTES.ACTIVITIES} element={<ActivitiesPage />} />
-          <Route path={ROUTES.MOVEMENTS} element={<MovementsPage />} />
+          <Route path={ROUTES.ACTIVITIES} element={<MovementsPage />} />
+          <Route path={`${ROUTES.ACTIVITIES}/:slug`} element={<MovementDetailPage />} />
+          <Route path={ROUTES.MOVEMENTS} element={<Navigate to={ROUTES.ACTIVITIES} replace />} />
           <Route path={`${ROUTES.MOVEMENTS}/:slug`} element={<MovementDetailPage />} />
           <Route path={ROUTES.GALLERY} element={<GalleryPage />} />
           <Route path={`${ROUTES.GALLERY}/:id`} element={<AlbumDetailPage />} />
