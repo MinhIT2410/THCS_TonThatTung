@@ -37,9 +37,9 @@ export function MovementTimelineTreeSvg({
   const firstNodeX = sidePadding + itemWidth / 2;
   const lastNodeX = sidePadding + (count - 1) * (itemWidth + gap) + itemWidth / 2;
 
-  // Trunk bounds: starts ~60px before first node, ends ~60px after last node
-  const trunkStartX = Math.max(15, firstNodeX - 60);
-  const trunkEndX = lastNodeX + 60;
+  // Trunk bounds: starts ~50px before first node, ends ~50px after last node
+  const trunkStartX = Math.max(15, firstNodeX - 50);
+  const trunkEndX = lastNodeX + 50;
 
   return (
     <svg
