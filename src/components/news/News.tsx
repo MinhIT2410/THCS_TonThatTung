@@ -13,6 +13,9 @@ interface NewsProps {
   selectedItem: NewsItem | null;
   onSelectItem: (item: NewsItem | null) => void;
   onIncrementViews: (id: string) => void;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 type CategoryFilter = 'Tất cả' | 'Học tập' | 'Rèn luyện' | 'Sự kiện' | 'Gương sáng';
@@ -21,7 +24,10 @@ export default function News({
   news,
   selectedItem,
   onSelectItem,
-  onIncrementViews
+  onIncrementViews,
+  loading = false,
+  error = null,
+  onRetry
 }: NewsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('Tất cả');
@@ -129,7 +135,7 @@ export default function News({
       </div>
 
       {/* News Content Area */}
-      {isLoading ? (
+      {(loading || isLoading) ? (
         // Skeleton Skeletons for Loading State
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map((n) => (
@@ -143,6 +149,21 @@ export default function News({
               </div>
             </div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 border border-dashed border-red-300 dark:border-red-900 rounded-3xl max-w-xl mx-auto space-y-4 bg-red-50/10 dark:bg-red-950/20 p-8">
+          <AlertCircle className="h-10 w-10 mx-auto text-red-500 opacity-80" />
+          <h3 className="font-display text-base font-bold text-red-800 dark:text-red-400">
+            {error}
+          </h3>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold text-xs hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              <span>Thử lại</span>
+            </button>
+          )}
         </div>
       ) : filteredNews.length === 0 ? (
         // Empty Search Results View

@@ -10,11 +10,19 @@ import { DocumentItem } from '../../types';
 
 interface DocumentsProps {
   documents: DocumentItem[];
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 type DocCategory = 'Tất cả' | 'Kế hoạch' | 'Công văn' | 'Biểu mẫu' | 'Quyết định' | 'Khác';
 
-export default function Documents({ documents }: DocumentsProps) {
+export default function Documents({
+  documents,
+  loading = false,
+  error = null,
+  onRetry
+}: DocumentsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<DocCategory>('Tất cả');
   
@@ -118,7 +126,28 @@ export default function Documents({ documents }: DocumentsProps) {
       </div>
 
       {/* Documents List */}
-      {filteredDocs.length === 0 ? (
+      {loading ? (
+        <div className="space-y-4 animate-pulse">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-16 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/60" />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 border border-dashed border-red-300 dark:border-red-900 rounded-3xl max-w-xl mx-auto space-y-4 bg-red-50/10 dark:bg-red-950/20 p-8">
+          <AlertCircle className="h-10 w-10 mx-auto text-red-500 opacity-80" />
+          <h3 className="font-display text-base font-bold text-red-800 dark:text-red-400">
+            {error}
+          </h3>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white font-semibold text-xs hover:bg-red-700 transition-colors shadow-sm"
+            >
+              <span>Thử lại</span>
+            </button>
+          )}
+        </div>
+      ) : filteredDocs.length === 0 ? (
         <div className="text-center py-16 space-y-3 max-w-sm mx-auto">
           <AlertCircle className="h-10 w-10 text-slate-400 mx-auto" />
           <h3 className="font-display font-bold text-slate-800 dark:text-slate-200">Không tìm thấy tài liệu nào</h3>

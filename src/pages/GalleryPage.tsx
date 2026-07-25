@@ -5,12 +5,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Folder, Calendar, Sparkles } from 'lucide-react';
+import { Folder, Calendar, Sparkles, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { albumApi } from '../features/albums/albumApi';
 import { Album } from '../features/albums/albumTypes';
-import LoadingState from '../components/common/LoadingState';
-import ErrorState from '../components/common/ErrorState';
 
 export default function GalleryPage() {
   const navigate = useNavigate();
@@ -36,14 +34,6 @@ export default function GalleryPage() {
     loadAlbums();
   }, []);
 
-  if (loading) {
-    return <LoadingState message="Đang tải danh sách album ảnh..." />;
-  }
-
-  if (error) {
-    return <ErrorState message={error} onRetry={loadAlbums} />;
-  }
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-10 pb-24" id="gallery-page">
       {/* Header */}
@@ -59,8 +49,27 @@ export default function GalleryPage() {
         </p>
       </div>
 
-      {/* Albums Grid */}
-      {albums.length === 0 ? (
+      {/* Content Section */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pt-4 animate-pulse">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-72 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/60" />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 border border-dashed border-red-300 dark:border-red-900 rounded-3xl max-w-xl mx-auto space-y-4 bg-red-50/10 dark:bg-red-950/20 p-8">
+          <AlertCircle className="h-10 w-10 mx-auto text-red-500 opacity-80" />
+          <h3 className="font-display text-base font-bold text-red-800 dark:text-red-400">
+            {error}
+          </h3>
+          <button
+            onClick={loadAlbums}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold text-xs hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <span>Thử lại</span>
+          </button>
+        </div>
+      ) : albums.length === 0 ? (
         <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/30 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl max-w-md mx-auto p-8 space-y-3">
           <Folder className="h-10 w-10 text-slate-300 dark:text-slate-700 mx-auto" />
           <h3 className="font-bold text-slate-700 dark:text-slate-300">Chưa có album ảnh nào</h3>

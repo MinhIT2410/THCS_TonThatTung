@@ -8,8 +8,6 @@ import Documents from '../components/documents/Documents';
 import { DocumentItem } from '../types';
 import { documentApi } from '../features/documents/documentApi';
 import { SchoolDocument, DocumentCategory } from '../features/documents/documentTypes';
-import LoadingState from '../components/common/LoadingState';
-import ErrorState from '../components/common/ErrorState';
 
 export default function DocumentsPage() {
   const [dbDocuments, setDbDocuments] = useState<SchoolDocument[]>([]);
@@ -83,15 +81,12 @@ export default function DocumentsPage() {
     };
   });
 
-  if (isLoading) {
-    return <LoadingState message="Đang tải kho văn bản - tài liệu..." />;
-  }
-
-  if (error) {
-    return <ErrorState message={error} onRetry={fetchDocs} />;
-  }
-
   return (
-    <Documents documents={formattedDocuments} />
+    <Documents
+      documents={formattedDocuments}
+      loading={isLoading}
+      error={error}
+      onRetry={fetchDocs}
+    />
   );
 }

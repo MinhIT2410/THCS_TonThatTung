@@ -5,7 +5,6 @@
 
 import React, { useContext } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import EditToolbar from '../components/editable/EditToolbar';
@@ -58,19 +57,9 @@ export default function Layout() {
         schoolName={schoolName}
       />
 
-      {/* Main content area with smooth page transition animations */}
+      {/* Main content area */}
       <main className="flex-grow">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-          >
-            <Outlet context={context} />
-          </motion.div>
-        </AnimatePresence>
+        <Outlet context={context} />
       </main>
 
       {/* Footer Section */}

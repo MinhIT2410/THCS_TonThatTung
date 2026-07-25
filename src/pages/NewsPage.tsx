@@ -8,8 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import News from '../components/news/News';
 import { NewsItem } from '../types';
 import { newsApi } from '../features/news/newsApi';
-import LoadingState from '../components/common/LoadingState';
-import ErrorState from '../components/common/ErrorState';
 import { NEWS_CATEGORY_CONFIG } from '../features/news/newsCategories';
 
 export default function NewsPage() {
@@ -51,17 +49,12 @@ export default function NewsPage() {
     loadNews();
   }, []);
 
-  if (loading) {
-    return <LoadingState message="Đang tải tin bài hoạt động..." />;
-  }
-
-  if (error) {
-    return <ErrorState message={error} onRetry={loadNews} />;
-  }
-
   return (
     <News
       news={news}
+      loading={loading}
+      error={error}
+      onRetry={loadNews}
       selectedItem={null}
       onSelectItem={(item) => {
         if (item && item.slug) {
