@@ -239,9 +239,9 @@ export default function MovementsPage() {
   }, [timelineCampaigns]);
 
   // Calculations for Desktop Timeline SVG alignment
-  const ITEM_WIDTH = 210;
-  const ITEM_GAP = 80;
-  const BASE_SIDE_PADDING = 80;
+  const ITEM_WIDTH = 200;
+  const ITEM_GAP = 48;
+  const BASE_SIDE_PADDING = 60;
   const timelineCount = displayTimelineCampaigns.length;
   const rawTimelineWidth =
     BASE_SIDE_PADDING * 2 +
