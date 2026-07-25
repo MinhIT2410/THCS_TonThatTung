@@ -29,7 +29,17 @@ export function MovementTimelineTreeSvg({
   colors = TIMELINE_COLORS,
   className = '',
 }: MovementTimelineTreeSvgProps) {
-  const height = 160;
+  const height = 120;
+  const y = 60;
+
+  if (count <= 0) return null;
+
+  const firstNodeX = sidePadding + itemWidth / 2;
+  const lastNodeX = sidePadding + (count - 1) * (itemWidth + gap) + itemWidth / 2;
+
+  // Trunk bounds: starts ~80px before first node, ends ~80px after last node
+  const trunkStartX = Math.max(15, firstNodeX - 80);
+  const trunkEndX = lastNodeX + 80;
 
   return (
     <svg
@@ -38,66 +48,48 @@ export function MovementTimelineTreeSvg({
       className={`w-full overflow-visible pointer-events-none ${className}`}
     >
       <defs>
-        {/* Symmetric Oval Leaf Path with pointed ends (~25-35% larger) */}
+        {/* Pointed Leaf Shape without stem (~36px length, ~21px width) */}
         <path
           id="timeline-leaf-shape"
-          d="M 0 0 C 15 -20 40 -20 56 0 C 40 20 15 20 0 0 Z"
+          d="M 0 0 C 10 -14 26 -14 36 0 C 26 14 10 14 0 0 Z"
         />
       </defs>
 
-      {/* Main horizontal tree trunk line (thick black line) */}
+      {/* Main horizontal tree trunk line (thick 7.5px black line) */}
       <path
-        d={`M 25 80 H ${width - 55}`}
+        d={`M ${trunkStartX} ${y} H ${trunkEndX}`}
         stroke="currentColor"
-        strokeWidth="8"
+        strokeWidth="7.5"
         strokeLinecap="round"
         className="text-[#0b0b0b] dark:text-slate-100"
       />
 
-      {/* Nodes & Leaf clusters for each timeline item */}
+      {/* Nodes & Stemless Leaf clusters for each timeline item */}
       {Array.from({ length: count }).map((_, idx) => {
         const isEven = idx % 2 === 0;
         const color = colors[idx % colors.length];
         const x = sidePadding + idx * (itemWidth + gap) + itemWidth / 2;
-        const y = 80;
 
         return (
           <g key={idx}>
-            {/* 1. Branch stem & leaves */}
+            {/* Stemless Leaves placed directly around node (no stem lines) */}
             {isEven ? (
-              /* TOP CLUSTER (Lá chính hướng LÊN) */
+              /* TOP NODE LEAVES */
               <g>
-                {/* Short stem curve */}
-                <path
-                  d={`M ${x} ${y} Q ${x - 8} ${y - 18} ${x - 18} ${y - 36}`}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  className="text-[#0b0b0b] dark:text-slate-100"
-                />
-                {/* Main colored leaf */}
-                <g transform={`translate(${x - 18}, ${y - 36}) rotate(-65)`}>
+                {/* Main colored leaf (Top) */}
+                <g transform={`translate(${x - 10}, ${y - 24}) rotate(-55)`}>
                   <use href="#timeline-leaf-shape" fill={color} />
                 </g>
-                {/* Secondary small black leaf 1 (Top Right) */}
-                <g transform={`translate(${x + 18}, ${y - 30}) rotate(-25) scale(0.5)`}>
+                {/* Secondary small black leaf 1 (Top-Right) */}
+                <g transform={`translate(${x + 12}, ${y - 18}) rotate(-20) scale(0.48)`}>
                   <use
                     href="#timeline-leaf-shape"
                     fill="currentColor"
                     className="text-[#0b0b0b] dark:text-slate-100"
                   />
                 </g>
-                {/* Secondary small black leaf 2 (Bottom Left) */}
-                <g transform={`translate(${x - 22}, ${y - 10}) rotate(140) scale(0.5)`}>
-                  <use
-                    href="#timeline-leaf-shape"
-                    fill="currentColor"
-                    className="text-[#0b0b0b] dark:text-slate-100"
-                  />
-                </g>
-                {/* Secondary small black leaf 3 (Bottom Right) */}
-                <g transform={`translate(${x + 20}, ${y + 14}) rotate(35) scale(0.5)`}>
+                {/* Secondary small black leaf 2 (Bottom-Right) */}
+                <g transform={`translate(${x + 14}, ${y + 10}) rotate(35) scale(0.48)`}>
                   <use
                     href="#timeline-leaf-shape"
                     fill="currentColor"
@@ -106,39 +98,22 @@ export function MovementTimelineTreeSvg({
                 </g>
               </g>
             ) : (
-              /* BOTTOM CLUSTER (Lá chính hướng DƯỚI) */
+              /* BOTTOM NODE LEAVES */
               <g>
-                {/* Short stem curve */}
-                <path
-                  d={`M ${x} ${y} Q ${x + 8} ${y + 18} ${x + 18} ${y + 36}`}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  className="text-[#0b0b0b] dark:text-slate-100"
-                />
-                {/* Main colored leaf */}
-                <g transform={`translate(${x + 18}, ${y + 36}) rotate(115)`}>
+                {/* Main colored leaf (Bottom) */}
+                <g transform={`translate(${x + 8}, ${y + 24}) rotate(125)`}>
                   <use href="#timeline-leaf-shape" fill={color} />
                 </g>
-                {/* Secondary small black leaf 1 (Top Left) */}
-                <g transform={`translate(${x - 22}, ${y - 12}) rotate(-140) scale(0.5)`}>
+                {/* Secondary small black leaf 1 (Top-Left) */}
+                <g transform={`translate(${x - 14}, ${y - 18}) rotate(-140) scale(0.48)`}>
                   <use
                     href="#timeline-leaf-shape"
                     fill="currentColor"
                     className="text-[#0b0b0b] dark:text-slate-100"
                   />
                 </g>
-                {/* Secondary small black leaf 2 (Top Right) */}
-                <g transform={`translate(${x + 18}, ${y - 30}) rotate(-25) scale(0.5)`}>
-                  <use
-                    href="#timeline-leaf-shape"
-                    fill="currentColor"
-                    className="text-[#0b0b0b] dark:text-slate-100"
-                  />
-                </g>
-                {/* Secondary small black leaf 3 (Bottom Left) */}
-                <g transform={`translate(${x - 22}, ${y + 14}) rotate(140) scale(0.5)`}>
+                {/* Secondary small black leaf 2 (Bottom-Left) */}
+                <g transform={`translate(${x - 14}, ${y + 10}) rotate(140) scale(0.48)`}>
                   <use
                     href="#timeline-leaf-shape"
                     fill="currentColor"
@@ -148,7 +123,7 @@ export function MovementTimelineTreeSvg({
               </g>
             )}
 
-            {/* 2. Center Node circle on the trunk (diameter 17px) */}
+            {/* Center Node circle on the trunk (diameter 17px) */}
             <circle
               cx={x}
               cy={y}
@@ -163,12 +138,13 @@ export function MovementTimelineTreeSvg({
         );
       })}
 
-      {/* End leaf arrowhead at right tip of tree branch (length 50px, height 24px) */}
+      {/* End leaf arrowhead at right tip of tree trunk */}
       <path
-        d={`M ${width - 55} 80 C ${width - 40} 68, ${width - 15} 68, ${width - 5} 80 C ${width - 15} 92, ${width - 40} 92, ${width - 55} 80 Z`}
+        d={`M ${trunkEndX} ${y} C ${trunkEndX + 15} ${y - 12}, ${trunkEndX + 35} ${y - 12}, ${trunkEndX + 45} ${y} C ${trunkEndX + 35} ${y + 12}, ${trunkEndX + 15} ${y + 12}, ${trunkEndX} ${y} Z`}
         fill="currentColor"
         className="text-[#0b0b0b] dark:text-slate-100"
       />
     </svg>
   );
 }
+

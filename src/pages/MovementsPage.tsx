@@ -240,8 +240,8 @@ export default function MovementsPage() {
 
   // Calculations for Desktop Timeline SVG alignment
   const ITEM_WIDTH = 210;
-  const ITEM_GAP = 24;
-  const BASE_SIDE_PADDING = 60;
+  const ITEM_GAP = 80;
+  const BASE_SIDE_PADDING = 80;
   const timelineCount = displayTimelineCampaigns.length;
   const rawTimelineWidth =
     BASE_SIDE_PADDING * 2 +
@@ -342,7 +342,7 @@ export default function MovementsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-16 pb-24 font-sans relative min-h-[60vh]">
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-12 pb-20 font-sans relative min-h-[60vh]">
       {/* 1. Static Page Header */}
       <div className="text-center max-w-3xl mx-auto space-y-3">
         <span className="text-xs font-extrabold text-red-600 dark:text-red-400 uppercase tracking-widest bg-red-50 dark:bg-red-950/40 px-3.5 py-1.5 rounded-full inline-block border border-red-200/30">
@@ -376,7 +376,7 @@ export default function MovementsPage() {
       )}
 
       {/* 2. SECTION: Cây Timeline hoạt động theo mốc */}
-      <section className="space-y-8">
+      <section className="space-y-6">
         <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -415,85 +415,87 @@ export default function MovementsPage() {
         {!loading && !error && displayTimelineCampaigns.length > 0 && (
           <div>
             {/* Desktop / Tablet Horizontal Tree Timeline (3-row layout) */}
-            <div className="hidden md:block w-full overflow-x-auto pb-8 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
-              <div
-                className="relative py-4 flex flex-col justify-center"
-                style={{ width: `${timelineCanvasWidth}px` }}
-              >
-                {/* HÀNG 1: CÁC CARD PHÍA TRÊN (Card index chẵn: 0, 2, 4, 6, ...) */}
+            <div className="hidden md:block w-full overflow-x-auto pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex justify-center w-full">
                 <div
-                  className="grid pb-2 min-h-[220px]"
-                  style={{
-                    gridTemplateColumns: `repeat(${timelineCount}, ${ITEM_WIDTH}px)`,
-                    columnGap: `${ITEM_GAP}px`,
-                    paddingLeft: `${effectiveTimelineSidePadding}px`,
-                    paddingRight: `${effectiveTimelineSidePadding}px`,
-                  }}
+                  className="relative py-2 flex flex-col justify-center"
+                  style={{ width: `${timelineCanvasWidth}px` }}
                 >
-                  {displayTimelineCampaigns.map((campaign, idx) => {
-                    const isEven = idx % 2 === 0;
-                    const theme = COLOR_THEMES[idx % COLOR_THEMES.length];
-                    return (
-                      <div key={campaign.id} className="flex justify-center w-full">
-                        {isEven ? (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: idx * 0.04 }}
-                            className="w-full"
-                          >
-                            {renderTimelineCard(campaign, theme, true)}
-                          </motion.div>
-                        ) : (
-                          <div className="w-full" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                  {/* HÀNG 1: CÁC CARD PHÍA TRÊN (Card index chẵn: 0, 2, 4, 6, ...) */}
+                  <div
+                    className="grid pb-1 min-h-[185px]"
+                    style={{
+                      gridTemplateColumns: `repeat(${timelineCount}, ${ITEM_WIDTH}px)`,
+                      columnGap: `${ITEM_GAP}px`,
+                      paddingLeft: `${effectiveTimelineSidePadding}px`,
+                      paddingRight: `${effectiveTimelineSidePadding}px`,
+                    }}
+                  >
+                    {displayTimelineCampaigns.map((campaign, idx) => {
+                      const isEven = idx % 2 === 0;
+                      const theme = COLOR_THEMES[idx % COLOR_THEMES.length];
+                      return (
+                        <div key={campaign.id} className="flex justify-center w-full">
+                          {isEven ? (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: idx * 0.04 }}
+                              className="w-full"
+                            >
+                              {renderTimelineCard(campaign, theme, true)}
+                            </motion.div>
+                          ) : (
+                            <div className="w-full" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
 
-                {/* HÀNG 2: SINGLE SVG CÂY TIMELINE (MovementTimelineTreeSvg) */}
-                <div className="w-full py-1">
-                  <MovementTimelineTreeSvg
-                    count={timelineCount}
-                    width={timelineCanvasWidth}
-                    itemWidth={ITEM_WIDTH}
-                    gap={ITEM_GAP}
-                    sidePadding={effectiveTimelineSidePadding}
-                    colors={COLOR_THEMES.map((t) => t.hex)}
-                  />
-                </div>
+                  {/* HÀNG 2: SINGLE SVG CÂY TIMELINE (MovementTimelineTreeSvg) */}
+                  <div className="w-full py-0">
+                    <MovementTimelineTreeSvg
+                      count={timelineCount}
+                      width={timelineCanvasWidth}
+                      itemWidth={ITEM_WIDTH}
+                      gap={ITEM_GAP}
+                      sidePadding={effectiveTimelineSidePadding}
+                      colors={COLOR_THEMES.map((t) => t.hex)}
+                    />
+                  </div>
 
-                {/* HÀNG 3: CÁC CARD PHÍA DƯỚI (Card index lẻ: 1, 3, 5, 7, ...) */}
-                <div
-                  className="grid pt-2 min-h-[220px]"
-                  style={{
-                    gridTemplateColumns: `repeat(${timelineCount}, ${ITEM_WIDTH}px)`,
-                    columnGap: `${ITEM_GAP}px`,
-                    paddingLeft: `${effectiveTimelineSidePadding}px`,
-                    paddingRight: `${effectiveTimelineSidePadding}px`,
-                  }}
-                >
-                  {displayTimelineCampaigns.map((campaign, idx) => {
-                    const isEven = idx % 2 === 0;
-                    const theme = COLOR_THEMES[idx % COLOR_THEMES.length];
-                    return (
-                      <div key={campaign.id} className="flex justify-center w-full">
-                        {!isEven ? (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: idx * 0.04 }}
-                            className="w-full"
-                          >
-                            {renderTimelineCard(campaign, theme, false)}
-                          </motion.div>
-                        ) : (
-                          <div className="w-full" />
-                        )}
-                      </div>
-                    );
-                  })}
+                  {/* HÀNG 3: CÁC CARD PHÍA DƯỚI (Card index lẻ: 1, 3, 5, 7, ...) */}
+                  <div
+                    className="grid pt-1 min-h-[185px]"
+                    style={{
+                      gridTemplateColumns: `repeat(${timelineCount}, ${ITEM_WIDTH}px)`,
+                      columnGap: `${ITEM_GAP}px`,
+                      paddingLeft: `${effectiveTimelineSidePadding}px`,
+                      paddingRight: `${effectiveTimelineSidePadding}px`,
+                    }}
+                  >
+                    {displayTimelineCampaigns.map((campaign, idx) => {
+                      const isEven = idx % 2 === 0;
+                      const theme = COLOR_THEMES[idx % COLOR_THEMES.length];
+                      return (
+                        <div key={campaign.id} className="flex justify-center w-full">
+                          {!isEven ? (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: idx * 0.04 }}
+                              className="w-full"
+                            >
+                              {renderTimelineCard(campaign, theme, false)}
+                            </motion.div>
+                          ) : (
+                            <div className="w-full" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
