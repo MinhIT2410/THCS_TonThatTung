@@ -17,6 +17,7 @@ import {
   FileCheck
 } from 'lucide-react';
 import { movementService } from '../services/movementService';
+import { MovementTimelineTreeSvg } from '../components/activity/MovementTimelineTreeSvg';
 import {
   MovementCampaign,
   CampaignType,
@@ -25,50 +26,172 @@ import {
   CAMPAIGN_STATUS_LABELS
 } from '../types/movement';
 
-// Cohesive color themes for Tree Timeline nodes & leaf accents
+// Cohesive color themes matching the reference timeline image
 const COLOR_THEMES = [
   {
-    name: 'emerald',
-    badgeBg: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-    nodeBg: 'bg-emerald-600 text-white ring-emerald-100 dark:ring-emerald-900',
-    leafColor: '#10b981',
-    textAccent: 'text-emerald-600 dark:text-emerald-400',
+    name: 'light-blue',
+    hex: '#3b82f6',
+    textColor: 'text-blue-600 dark:text-blue-400',
+    badgeBg: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
   },
   {
-    name: 'amber',
-    badgeBg: 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-    nodeBg: 'bg-amber-600 text-white ring-amber-100 dark:ring-amber-900',
-    leafColor: '#f59e0b',
-    textAccent: 'text-amber-600 dark:text-amber-400',
+    name: 'dark-blue',
+    hex: '#1e40af',
+    textColor: 'text-indigo-800 dark:text-indigo-400',
+    badgeBg: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
   },
   {
-    name: 'blue',
-    badgeBg: 'bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-    nodeBg: 'bg-blue-600 text-white ring-blue-100 dark:ring-blue-900',
-    leafColor: '#3b82f6',
-    textAccent: 'text-blue-600 dark:text-blue-400',
+    name: 'maroon',
+    hex: '#9f1239',
+    textColor: 'text-rose-900 dark:text-rose-400',
+    badgeBg: 'bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-300 border-rose-200 dark:border-rose-800',
   },
   {
-    name: 'purple',
+    name: 'cyan',
+    hex: '#0891b2',
+    textColor: 'text-cyan-700 dark:text-cyan-400',
+    badgeBg: 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
+  },
+  {
+    name: 'coral',
+    hex: '#ef4444',
+    textColor: 'text-red-600 dark:text-red-400',
+    badgeBg: 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
+  },
+  {
+    name: 'plum',
+    hex: '#6b21a8',
+    textColor: 'text-purple-800 dark:text-purple-400',
     badgeBg: 'bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-    nodeBg: 'bg-purple-600 text-white ring-purple-100 dark:ring-purple-900',
-    leafColor: '#a855f7',
-    textAccent: 'text-purple-600 dark:text-purple-400',
   },
   {
-    name: 'crimson',
-    badgeBg: 'bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-    nodeBg: 'bg-rose-600 text-white ring-rose-100 dark:ring-rose-900',
-    leafColor: '#f43f5e',
-    textAccent: 'text-rose-600 dark:text-rose-400',
+    name: 'orange',
+    hex: '#f97316',
+    textColor: 'text-orange-600 dark:text-orange-400',
+    badgeBg: 'bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800',
   },
   {
-    name: 'teal',
-    badgeBg: 'bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800',
-    nodeBg: 'bg-teal-600 text-white ring-teal-100 dark:ring-teal-900',
-    leafColor: '#14b8a6',
-    textAccent: 'text-teal-600 dark:text-teal-400',
+    name: 'lime',
+    hex: '#65a30d',
+    textColor: 'text-lime-700 dark:text-lime-400',
+    badgeBg: 'bg-lime-50 dark:bg-lime-950/60 text-lime-800 dark:text-lime-300 border-lime-200 dark:border-lime-800',
   }
+];
+
+// Development / Preview 8-milestone placeholder items if real timeline data has fewer items
+const DEMO_PREVIEW_CAMPAIGN_ITEMS: MovementCampaign[] = [
+  {
+    id: 'demo-1',
+    title: 'Chương trình "Khởi động năm học mới 2024 - 2025"',
+    summary: 'Phát động phong trào thi đua học tập và rèn luyện Đội viên đầu năm học.',
+    campaign_type: 'cao_diem',
+    status: 'dang_dien_ra',
+    start_date: '2024-09-05',
+    end_date: '2024-09-30',
+    slug: 'khoi-dong-nam-hoc',
+    is_featured: false,
+    is_published: true,
+    display_order: 1,
+    academic_year: '2024-2025',
+  },
+  {
+    id: 'demo-2',
+    title: 'Hội thu Kế hoạch nhỏ đợt 1',
+    summary: 'Quyên góp giấy vụn, vỏ lon gây quỹ học bổng "Thắp sáng giấc mơ thiếu nhi".',
+    campaign_type: 'cuoc_thi',
+    status: 'sap_dien_ra',
+    start_date: '2024-10-15',
+    end_date: '2024-10-25',
+    slug: 'ke-hoach-nho-dot-1',
+    is_featured: false,
+    is_published: true,
+    display_order: 2,
+    academic_year: '2024-2025',
+  },
+  {
+    id: 'demo-3',
+    title: 'Thi đua Chào mừng Ngày Nhà giáo Việt Nam 20/11',
+    summary: 'Hội thi làm báo tường, hoa điểm tốt và văn nghệ tri ân thầy cô giáo.',
+    campaign_type: 'cao_diem',
+    status: 'sap_dien_ra',
+    start_date: '2024-11-01',
+    end_date: '2024-11-20',
+    slug: 'chao-mung-20-11',
+    is_featured: false,
+    is_published: true,
+    display_order: 3,
+    academic_year: '2024-2025',
+  },
+  {
+    id: 'demo-4',
+    title: 'Hội khỏe Phù Đổng cấp Trường',
+    summary: 'Giải thi đấu các môn thể thao học sinh: bóng đá, cầu lông, cờ vua, kéo co.',
+    campaign_type: 'cuoc_thi',
+    status: 'sap_dien_ra',
+    start_date: '2024-12-10',
+    end_date: '2024-12-22',
+    slug: 'hoi-khoe-phu-dong',
+    is_featured: false,
+    is_published: true,
+    display_order: 4,
+    academic_year: '2024-2025',
+  },
+  {
+    id: 'demo-5',
+    title: 'Chương trình "Xuân yêu thương - Tết sẻ chia"',
+    summary: 'Trao tặng quà Tết cho các bạn học sinh có hoàn cảnh khó khăn vươn lên.',
+    campaign_type: 'cao_diem',
+    status: 'sap_dien_ra',
+    start_date: '2025-01-10',
+    end_date: '2025-01-22',
+    slug: 'xuan-yeu-thuong-2025',
+    is_featured: false,
+    is_published: true,
+    display_order: 5,
+    academic_year: '2024-2025',
+  },
+  {
+    id: 'demo-6',
+    title: 'Cuộc thi Sáng tạo Thanh thiếu niên Nhi đồng',
+    summary: 'Trưng bày và chấm giải các mô hình, sản phẩm sáng tạo KHKT của thiếu nhi.',
+    campaign_type: 'cuoc_thi',
+    status: 'sap_dien_ra',
+    start_date: '2025-02-15',
+    end_date: '2025-03-01',
+    slug: 'sang-tao-thanh-thieu-nien',
+    is_featured: false,
+    is_published: true,
+    display_order: 6,
+    academic_year: '2024-2025',
+  },
+  {
+    id: 'demo-7',
+    title: 'Tháng Thanh niên & Kỷ niệm 94 năm Ngày thành lập Đoàn',
+    summary: 'Ngày hội "Tiến bước lên Đoàn", kết náp Đoàn viên mới và hội trại kỹ năng.',
+    campaign_type: 'cao_diem',
+    status: 'sap_dien_ra',
+    start_date: '2025-03-01',
+    end_date: '2025-03-26',
+    slug: 'thang-thanh-nien-2025',
+    is_featured: false,
+    is_published: true,
+    display_order: 7,
+    academic_year: '2024-2025',
+  },
+  {
+    id: 'demo-8',
+    title: 'Đại hội Cháu ngoan Bác Hồ & Tổng kết năm học',
+    summary: 'Tuyên dương các dũng sĩ Kế hoạch nhỏ, Cháu ngoan Bác Hồ xuất sắc toàn trường.',
+    campaign_type: 'cao_diem',
+    status: 'sap_dien_ra',
+    start_date: '2025-05-15',
+    end_date: '2025-05-25',
+    slug: 'dai-hoi-chau-ngoan-bac-ho',
+    is_featured: false,
+    is_published: true,
+    display_order: 8,
+    academic_year: '2024-2025',
+  },
 ];
 
 export default function MovementsPage() {
@@ -94,7 +217,7 @@ export default function MovementsPage() {
     }
   };
 
-  // Group 1: Hoạt động theo mốc thời gian (không thuộc loại thường xuyên, có start_date, sắp xếp tăng dần)
+  // Group 1: Real timeline campaigns
   const timelineCampaigns = useMemo(() => {
     return campaigns
       .filter(c => c.campaign_type !== 'thuong_xuyen' && Boolean(c.start_date))
@@ -104,6 +227,29 @@ export default function MovementsPage() {
         return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
       });
   }, [campaigns]);
+
+  // For desktop preview: Ensure at least 8 items are displayed to match reference layout
+  const displayTimelineCampaigns = useMemo(() => {
+    if (timelineCampaigns.length >= 8) {
+      return timelineCampaigns;
+    }
+    const needed = 8 - timelineCampaigns.length;
+    const fillers = DEMO_PREVIEW_CAMPAIGN_ITEMS.slice(0, needed);
+    return [...timelineCampaigns, ...fillers];
+  }, [timelineCampaigns]);
+
+  // Calculations for Desktop Timeline SVG alignment
+  const ITEM_WIDTH = 210;
+  const ITEM_GAP = 24;
+  const BASE_SIDE_PADDING = 60;
+  const timelineCount = displayTimelineCampaigns.length;
+  const rawTimelineWidth =
+    BASE_SIDE_PADDING * 2 +
+    timelineCount * ITEM_WIDTH +
+    Math.max(0, timelineCount - 1) * ITEM_GAP;
+  const timelineCanvasWidth = Math.max(1200, rawTimelineWidth);
+  const extraTimelinePadding = (timelineCanvasWidth - rawTimelineWidth) / 2;
+  const effectiveTimelineSidePadding = BASE_SIDE_PADDING + extraTimelinePadding;
 
   // Group 2: Hoạt động thường xuyên
   const regularCampaigns = useMemo(() => {
@@ -146,37 +292,52 @@ export default function MovementsPage() {
     return `${startStr} – ${endStr}`;
   };
 
-  const renderTimelineCard = (campaign: MovementCampaign, theme: typeof COLOR_THEMES[0]) => {
+  const renderTimelineCard = (campaign: MovementCampaign, theme: typeof COLOR_THEMES[0], isEven: boolean) => {
     return (
-      <Link
-        to={`/hoat-dong/${campaign.slug}`}
-        className="group block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all space-y-2 text-left h-full flex flex-col justify-between"
-      >
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border uppercase tracking-wider ${theme.badgeBg}`}>
-              <Calendar className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+      <div className="relative group w-full">
+        <Link
+          to={`/hoat-dong/${campaign.slug}`}
+          className="block bg-slate-100/90 hover:bg-slate-200/90 dark:bg-slate-800/90 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all text-center space-y-2 h-full flex flex-col justify-between"
+        >
+          <div className="space-y-2">
+            {/* Prominent Date / Year in Theme Color */}
+            <div className={`font-display font-black text-xl sm:text-2xl tracking-tight ${theme.textColor}`}>
               {formatCampaignDate(campaign.start_date, campaign.end_date)}
+            </div>
+
+            {/* Campaign Title */}
+            <h3 className="font-display font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 group-hover:text-red-600 dark:group-hover:text-red-400 line-clamp-2 transition-colors">
+              {campaign.title}
+            </h3>
+
+            {/* Short Summary */}
+            {campaign.summary && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                {campaign.summary}
+              </p>
+            )}
+          </div>
+
+          <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeClass(campaign.status)}`}>
+              {CAMPAIGN_STATUS_LABELS[campaign.status] || 'Đang diễn ra'}
             </span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(campaign.status)}`}>
-              {CAMPAIGN_STATUS_LABELS[campaign.status]}
+            <span className="flex items-center gap-1 text-[11px]">
+              Chi tiết
+              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
             </span>
           </div>
-          <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 line-clamp-2 transition-colors">
-            {campaign.title}
-          </h3>
-          {campaign.summary && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-              {campaign.summary}
-            </p>
-          )}
-        </div>
+        </Link>
 
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-red-600 dark:text-red-400 group-hover:underline">
-          <span>Xem chi tiết</span>
-          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+        {/* Pointer Arrow pointing to Timeline */}
+        <div className={`absolute left-1/2 -translate-x-1/2 pointer-events-none z-10 ${
+          isEven ? '-bottom-2' : '-top-2'
+        }`}>
+          <svg width="18" height="9" viewBox="0 0 18 9" className="fill-slate-100 dark:fill-slate-800 drop-shadow-sm">
+            <polygon points={isEven ? "0,0 18,0 9,9" : "0,9 18,9 9,0"} />
+          </svg>
         </div>
-      </Link>
+      </div>
     );
   };
 
@@ -251,108 +412,138 @@ export default function MovementsPage() {
         )}
 
         {/* Cây Timeline Content */}
-        {!loading && !error && timelineCampaigns.length > 0 && (
+        {!loading && !error && displayTimelineCampaigns.length > 0 && (
           <div>
-            {/* Desktop / Tablet Horizontal Tree Timeline */}
+            {/* Desktop / Tablet Horizontal Tree Timeline (3-row layout) */}
             <div className="hidden md:block w-full overflow-x-auto pb-8 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
-              <div className="relative min-w-max px-12 py-6 flex items-center min-h-[500px]">
-                {/* Horizontal Trunk Line passing through center */}
-                <div className="absolute left-8 right-12 top-1/2 -translate-y-1/2 h-2.5 bg-slate-800 dark:bg-slate-200 rounded-full z-0" />
-
-                <div className="relative z-10 flex items-center space-x-10">
-                  {timelineCampaigns.map((campaign, idx) => {
+              <div
+                className="relative py-4 flex flex-col justify-center"
+                style={{ width: `${timelineCanvasWidth}px` }}
+              >
+                {/* HÀNG 1: CÁC CARD PHÍA TRÊN (Card index chẵn: 0, 2, 4, 6, ...) */}
+                <div
+                  className="grid pb-2 min-h-[220px]"
+                  style={{
+                    gridTemplateColumns: `repeat(${timelineCount}, ${ITEM_WIDTH}px)`,
+                    columnGap: `${ITEM_GAP}px`,
+                    paddingLeft: `${effectiveTimelineSidePadding}px`,
+                    paddingRight: `${effectiveTimelineSidePadding}px`,
+                  }}
+                >
+                  {displayTimelineCampaigns.map((campaign, idx) => {
                     const isEven = idx % 2 === 0;
                     const theme = COLOR_THEMES[idx % COLOR_THEMES.length];
-
                     return (
-                      <div key={campaign.id} className="relative flex flex-col items-center w-80 shrink-0">
-                        {/* Top Slot */}
-                        <div className="h-56 w-full flex flex-col items-center justify-end pb-1">
-                          {isEven && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -12 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3, delay: idx * 0.05 }}
-                              className="w-full flex flex-col items-center space-y-1"
-                            >
-                              <div className="w-full">
-                                {renderTimelineCard(campaign, theme)}
-                              </div>
-                              {/* Branch & Leaves pointing down to node */}
-                              <svg className="w-16 h-10 text-slate-800 dark:text-slate-200 pointer-events-none shrink-0" viewBox="0 0 60 40">
-                                <path d="M 30 40 L 30 0" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                                <path d="M 30 24 C 15 14, 5 16, 2 24 C 10 32, 25 29, 30 24 Z" fill={theme.leafColor} opacity="0.9" />
-                                <path d="M 30 14 C 45 4, 55 6, 58 14 C 50 22, 35 19, 30 14 Z" fill={theme.leafColor} opacity="0.9" />
-                              </svg>
-                            </motion.div>
-                          )}
-                        </div>
-
-                        {/* Node Circle directly on Trunk Line */}
-                        <div className="relative my-1 flex items-center justify-center z-20">
-                          <div className={`w-10 h-10 rounded-full ${theme.nodeBg} flex items-center justify-center font-extrabold text-xs shadow-md ring-4 ring-white dark:ring-slate-950`}>
-                            {idx + 1}
-                          </div>
-                        </div>
-
-                        {/* Bottom Slot */}
-                        <div className="h-56 w-full flex flex-col items-center justify-start pt-1">
-                          {!isEven && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 12 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3, delay: idx * 0.05 }}
-                              className="w-full flex flex-col items-center space-y-1"
-                            >
-                              {/* Branch & Leaves pointing up to node */}
-                              <svg className="w-16 h-10 text-slate-800 dark:text-slate-200 pointer-events-none shrink-0" viewBox="0 0 60 40">
-                                <path d="M 30 0 L 30 40" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                                <path d="M 30 16 C 15 26, 5 24, 2 16 C 10 8, 25 11, 30 16 Z" fill={theme.leafColor} opacity="0.9" />
-                                <path d="M 30 26 C 45 36, 55 34, 58 26 C 50 18, 35 21, 30 26 Z" fill={theme.leafColor} opacity="0.9" />
-                              </svg>
-                              <div className="w-full">
-                                {renderTimelineCard(campaign, theme)}
-                              </div>
-                            </motion.div>
-                          )}
-                        </div>
+                      <div key={campaign.id} className="flex justify-center w-full">
+                        {isEven ? (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: idx * 0.04 }}
+                            className="w-full"
+                          >
+                            {renderTimelineCard(campaign, theme, true)}
+                          </motion.div>
+                        ) : (
+                          <div className="w-full" />
+                        )}
                       </div>
                     );
                   })}
+                </div>
 
-                  {/* Arrowhead / Tip at end of horizontal trunk */}
-                  <div className="relative flex items-center pl-2 shrink-0 z-10">
-                    <svg className="w-8 h-8 text-slate-800 dark:text-slate-200 pointer-events-none" viewBox="0 0 32 32" fill="currentColor">
-                      <path d="M 2 11 C 12 11, 22 7, 30 16 C 22 25, 12 21, 2 21 Z" />
-                    </svg>
-                  </div>
+                {/* HÀNG 2: SINGLE SVG CÂY TIMELINE (MovementTimelineTreeSvg) */}
+                <div className="w-full py-1">
+                  <MovementTimelineTreeSvg
+                    count={timelineCount}
+                    width={timelineCanvasWidth}
+                    itemWidth={ITEM_WIDTH}
+                    gap={ITEM_GAP}
+                    sidePadding={effectiveTimelineSidePadding}
+                    colors={COLOR_THEMES.map((t) => t.hex)}
+                  />
+                </div>
+
+                {/* HÀNG 3: CÁC CARD PHÍA DƯỚI (Card index lẻ: 1, 3, 5, 7, ...) */}
+                <div
+                  className="grid pt-2 min-h-[220px]"
+                  style={{
+                    gridTemplateColumns: `repeat(${timelineCount}, ${ITEM_WIDTH}px)`,
+                    columnGap: `${ITEM_GAP}px`,
+                    paddingLeft: `${effectiveTimelineSidePadding}px`,
+                    paddingRight: `${effectiveTimelineSidePadding}px`,
+                  }}
+                >
+                  {displayTimelineCampaigns.map((campaign, idx) => {
+                    const isEven = idx % 2 === 0;
+                    const theme = COLOR_THEMES[idx % COLOR_THEMES.length];
+                    return (
+                      <div key={campaign.id} className="flex justify-center w-full">
+                        {!isEven ? (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: idx * 0.04 }}
+                            className="w-full"
+                          >
+                            {renderTimelineCard(campaign, theme, false)}
+                          </motion.div>
+                        ) : (
+                          <div className="w-full" />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             {/* Mobile Vertical Tree Timeline */}
-            <div className="block md:hidden relative pl-8 pr-2 space-y-8">
-              {/* Vertical Trunk Line */}
-              <div className="absolute left-3.5 top-3 bottom-3 w-2 bg-slate-800 dark:bg-slate-200 rounded-full z-0" />
+            <div className="block md:hidden relative pl-10 pr-2 space-y-10">
+              {/* Thân cây dọc màu đen 6px */}
+              <div className="absolute left-3.5 top-4 bottom-4 w-[6px] bg-[#0b0b0b] dark:bg-slate-100 rounded-full z-0" />
 
               {timelineCampaigns.map((campaign, idx) => {
                 const theme = COLOR_THEMES[idx % COLOR_THEMES.length];
+                const isEven = idx % 2 === 0;
 
                 return (
                   <div key={campaign.id} className="relative flex items-start gap-4">
-                    {/* Node Circle on Vertical Trunk */}
-                    <div className={`absolute -left-8 top-3 w-9 h-9 rounded-full ${theme.nodeBg} flex items-center justify-center font-extrabold text-xs shadow-md ring-4 ring-white dark:ring-slate-950 z-20`}>
-                      {idx + 1}
+                    {/* Node Circle & Leaf Cluster SVG on Vertical Trunk */}
+                    <div className="absolute -left-9 top-4 w-12 h-12 z-20 pointer-events-none">
+                      <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48">
+                        {/* Short branch stem */}
+                        <path
+                          d={isEven ? "M 24 24 Q 14 16 6 8" : "M 24 24 Q 34 16 42 8"}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          className="text-[#0b0b0b] dark:text-slate-100"
+                        />
+                        {/* Main colored leaf */}
+                        <g transform={isEven ? "translate(6, 8) rotate(-50)" : "translate(42, 8) rotate(50)"}>
+                          <path d="M 0 0 C 8 -8 20 -8 28 0 C 20 8 8 8 0 0 Z" fill={theme.hex} />
+                        </g>
+                        {/* Secondary small black leaf */}
+                        <g transform="translate(24, 34) rotate(45)">
+                          <path d="M 0 0 C 4 -4 10 -4 14 0 C 10 4 4 4 0 0 Z" fill="currentColor" className="text-[#0b0b0b] dark:text-slate-100" />
+                        </g>
+                        {/* Center Circle Node */}
+                        <circle
+                          cx="24"
+                          cy="24"
+                          r="8"
+                          fill="#ffffff"
+                          stroke={theme.hex}
+                          strokeWidth="3.5"
+                          className="dark:fill-slate-900"
+                        />
+                      </svg>
                     </div>
 
-                    {/* Leaf accent beside vertical node */}
-                    <svg className="absolute -left-12 top-2.5 w-6 h-6 pointer-events-none z-10" viewBox="0 0 30 30">
-                      <path d="M 15 15 C 5 5, 2 12, 0 15 C 8 22, 12 18, 15 15 Z" fill={theme.leafColor} opacity="0.85" />
-                    </svg>
-
                     {/* Card on Right Side */}
-                    <div className="w-full">
-                      {renderTimelineCard(campaign, theme)}
+                    <div className="w-full pl-2">
+                      {renderTimelineCard(campaign, theme, false)}
                     </div>
                   </div>
                 );
