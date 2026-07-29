@@ -44,9 +44,9 @@ export const NAV_MENU: MenuItem[] = [
     showInNavbar: true,
   },
   {
-    title: 'Liên hệ',
-    path: ROUTES.CONTACT,
-    id: 'contact',
+    title: 'Thi đua',
+    path: ROUTES.COMPETITION,
+    id: 'competition',
     showInNavbar: true,
   },
 ];

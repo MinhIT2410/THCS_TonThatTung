@@ -79,3 +79,32 @@ export interface AchievementItem {
 }
 
 export * from './movement';
+export type {
+  CompetitionCategory,
+  CompetitionEffectScope,
+  IncidentStatus,
+  LedgerType,
+  TransactionType,
+  TransactionStatus,
+  WeekStatus,
+  ReviewRequestStatus,
+  RedemptionStatus,
+  CompetitionProgram,
+  CompetitionRule,
+  CompetitionIncident,
+  CompetitionEvidence,
+  CompetitionPointTransaction,
+  CompetitionWeek,
+  CompetitionWeekUnit,
+  CompetitionWeekAdjustment,
+  CompetitionReviewRequest,
+  RewardItem,
+  RewardRedemption,
+  StudentCompetitionProfile,
+} from './competition';
+export {
+  WEEK_STATUS_LABELS,
+  COMPETITION_CATEGORY_LABELS,
+  REVIEW_REQUEST_STATUS_LABELS,
+  REDEMPTION_STATUS_LABELS,
+} from './competition';

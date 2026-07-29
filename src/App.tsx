@@ -38,6 +38,12 @@ import AlbumDetailPage from './pages/AlbumDetailPage';
 import AboutDetailPage from './pages/AboutDetailPage';
 import MovementsPage from './pages/MovementsPage';
 import MovementDetailPage from './pages/MovementDetailPage';
+import CompetitionOverviewPage from './pages/CompetitionOverviewPage';
+import PublicUnitCompetitionPage from './pages/PublicUnitCompetitionPage';
+import StudentCompetitionPage from './pages/StudentCompetitionPage';
+import PublicGoodDeedsPage from './pages/PublicGoodDeedsPage';
+import PublicRewardShopPage from './pages/PublicRewardShopPage';
+import AdminCompetitionPage from './pages/admin/AdminCompetitionPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { RoleGuard } from './components/auth/RoleGuard';
 import { AccessDenied } from './components/auth/AccessDenied';
@@ -70,6 +76,7 @@ function AppContent() {
     if (pathname === ROUTES.ACTIVITIES || pathname.startsWith('/hoat-dong') || pathname === ROUTES.MOVEMENTS || pathname.startsWith('/hoat-dong-phong-trao')) return 'activities';
     if (pathname === ROUTES.GALLERY) return 'gallery';
     if (pathname === ROUTES.DOCUMENTS) return 'documents';
+    if (pathname === ROUTES.COMPETITION || pathname.startsWith('/thi-dua')) return 'competition';
     if (pathname === ROUTES.CONTACT) return 'contact';
     if (pathname === ROUTES.ADMIN) return 'cms';
     return 'home';
@@ -219,6 +226,7 @@ function AppContent() {
     else if (viewId === 'movements') navigate(ROUTES.MOVEMENTS);
     else if (viewId === 'gallery') navigate(ROUTES.GALLERY);
     else if (viewId === 'documents') navigate(ROUTES.DOCUMENTS);
+    else if (viewId === 'competition') navigate(ROUTES.COMPETITION);
     else if (viewId === 'contact') navigate(ROUTES.CONTACT);
     else if (viewId === 'cms') navigate(ROUTES.ADMIN);
   };
@@ -303,6 +311,11 @@ function AppContent() {
           <Route path={ROUTES.GALLERY} element={<GalleryPage />} />
           <Route path={`${ROUTES.GALLERY}/:id`} element={<AlbumDetailPage />} />
           <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
+          <Route path={ROUTES.COMPETITION} element={<CompetitionOverviewPage />} />
+          <Route path={ROUTES.COMPETITION_UNITS} element={<PublicUnitCompetitionPage />} />
+          <Route path={ROUTES.COMPETITION_STUDENT} element={<StudentCompetitionPage />} />
+          <Route path={ROUTES.COMPETITION_GOOD_DEEDS} element={<PublicGoodDeedsPage />} />
+          <Route path={ROUTES.COMPETITION_REWARDS} element={<PublicRewardShopPage />} />
           <Route path={ROUTES.CONTACT} element={<ContactPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />
@@ -322,6 +335,11 @@ function AppContent() {
           }
         >
           <Route index element={<AdminDashboardPage />} />
+          <Route path="thi-dua" element={<AdminCompetitionPage />} />
+          <Route path="thi-dua/chi-doi" element={<AdminCompetitionPage />} />
+          <Route path="thi-dua/cua-hang" element={<AdminCompetitionPage />} />
+          <Route path="thi-dua/doi-qua" element={<AdminCompetitionPage />} />
+          <Route path="thi-dua/xem-lai" element={<AdminCompetitionPage />} />
           <Route path="tin-tuc" element={<AdminNewsPage />} />
           <Route path="hoat-dong-phong-trao" element={<AdminMovementsPage />} />
           <Route path="tai-lieu" element={<AdminDocumentsPage />} />

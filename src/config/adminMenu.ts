@@ -13,7 +13,8 @@ import {
   Settings,
   LucideIcon,
   Info,
-  Flag
+  Flag,
+  Award
 } from 'lucide-react';
 
 export interface AdminMenuItem {
@@ -27,6 +28,11 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     label: 'Tổng quan',
     href: '/quan-tri',
     icon: LayoutDashboard,
+  },
+  {
+    label: 'Thi đua',
+    href: '/quan-tri/thi-dua',
+    icon: Award,
   },
   {
     label: 'Tin tức',
