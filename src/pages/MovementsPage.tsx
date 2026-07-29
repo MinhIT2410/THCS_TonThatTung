@@ -345,6 +345,53 @@ export default function MovementsPage() {
     );
   };
 
+  const renderMobileTimelineCard = (campaign: MovementCampaign, theme: typeof COLOR_THEMES[0]) => {
+    return (
+      <div className="relative group w-full min-w-0">
+        <Link
+          to={`/hoat-dong/${campaign.slug}`}
+          className="block bg-slate-100/90 hover:bg-slate-200/90 dark:bg-slate-800/90 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl p-3.5 shadow-sm transition-all text-left space-y-1.5 overflow-hidden"
+        >
+          <div className="space-y-1 overflow-hidden">
+            {/* Prominent Date / Year in Theme Color */}
+            <div className={`font-display font-black text-base sm:text-lg tracking-tight ${theme.textColor} truncate`}>
+              {formatCampaignDate(campaign.start_date, campaign.end_date)}
+            </div>
+
+            {/* Campaign Title */}
+            <h3 className="font-display font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 group-hover:text-red-600 dark:group-hover:text-red-400 line-clamp-2 transition-colors leading-tight">
+              {campaign.title}
+            </h3>
+
+            {/* Short Summary */}
+            {campaign.summary && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-tight">
+                {campaign.summary}
+              </p>
+            )}
+          </div>
+
+          <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors shrink-0">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeClass(campaign.status)} truncate max-w-[110px]`}>
+              {CAMPAIGN_STATUS_LABELS[campaign.status] || 'Đang diễn ra'}
+            </span>
+            <span className="flex items-center gap-1 text-[11px] shrink-0">
+              Chi tiết
+              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
+            </span>
+          </div>
+        </Link>
+
+        {/* Pointer Arrow pointing LEFT towards node */}
+        <div className="absolute -left-2 top-3.5 pointer-events-none z-10">
+          <svg width="8" height="12" viewBox="0 0 8 12" className="fill-slate-100 dark:fill-slate-800 drop-shadow-sm">
+            <polygon points="8,0 0,6 8,12" />
+          </svg>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-12 pb-20 font-sans relative min-h-[60vh]">
       {/* 1. Static Page Header */}
@@ -616,51 +663,42 @@ export default function MovementsPage() {
             </div>
 
             {/* Mobile Vertical Tree Timeline */}
-            <div className="block md:hidden relative pl-10 pr-2 space-y-10">
-              {/* Thân cây dọc màu đen 6px */}
-              <div className="absolute left-3.5 top-4 bottom-4 w-[6px] bg-[#0b0b0b] dark:bg-slate-100 rounded-full z-0" />
+            <div className="block md:hidden relative pl-11 pr-2 space-y-6">
+              {/* Thân cây dọc màu đen 4px */}
+              <div className="absolute left-[20px] top-4 bottom-4 w-[4px] bg-[#0b0b0b] dark:bg-slate-100 rounded-full z-0" />
 
-              {timelineCampaigns.map((campaign, idx) => {
+              {displayTimelineCampaigns.map((campaign, idx) => {
                 const theme = COLOR_THEMES[idx % COLOR_THEMES.length];
-                const isEven = idx % 2 === 0;
 
                 return (
-                  <div key={campaign.id} className="relative flex items-start gap-4">
+                  <div key={campaign.id} className="relative flex items-start">
                     {/* Node Circle & Leaf Cluster SVG on Vertical Trunk */}
-                    <div className="absolute -left-9 top-4 w-12 h-12 z-20 pointer-events-none">
-                      <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48">
-                        {/* Short branch stem */}
-                        <path
-                          d={isEven ? "M 24 24 Q 14 16 6 8" : "M 24 24 Q 34 16 42 8"}
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          className="text-[#0b0b0b] dark:text-slate-100"
-                        />
-                        {/* Main colored leaf */}
-                        <g transform={isEven ? "translate(6, 8) rotate(-50)" : "translate(42, 8) rotate(50)"}>
-                          <path d="M 0 0 C 8 -8 20 -8 28 0 C 20 8 8 8 0 0 Z" fill={theme.hex} />
+                    <div className="absolute -left-[44px] top-3.5 w-11 h-11 z-20 pointer-events-none flex items-center justify-center">
+                      <svg className="w-full h-full overflow-visible" viewBox="0 0 44 44">
+                        {/* Main colored leaf (pointing top-right towards card, 25% larger) */}
+                        <g transform="translate(22, 14) rotate(-35) scale(1.25)">
+                          <path d="M 0 0 C 6 -6 16 -6 22 0 C 16 6 6 6 0 0 Z" fill={theme.hex} />
                         </g>
                         {/* Secondary small black leaf */}
-                        <g transform="translate(24, 34) rotate(45)">
+                        <g transform="translate(26, 26) rotate(20) scale(0.6)">
                           <path d="M 0 0 C 4 -4 10 -4 14 0 C 10 4 4 4 0 0 Z" fill="currentColor" className="text-[#0b0b0b] dark:text-slate-100" />
                         </g>
-                        {/* Center Circle Node */}
+                        {/* Center Node Circle on Trunk */}
                         <circle
-                          cx="24"
-                          cy="24"
-                          r="8"
+                          cx="22"
+                          cy="22"
+                          r="7"
                           fill="#ffffff"
                           stroke={theme.hex}
-                          strokeWidth="3.5"
+                          strokeWidth="3"
                           className="dark:fill-slate-900"
                         />
                       </svg>
                     </div>
 
                     {/* Card on Right Side */}
-                    <div className="w-full pl-2">
-                      {renderTimelineCard(campaign, theme)}
+                    <div className="w-full">
+                      {renderMobileTimelineCard(campaign, theme)}
                     </div>
                   </div>
                 );
