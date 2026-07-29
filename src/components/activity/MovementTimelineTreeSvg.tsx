@@ -72,15 +72,15 @@ export function MovementTimelineTreeSvg({
 
         return (
           <g key={idx}>
-            {/* Stemless Leaves placed directly around node (8-12px from line center) */}
+            {/* Stemless Leaves pointing in left-to-right direction, oriented towards the corresponding card */}
             {isEven ? (
-              /* TOP NODE LEAVES */
+              /* TOP NODE LEAVES (oriented towards top activity card) */
               <g>
-                {/* Main colored leaf (Top) - ~10px from trunk line */}
-                <g transform={`translate(${x - 8}, ${y - 10}) rotate(-52)`}>
+                {/* Main colored leaf (Top) - scaled 1.25 (25% larger) */}
+                <g transform={`translate(${x - 8}, ${y - 10}) rotate(-52) scale(1.25)`}>
                   <use href="#timeline-leaf-shape" fill={color} />
                 </g>
-                {/* Secondary small black leaf 1 (Top-Right) - ~8px from trunk line */}
+                {/* Secondary small black leaf 1 (Top-Right) */}
                 <g transform={`translate(${x + 10}, ${y - 8}) rotate(-20) scale(0.48)`}>
                   <use
                     href="#timeline-leaf-shape"
@@ -88,7 +88,7 @@ export function MovementTimelineTreeSvg({
                     className="text-[#0b0b0b] dark:text-slate-100"
                   />
                 </g>
-                {/* Secondary small black leaf 2 (Bottom-Right) - ~6px from trunk line */}
+                {/* Secondary small black leaf 2 (Forward-Right) */}
                 <g transform={`translate(${x + 10}, ${y + 6}) rotate(30) scale(0.48)`}>
                   <use
                     href="#timeline-leaf-shape"
@@ -98,22 +98,22 @@ export function MovementTimelineTreeSvg({
                 </g>
               </g>
             ) : (
-              /* BOTTOM NODE LEAVES */
+              /* BOTTOM NODE LEAVES (oriented towards bottom activity card) */
               <g>
-                {/* Main colored leaf (Bottom) - ~10px from trunk line */}
-                <g transform={`translate(${x + 6}, ${y + 10}) rotate(122)`}>
+                {/* Main colored leaf (Bottom) - scaled 1.25 (25% larger) */}
+                <g transform={`translate(${x - 8}, ${y + 10}) rotate(52) scale(1.25)`}>
                   <use href="#timeline-leaf-shape" fill={color} />
                 </g>
-                {/* Secondary small black leaf 1 (Top-Left) - ~8px from trunk line */}
-                <g transform={`translate(${x - 10}, ${y - 8}) rotate(-140) scale(0.48)`}>
+                {/* Secondary small black leaf 1 (Bottom-Right) */}
+                <g transform={`translate(${x + 10}, ${y + 8}) rotate(20) scale(0.48)`}>
                   <use
                     href="#timeline-leaf-shape"
                     fill="currentColor"
                     className="text-[#0b0b0b] dark:text-slate-100"
                   />
                 </g>
-                {/* Secondary small black leaf 2 (Bottom-Left) - ~6px from trunk line */}
-                <g transform={`translate(${x - 10}, ${y + 6}) rotate(140) scale(0.48)`}>
+                {/* Secondary small black leaf 2 (Forward-Right) */}
+                <g transform={`translate(${x + 10}, ${y - 6}) rotate(-30) scale(0.48)`}>
                   <use
                     href="#timeline-leaf-shape"
                     fill="currentColor"
