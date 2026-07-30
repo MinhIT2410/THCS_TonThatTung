@@ -877,40 +877,18 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
           </div>
 
           {/* Download template */}
-          <div className="space-y-2 shrink-0">
-            <div className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800 rounded-2xl">
-              <div className="space-y-0.5">
-                <p className="font-bold text-slate-700 dark:text-slate-300">Tệp Excel mẫu chuẩn</p>
-                <p className="text-[10px] text-slate-400">Tải xuống tệp mẫu cấu hình sẵn để điền thông tin.</p>
-              </div>
-              <button
-                type="button"
-                onClick={downloadTemplate}
-                className="px-3.5 py-1.5 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/30 rounded-xl border border-emerald-100 dark:border-emerald-900/20"
-              >
-                Tải tệp mẫu
-              </button>
+          <div className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800 rounded-2xl shrink-0">
+            <div className="space-y-0.5">
+              <p className="font-bold text-slate-700 dark:text-slate-300">Tệp Excel mẫu chuẩn</p>
+              <p className="text-[10px] text-slate-400">Tải xuống tệp mẫu cấu hình sẵn để điền thông tin.</p>
             </div>
-
-            {selectedType === 'student' && (
-              <div className="p-3 bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 rounded-xl text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
-                <p>
-                  <strong className="text-slate-700 dark:text-slate-300">username:</strong> Tự động sinh từ họ tên và số thứ tự bằng công thức Excel (ví dụ: nguyenvana001). Hệ thống tự tạo email nội bộ khi import.
-                </p>
-                <p>
-                  <strong className="text-slate-700 dark:text-slate-300">student_code:</strong> Tự động sinh bằng công thức Excel theo định dạng YYYY-CLASSCODE-NNN (ví dụ: 2026-LH61-001).
-                </p>
-                <p>
-                  <strong className="text-slate-700 dark:text-slate-300">class_code:</strong> Mã lớp trong hệ thống (ví dụ: LH61), không nhập tên lớp.
-                </p>
-                <p>
-                  <strong className="text-slate-700 dark:text-slate-300">academic_year_code:</strong> Mã năm học (ví dụ: 2026-2027) phải tồn tại trong hệ thống.
-                </p>
-                <p>
-                  <strong className="text-slate-700 dark:text-slate-300">sequence_no:</strong> Số thứ tự trong lớp (1–999), không trùng lặp trong cùng một lớp và năm học.
-                </p>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={downloadTemplate}
+              className="px-3.5 py-1.5 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/30 rounded-xl border border-emerald-100 dark:border-emerald-900/20"
+            >
+              Tải tệp mẫu
+            </button>
           </div>
 
           {/* Step 3: Choose file */}
