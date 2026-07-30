@@ -10,6 +10,7 @@ import {
   Filter,
   ArrowRightLeft,
   UserPlus,
+  FileSpreadsheet,
   CheckSquare,
   Square,
   AlertCircle,
@@ -26,11 +27,15 @@ import {
   studentEnrollmentService,
   StudentEnrollmentItem,
 } from '../../../services/studentEnrollmentService';
+import { CreateUserModal } from '../../users/components/CreateUserModal';
 
 export default function StudentsTab() {
   const [students, setStudents] = useState<StudentEnrollmentItem[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+
+  // Modal states for creating students
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState<boolean>(false);
 
   // Filter states
   const [selectedYearId, setSelectedYearId] = useState<string>('');
@@ -279,17 +284,26 @@ export default function StudentsTab() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {selectedStudentIds.length > 0 && (
             <button
               type="button"
               onClick={() => openAssignModal()}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all"
             >
               <UserPlus className="w-4 h-4" />
               <span>Phân vào lớp ({selectedStudentIds.length})</span>
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => setIsAddStudentModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>+ Thêm học sinh</span>
+          </button>
 
           <button
             type="button"
@@ -818,6 +832,20 @@ export default function StudentsTab() {
           </div>
         </div>
       )}
+
+      {/* Create Student Modal */}
+      <CreateUserModal
+        isOpen={isAddStudentModalOpen}
+        onClose={() => setIsAddStudentModalOpen(false)}
+        onSuccess={() => {
+          setIsAddStudentModalOpen(false);
+          setSuccess('Đã thêm học sinh thành công!');
+          fetchStudents();
+        }}
+        defaultRole="STUDENT"
+        initialAcademicYearId={selectedYearId}
+        initialClassId={selectedClassId}
+      />
     </div>
   );
 }

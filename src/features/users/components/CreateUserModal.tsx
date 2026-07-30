@@ -12,6 +12,9 @@ interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  defaultRole?: string;
+  initialAcademicYearId?: string;
+  initialClassId?: string;
 }
 
 const AVAILABLE_ROLES = [
@@ -27,7 +30,10 @@ const AVAILABLE_ROLES = [
 export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
+  defaultRole,
+  initialAcademicYearId,
+  initialClassId,
 }) => {
   const { hasRole } = useAuth();
   
@@ -88,11 +94,11 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
       // Reset form states
       setFullName('');
       setEmail('');
-      setHasEmail(true);
+      setHasEmail(defaultRole === 'STUDENT' ? false : true);
       setStudentCode('');
-      setSelectedRoles([]);
-      setSelectedClassId('');
-      setSelectedAcademicYearId('');
+      setSelectedRoles(defaultRole ? [defaultRole] : []);
+      setSelectedClassId(initialClassId && initialClassId !== 'all' && initialClassId !== 'unassigned' ? initialClassId : '');
+      setSelectedAcademicYearId(initialAcademicYearId || '');
       setCreatedCredentials(null);
       setError(null);
 
@@ -106,15 +112,22 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
           setAcademicYears(years);
           setClasses(classList);
 
-          // Auto-select active academic year
-          const activeYear = years.find((y: any) => y.is_active);
-          if (activeYear) {
-            setSelectedAcademicYearId(activeYear.id);
-          } else if (years.length > 0) {
-            setSelectedAcademicYearId(years[0].id);
+          // Auto-select academic year
+          if (initialAcademicYearId && years.some((y: any) => y.id === initialAcademicYearId)) {
+            setSelectedAcademicYearId(initialAcademicYearId);
+          } else {
+            const activeYear = years.find((y: any) => y.is_active || y.is_current);
+            if (activeYear) {
+              setSelectedAcademicYearId(activeYear.id);
+            } else if (years.length > 0) {
+              setSelectedAcademicYearId(years[0].id);
+            }
           }
 
-          if (classList.length > 0) {
+          // Auto-select class
+          if (initialClassId && initialClassId !== 'all' && initialClassId !== 'unassigned' && classList.some((c: any) => c.id === initialClassId)) {
+            setSelectedClassId(initialClassId);
+          } else if (classList.length > 0) {
             setSelectedClassId(classList[0].id);
           }
         } catch (err) {
@@ -125,7 +138,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
       };
       loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, defaultRole, initialAcademicYearId, initialClassId]);
 
   if (!isOpen) return null;
 

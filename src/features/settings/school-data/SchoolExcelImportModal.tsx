@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../services/supabaseClient';
+import { userCreationApi } from '../../users/userCreationApi';
 import * as XLSX from 'xlsx';
 import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2, X, AlertTriangle } from 'lucide-react';
 
@@ -12,9 +13,10 @@ interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImportSuccess: () => void;
+  initialType?: EntityType;
 }
 
-type EntityType = 'class' | 'subject' | 'classroom';
+type EntityType = 'student' | 'class' | 'subject' | 'classroom';
 
 interface ParsedRow {
   index: number;
@@ -27,8 +29,8 @@ interface ParsedRow {
   payload: any;
 }
 
-export default function SchoolExcelImportModal({ isOpen, onClose, onImportSuccess }: ImportModalProps) {
-  const [selectedType, setSelectedType] = useState<EntityType>('class');
+export default function SchoolExcelImportModal({ isOpen, onClose, onImportSuccess, initialType = 'student' }: ImportModalProps) {
+  const [selectedType, setSelectedType] = useState<EntityType>(initialType);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
@@ -36,6 +38,16 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
   const [success, setSuccess] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedType(initialType);
+      setFile(null);
+      setError(null);
+      setSuccess(null);
+      setParsedRows([]);
+    }
+  }, [isOpen, initialType]);
 
   if (!isOpen) return null;
 
@@ -88,7 +100,115 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
 
           const validated: ParsedRow[] = [];
 
-          if (type === 'class') {
+          if (type === 'student') {
+            const { data: years } = await supabase.from('academic_years').select('id, name, code, is_active');
+            const { data: classes } = await supabase.from('classes').select('id, name, code, academic_year_id, is_active');
+            const { data: profiles } = await supabase.from('profiles').select('id, full_name, student_code, email');
+
+            const processedExcelStudentCodes = new Set<string>();
+            const processedExcelEmails = new Set<string>();
+
+            rawRows.forEach((r, idx) => {
+              const rowNumber = idx + 2;
+              const errors: string[] = [];
+
+              const fullName = String(r.full_name || r['Họ và tên'] || r['Họ tên'] || r.name || '').trim();
+              const studentCode = String(r.student_code || r['Mã học sinh'] || r['Mã HS'] || r.code || '').trim().toUpperCase();
+              const usernameOrEmail = String(r.username || r.email || r['Tên đăng nhập'] || r['Email'] || '').trim().toLowerCase();
+              const yearInput = String(r.academic_year_code || r.academic_year_name || r['Năm học'] || r['Mã năm học'] || '').trim();
+              const classInput = String(r.class_code || r.class_name || r['Lớp'] || r['Lớp học'] || r['Mã lớp'] || '').trim();
+
+              if (!fullName) {
+                errors.push('Họ và tên không được bỏ trống.');
+              }
+
+              if (!studentCode) {
+                errors.push('Mã học sinh không được bỏ trống.');
+              } else {
+                if (!/^[A-Z0-9-]+$/.test(studentCode)) {
+                  errors.push(`Mã học sinh "${studentCode}" chỉ được chứa chữ cái (A-Z), số (0-9) và dấu gạch ngang.`);
+                }
+
+                if (processedExcelStudentCodes.has(studentCode)) {
+                  errors.push(`Mã học sinh "${studentCode}" bị trùng lặp trong tệp Excel.`);
+                } else {
+                  processedExcelStudentCodes.add(studentCode);
+                }
+
+                const existsInDb = profiles?.some(p => p.student_code?.toUpperCase() === studentCode);
+                if (existsInDb) {
+                  errors.push(`Mã học sinh "${studentCode}" đã tồn tại trên hệ thống.`);
+                }
+              }
+
+              if (usernameOrEmail) {
+                if (processedExcelEmails.has(usernameOrEmail)) {
+                  errors.push(`Email/Tên đăng nhập "${usernameOrEmail}" bị trùng lặp trong tệp Excel.`);
+                } else {
+                  processedExcelEmails.add(usernameOrEmail);
+                }
+
+                const existsInDb = profiles?.some(p => p.email?.toLowerCase() === usernameOrEmail);
+                if (existsInDb) {
+                  errors.push(`Email/Tên đăng nhập "${usernameOrEmail}" đã tồn tại trên hệ thống.`);
+                }
+              }
+
+              let matchedYear: any = null;
+              if (!yearInput) {
+                errors.push('Năm học không được bỏ trống.');
+              } else {
+                matchedYear = years?.find(y =>
+                  y.code?.toLowerCase() === yearInput.toLowerCase() ||
+                  y.name?.toLowerCase() === yearInput.toLowerCase() ||
+                  y.name?.toLowerCase().includes(yearInput.toLowerCase())
+                );
+                if (!matchedYear) {
+                  errors.push(`Năm học "${yearInput}" không tồn tại trên hệ thống.`);
+                }
+              }
+
+              let matchedClass: any = null;
+              if (!classInput) {
+                errors.push('Lớp học không được bỏ trống.');
+              } else {
+                const targetYearId = matchedYear?.id;
+                matchedClass = classes?.find(c =>
+                  (!targetYearId || c.academic_year_id === targetYearId) &&
+                  (c.code?.toLowerCase() === classInput.toLowerCase() ||
+                   c.name?.toLowerCase() === classInput.toLowerCase() ||
+                   c.name?.toLowerCase() === `lớp ${classInput.toLowerCase()}` ||
+                   c.name?.toLowerCase() === classInput.toLowerCase().replace(/^lớp\s+/i, ''))
+                );
+
+                if (!matchedClass) {
+                  errors.push(`Lớp "${classInput}" không tồn tại ${matchedYear ? `trong ${matchedYear.name}` : ''}.`);
+                } else if (matchedClass.is_active === false) {
+                  errors.push(`Lớp "${matchedClass.name}" đang tạm ngưng hoạt động.`);
+                }
+              }
+
+              validated.push({
+                index: idx,
+                rowNumber,
+                name: fullName || 'Học sinh',
+                code: studentCode,
+                details: `Mã HS: ${studentCode || 'Trống'} | Lớp: ${matchedClass?.name || classInput || 'Trống'} | Năm: ${matchedYear?.name || yearInput || 'Trống'}${usernameOrEmail ? ` | Email: ${usernameOrEmail}` : ''}`,
+                isValid: errors.length === 0,
+                errors,
+                payload: {
+                  row_number: rowNumber,
+                  full_name: fullName,
+                  student_code: studentCode,
+                  email: usernameOrEmail || undefined,
+                  roles: ['STUDENT'],
+                  class_id: matchedClass?.id || null,
+                  academic_year_id: matchedYear?.id || null,
+                },
+              });
+            });
+
+          } else if (type === 'class') {
             // Fetch system mappings
             const { data: grades } = await supabase.from('grade_levels').select('id, name');
             const { data: years } = await supabase.from('academic_years').select('id, name');
@@ -312,7 +432,30 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
     let sampleData: any[] = [];
     let sheetName = '';
 
-    if (selectedType === 'class') {
+    if (selectedType === 'student') {
+      sheetName = 'Hoc_sinh';
+      headers = ['full_name', 'student_code', 'username', 'academic_year_code', 'class_code', 'is_active', 'temporary_password'];
+      sampleData = [
+        {
+          full_name: 'Nguyễn Văn A',
+          student_code: 'HS2026001',
+          username: 'nguyenvana@school.edu.vn',
+          academic_year_code: '2026-2027',
+          class_code: '6A1',
+          is_active: 'TRUE',
+          temporary_password: 'Student@2026',
+        },
+        {
+          full_name: 'Trần Thị B',
+          student_code: 'HS2026002',
+          username: 'tranthib@school.edu.vn',
+          academic_year_code: '2026-2027',
+          class_code: '6A1',
+          is_active: 'TRUE',
+          temporary_password: 'Student@2026',
+        },
+      ];
+    } else if (selectedType === 'class') {
       sheetName = 'Lớp_học';
       headers = ['name', 'code', 'grade_level_name', 'academic_year_name', 'expected_capacity', 'primary_classroom_code'];
       sampleData = [
@@ -392,6 +535,30 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
     setProgress(`Đang tải lên ${validRows.length} dòng dữ liệu hợp lệ...`);
 
     try {
+      if (selectedType === 'student') {
+        const payloads = validRows.map(r => r.payload);
+        const result = await userCreationApi.createManyUsers(payloads);
+
+        if (result && result.success === false) {
+          throw new Error(result.message || 'Có lỗi xảy ra khi khởi tạo danh sách học sinh.');
+        }
+
+        const resultsList = result?.data || [];
+        const successCount = resultsList.filter((r: any) => r.success !== false).length;
+        const failCount = resultsList.length - successCount;
+
+        if (failCount > 0) {
+          setSuccess(`Đã tạo thành công ${successCount}/${payloads.length} học sinh. Bỏ qua ${failCount} học sinh do lỗi.`);
+        } else {
+          setSuccess(`Đã tạo tài khoản và phân lớp thành công cho toàn bộ ${payloads.length} học sinh!`);
+        }
+
+        onImportSuccess();
+        setFile(null);
+        setParsedRows([]);
+        return;
+      }
+
       const table = selectedType === 'class' ? 'classes' : selectedType === 'subject' ? 'subjects' : 'classrooms';
       const payloads = validRows.map(r => r.payload);
 
@@ -458,8 +625,9 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
           {/* Select Import Type */}
           <div className="space-y-1.5 shrink-0">
             <label className="font-bold text-slate-500">Bước 1: Chọn bảng dữ liệu cần nhập</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
+                { type: 'student', label: 'Học sinh' },
                 { type: 'class', label: 'Lớp học' },
                 { type: 'subject', label: 'Môn học' },
                 { type: 'classroom', label: 'Phòng học' },
