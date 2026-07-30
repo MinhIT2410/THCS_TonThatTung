@@ -19,6 +19,46 @@ interface ImportModalProps {
 
 type EntityType = 'student' | 'class' | 'subject' | 'classroom';
 
+function removeVietnameseTones(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+}
+
+function buildExcelUsernameFormula(r: number): string {
+  const replacePairs: [string, string][] = [
+    [' ', ''],
+    ['à', 'a'], ['á', 'a'], ['ạ', 'a'], ['ả', 'a'], ['ã', 'a'],
+    ['â', 'a'], ['ầ', 'a'], ['ấ', 'a'], ['ậ', 'a'], ['ẩ', 'a'], ['ẫ', 'a'],
+    ['ă', 'a'], ['ằ', 'a'], ['ắ', 'a'], ['ặ', 'a'], ['ẳ', 'a'], ['ẵ', 'a'],
+    ['è', 'e'], ['é', 'e'], ['ẹ', 'e'], ['ẻ', 'e'], ['ẽ', 'e'],
+    ['ê', 'e'], ['ề', 'e'], ['ế', 'e'], ['ệ', 'e'], ['ể', 'e'], ['ễ', 'e'],
+    ['ì', 'i'], ['í', 'i'], ['ị', 'i'], ['ỉ', 'i'], ['ĩ', 'i'],
+    ['ò', 'o'], ['ó', 'o'], ['ọ', 'o'], ['ỏ', 'o'], ['õ', 'o'],
+    ['ô', 'o'], ['ồ', 'o'], ['ố', 'o'], ['ộ', 'o'], ['ổ', 'o'], ['ỗ', 'o'],
+    ['ơ', 'o'], ['ờ', 'o'], ['ớ', 'o'], ['ợ', 'o'], ['ở', 'o'], ['ỡ', 'o'],
+    ['ù', 'u'], ['ú', 'u'], ['ụ', 'u'], ['ủ', 'u'], ['ũ', 'u'],
+    ['ư', 'u'], ['ừ', 'u'], ['ứ', 'u'], ['ự', 'u'], ['ử', 'u'], ['ữ', 'u'],
+    ['ỳ', 'y'], ['ý', 'y'], ['ỵ', 'y'], ['ỷ', 'y'], ['ỹ', 'y'],
+    ['đ', 'd'],
+  ];
+
+  let expr = `LOWER(TRIM(A${r}))`;
+  for (const [from, to] of replacePairs) {
+    expr = `SUBSTITUTE(${expr}, "${from}", "${to}")`;
+  }
+
+  return `IF(OR(A${r}="", D${r}=""), "", ${expr} & TEXT(D${r}, "000"))`;
+}
+
+function buildExcelStudentCodeFormula(r: number): string {
+  return `IF(OR(B${r}="", C${r}="", D${r}=""), "", LEFT(TRIM(B${r}), 4) & "-" & UPPER(TRIM(C${r})) & "-" & TEXT(D${r}, "000"))`;
+}
+
 interface ParsedRow {
   index: number;
   rowNumber: number;
@@ -115,80 +155,29 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
             const processedExcelStudentCodes = new Set<string>();
             const processedExcelUsernames = new Set<string>();
             const processedExcelEmails = new Set<string>();
+            const processedClassSeqKeys = new Set<string>();
 
             rawRows.forEach((r, idx) => {
               const rowNumber = idx + 2;
               const errors: string[] = [];
+              const warnings: string[] = [];
 
               const fullName = String(r.full_name || r['Họ và tên'] || r['Họ tên'] || r.name || '').trim();
-              const studentCode = String(r.student_code || r['Mã học sinh'] || r['Mã HS'] || r.code || '').trim().toUpperCase();
-              const rawUsernameInput = String(r.username || r.email || r['Tên đăng nhập'] || r['Email'] || '').trim().toLowerCase();
               const yearInput = String(r.academic_year_code || r.academic_year_name || r['Năm học'] || r['Mã năm học'] || '').trim();
-              const classInput = String(r.class_code || r.class_name || r['Lớp'] || r['Lớp học'] || r['Mã lớp'] || '').trim();
+              const classInput = String(r.class_code || r['Mã lớp'] || r['Lớp'] || '').trim();
+              const rawSeqInput = r.sequence_no !== undefined && r.sequence_no !== null && r.sequence_no !== ''
+                ? String(r.sequence_no).trim()
+                : (r['STT'] || r['Số thứ tự'] ? String(r['STT'] || r['Số thứ tự']).trim() : '');
 
+              const excelUsername = String(r.username || r['Tên đăng nhập'] || '').trim().toLowerCase();
+              const excelStudentCode = String(r.student_code || r['Mã học sinh'] || r['Mã HS'] || '').trim().toUpperCase();
+
+              // 1. Validate full_name
               if (!fullName) {
-                errors.push('Họ và tên không được bỏ trống.');
+                errors.push('Họ và tên (full_name) không được bỏ trống.');
               }
 
-              if (!studentCode) {
-                errors.push('Mã học sinh không được bỏ trống.');
-              } else {
-                if (!/^[A-Z0-9-]+$/.test(studentCode)) {
-                  errors.push(`Mã học sinh "${studentCode}" chỉ được chứa chữ cái (A-Z), số (0-9) và dấu gạch ngang.`);
-                }
-
-                if (processedExcelStudentCodes.has(studentCode)) {
-                  errors.push(`Mã học sinh "${studentCode}" bị trùng lặp trong tệp Excel.`);
-                } else {
-                  processedExcelStudentCodes.add(studentCode);
-                }
-
-                const existsInDb = profiles?.some(p => p.student_code?.toUpperCase() === studentCode);
-                if (existsInDb) {
-                  errors.push(`Mã học sinh "${studentCode}" đã tồn tại trên hệ thống.`);
-                }
-              }
-
-              let cleanUsername = '';
-              let finalEmail = '';
-
-              if (!rawUsernameInput) {
-                errors.push('Tên đăng nhập (username) không được bỏ trống.');
-              } else if (rawUsernameInput.includes('@')) {
-                const parts = rawUsernameInput.split('@');
-                cleanUsername = parts[0];
-                const inputDomain = (parts[1] || '').trim().toLowerCase();
-
-                if (internalDomain && inputDomain !== internalDomain) {
-                  errors.push(`Tên đăng nhập/Email "${rawUsernameInput}" chứa domain không đúng (yêu cầu domain nội bộ: @${internalDomain}).`);
-                }
-                finalEmail = rawUsernameInput;
-              } else {
-                cleanUsername = rawUsernameInput;
-                finalEmail = internalDomain ? `${cleanUsername}@${internalDomain}` : cleanUsername;
-              }
-
-              if (cleanUsername) {
-                if (processedExcelUsernames.has(cleanUsername)) {
-                  errors.push(`Tên đăng nhập "${cleanUsername}" bị trùng lặp trong tệp Excel.`);
-                } else {
-                  processedExcelUsernames.add(cleanUsername);
-                }
-              }
-
-              if (finalEmail) {
-                if (processedExcelEmails.has(finalEmail)) {
-                  errors.push(`Email nội bộ "${finalEmail}" bị trùng lặp trong tệp Excel.`);
-                } else {
-                  processedExcelEmails.add(finalEmail);
-                }
-
-                const existsInDb = profiles?.some(p => p.email?.toLowerCase() === finalEmail.toLowerCase());
-                if (existsInDb) {
-                  errors.push(`Tài khoản/Email "${finalEmail}" đã tồn tại trên hệ thống.`);
-                }
-              }
-
+              // 2. Validate academic_year_code
               let matchedYear: any = null;
               if (!yearInput) {
                 errors.push('Mã năm học (academic_year_code) không được bỏ trống.');
@@ -202,12 +191,12 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
                 }
               }
 
+              // 3. Validate class_code
               let matchedClass: any = null;
               if (!classInput) {
                 errors.push('Mã lớp (class_code) không được bỏ trống.');
               } else {
                 const targetYearId = matchedYear?.id;
-                // Match class strictly by code first
                 matchedClass = classes?.find(c =>
                   (!targetYearId || c.academic_year_id === targetYearId) &&
                   c.code?.toLowerCase() === classInput.toLowerCase()
@@ -225,18 +214,117 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
                 }
               }
 
+              // 4. Validate sequence_no
+              let sequenceNo: number | null = null;
+              if (!rawSeqInput) {
+                errors.push('Số thứ tự (sequence_no) không được bỏ trống.');
+              } else {
+                const parsedSeq = Number(rawSeqInput);
+                if (isNaN(parsedSeq) || !Number.isInteger(parsedSeq) || parsedSeq < 1 || parsedSeq > 999) {
+                  errors.push(`Số thứ tự (sequence_no) "${rawSeqInput}" phải là số nguyên từ 1 đến 999.`);
+                } else {
+                  sequenceNo = parsedSeq;
+                }
+              }
+
+              // 5. Sequence_no duplicate check per class & academic year
+              if (matchedYear && matchedClass && sequenceNo) {
+                const classSeqKey = `${matchedYear.id}_${matchedClass.id}_${sequenceNo}`;
+                if (processedClassSeqKeys.has(classSeqKey)) {
+                  errors.push(`Số thứ tự (sequence_no) ${sequenceNo} bị trùng lặp trong lớp "${matchedClass.code}" (${matchedYear.code}).`);
+                } else {
+                  processedClassSeqKeys.add(classSeqKey);
+                }
+              }
+
+              // 6. Recalculate system username & student_code
+              let systemUsername = '';
+              let systemStudentCode = '';
+
+              if (fullName && sequenceNo) {
+                const seqStr = String(sequenceNo).padStart(3, '0');
+                const cleanName = removeVietnameseTones(fullName);
+                systemUsername = `${cleanName}${seqStr}`;
+              }
+
+              if (yearInput && classInput && sequenceNo) {
+                const yearPrefix = yearInput.trim().slice(0, 4);
+                const classCodeUpper = classInput.trim().toUpperCase();
+                const seqStr = String(sequenceNo).padStart(3, '0');
+                systemStudentCode = `${yearPrefix}-${classCodeUpper}-${seqStr}`;
+              }
+
+              // Check Excel values vs recalculation
+              if (excelUsername && systemUsername && excelUsername !== systemUsername && excelUsername !== `${systemUsername}@${internalDomain}`) {
+                warnings.push(`Username trong Excel ("${excelUsername}") khác giá trị tự sinh ("${systemUsername}"). Hệ thống sử dụng giá trị tự sinh.`);
+              }
+              const finalUsername = systemUsername;
+
+              if (excelStudentCode && systemStudentCode && excelStudentCode !== systemStudentCode) {
+                warnings.push(`Mã HS trong Excel ("${excelStudentCode}") khác mã tự sinh ("${systemStudentCode}"). Hệ thống sử dụng giá trị tự sinh.`);
+              }
+              const finalStudentCode = systemStudentCode;
+
+              // 7. Check username duplicates
+              if (finalUsername) {
+                if (processedExcelUsernames.has(finalUsername)) {
+                  errors.push(`Tên đăng nhập "${finalUsername}" bị trùng lặp trong tệp Excel.`);
+                } else {
+                  processedExcelUsernames.add(finalUsername);
+                }
+              }
+
+              // 8. Check student_code format & duplicates
+              if (finalStudentCode) {
+                if (!/^[A-Z0-9-]+$/.test(finalStudentCode)) {
+                  errors.push(`Mã học sinh "${finalStudentCode}" không đúng định dạng YYYY-CLASSCODE-NNN.`);
+                }
+
+                if (processedExcelStudentCodes.has(finalStudentCode)) {
+                  errors.push(`Mã học sinh "${finalStudentCode}" bị trùng lặp trong tệp Excel.`);
+                } else {
+                  processedExcelStudentCodes.add(finalStudentCode);
+                }
+
+                const existsInDb = profiles?.some(p => p.student_code?.toUpperCase() === finalStudentCode.toUpperCase());
+                if (existsInDb) {
+                  errors.push(`Mã học sinh "${finalStudentCode}" đã tồn tại trên hệ thống.`);
+                }
+              }
+
+              // 9. Email generation & duplicates
+              const finalEmail = internalDomain && finalUsername ? `${finalUsername}@${internalDomain}` : finalUsername;
+
+              if (finalEmail) {
+                if (processedExcelEmails.has(finalEmail.toLowerCase())) {
+                  errors.push(`Email nội bộ "${finalEmail}" bị trùng lặp trong tệp Excel.`);
+                } else {
+                  processedExcelEmails.add(finalEmail.toLowerCase());
+                }
+
+                const existsInDb = profiles?.some(p => p.email?.toLowerCase() === finalEmail.toLowerCase());
+                if (existsInDb) {
+                  errors.push(`Tài khoản/Email "${finalEmail}" đã tồn tại trên hệ thống.`);
+                }
+              }
+
+              let detailsText = `STT: ${sequenceNo || 'Trống'} | Mã HS: ${finalStudentCode || 'Trống'} | Lớp: ${matchedClass?.code || classInput || 'Trống'} | Năm: ${matchedYear?.code || yearInput || 'Trống'} | Username: ${finalUsername || 'Trống'}`;
+              if (warnings.length > 0) {
+                detailsText += ` [${warnings.join('; ')}]`;
+              }
+
               validated.push({
                 index: idx,
                 rowNumber,
                 name: fullName || 'Học sinh',
-                code: studentCode,
-                details: `Mã HS: ${studentCode || 'Trống'} | Lớp: ${matchedClass?.code || classInput || 'Trống'} | Năm: ${matchedYear?.code || yearInput || 'Trống'} | Username: ${cleanUsername || 'Trống'}${finalEmail ? ` (${finalEmail})` : ''}`,
+                code: finalStudentCode,
+                details: detailsText,
                 isValid: errors.length === 0,
                 errors,
                 payload: {
                   row_number: rowNumber,
                   full_name: fullName,
-                  student_code: studentCode,
+                  student_code: finalStudentCode,
                   email: finalEmail || undefined,
                   roles: ['STUDENT'],
                   class_id: matchedClass?.id || null,
@@ -465,34 +553,117 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
   };
 
   const downloadTemplate = () => {
+    if (selectedType === 'student') {
+      const headers = [
+        'full_name',
+        'academic_year_code',
+        'class_code',
+        'sequence_no',
+        'username',
+        'student_code',
+        'is_active',
+        'temporary_password'
+      ];
+
+      const rowsData: any[][] = [headers];
+
+      for (let i = 2; i <= 101; i++) {
+        if (i === 2) {
+          rowsData.push(['Nguyễn Văn A', '2026-2027', 'LH61', 1, '', '', 'TRUE', 'Student@2026']);
+        } else if (i === 3) {
+          rowsData.push(['Trần Thị B', '2026-2027', 'LH61', 2, '', '', 'TRUE', 'Student@2026']);
+        } else {
+          rowsData.push(['', '2026-2027', 'LH61', i - 1, '', '', 'TRUE', 'Student@2026']);
+        }
+      }
+
+      const wsStudent = XLSX.utils.aoa_to_sheet(rowsData);
+
+      // Attach formulas to columns E (username) and F (student_code) for rows 2..101
+      for (let i = 2; i <= 101; i++) {
+        const eRef = `E${i}`;
+        const fRef = `F${i}`;
+        const uFormula = buildExcelUsernameFormula(i);
+        const cFormula = buildExcelStudentCodeFormula(i);
+
+        let valU = '';
+        let valF = '';
+        if (i === 2) {
+          valU = 'nguyenvana001';
+          valF = '2026-LH61-001';
+        } else if (i === 3) {
+          valU = 'tranthib002';
+          valF = '2026-LH61-002';
+        }
+
+        wsStudent[eRef] = { t: 's', v: valU, f: uFormula };
+        wsStudent[fRef] = { t: 's', v: valF, f: cFormula };
+      }
+
+      // Column widths, frozen panes, autofilter
+      wsStudent['!cols'] = [
+        { wch: 22 }, // full_name
+        { wch: 20 }, // academic_year_code
+        { wch: 15 }, // class_code
+        { wch: 14 }, // sequence_no
+        { wch: 22 }, // username
+        { wch: 22 }, // student_code
+        { wch: 12 }, // is_active
+        { wch: 20 }, // temporary_password
+      ];
+      wsStudent['!views'] = [{ state: 'frozen', ySplit: 1 }];
+      wsStudent['!autofilter'] = { ref: 'A1:H101' };
+
+      // Guide sheet
+      const huongDanRows = [
+        ['TỆP EXCEL MẪU NHẬP DỮ LIỆU HỌC SINH'],
+        [''],
+        ['HƯỚNG DẪN NHẬP LIỆU:'],
+        ['1. Chỉ nhập dữ liệu vào các cột nền trắng: full_name, academic_year_code, class_code, sequence_no, is_active, temporary_password.'],
+        ['2. Cột "username" và "student_code" TỰ ĐỘNG TÍNH bằng công thức Excel từ họ tên, năm học, mã lớp và số thứ tự.'],
+        ['3. full_name: Nhập họ và tên đầy đủ của học sinh (ví dụ: Nguyễn Văn A).'],
+        ['4. academic_year_code: Nhập mã năm học hợp lệ đã có trong hệ thống (ví dụ: 2026-2027).'],
+        ['5. class_code: Nhập mã lớp (class_code) thực tế trong hệ thống (ví dụ: LH61). Không dùng tên lớp (ví dụ 6/1).'],
+        ['6. sequence_no: Nhập số thứ tự học sinh trong lớp (từ 1 đến 999). Không trùng lặp trong cùng một lớp và năm học.'],
+        ['7. is_active: Nhập TRUE (đang học) hoặc FALSE (ngừng học).'],
+        ['8. temporary_password: Mật khẩu khởi tạo ban đầu cho tài khoản học sinh.'],
+      ];
+      const wsHuongDan = XLSX.utils.aoa_to_sheet(huongDanRows);
+      wsHuongDan['!cols'] = [{ wch: 110 }];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, wsStudent, 'Hoc_sinh');
+      XLSX.utils.book_append_sheet(wb, wsHuongDan, 'Huong_dan');
+
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      const fileName = 'Template_nhap_student.xlsx';
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.href = url;
+      link.download = fileName;
+      link.style.display = 'none';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+
+      return;
+    }
+
     let headers: string[] = [];
     let sampleData: any[] = [];
     let sheetName = '';
 
-    if (selectedType === 'student') {
-      sheetName = 'Hoc_sinh';
-      headers = ['full_name', 'student_code', 'username', 'academic_year_code', 'class_code', 'is_active', 'temporary_password'];
-      sampleData = [
-        {
-          full_name: 'Nguyễn Văn A',
-          student_code: 'HS2026001',
-          username: 'nguyenvana',
-          academic_year_code: '2026-2027',
-          class_code: 'LH61',
-          is_active: 'TRUE',
-          temporary_password: 'Student@2026',
-        },
-        {
-          full_name: 'Trần Thị B',
-          student_code: 'HS2026002',
-          username: 'tranthib',
-          academic_year_code: '2026-2027',
-          class_code: 'LH61',
-          is_active: 'TRUE',
-          temporary_password: 'Student@2026',
-        },
-      ];
-    } else if (selectedType === 'class') {
+    if (selectedType === 'class') {
       sheetName = 'Lớp_học';
       headers = ['name', 'code', 'grade_level_name', 'academic_year_name', 'expected_capacity', 'primary_classroom_code'];
       sampleData = [
@@ -706,18 +877,40 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
           </div>
 
           {/* Download template */}
-          <div className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800 rounded-2xl shrink-0">
-            <div className="space-y-0.5">
-              <p className="font-bold text-slate-700 dark:text-slate-300">Tệp Excel mẫu chuẩn</p>
-              <p className="text-[10px] text-slate-400">Tải xuống tệp mẫu cấu hình sẵn để điền thông tin.</p>
+          <div className="space-y-2 shrink-0">
+            <div className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800 rounded-2xl">
+              <div className="space-y-0.5">
+                <p className="font-bold text-slate-700 dark:text-slate-300">Tệp Excel mẫu chuẩn</p>
+                <p className="text-[10px] text-slate-400">Tải xuống tệp mẫu cấu hình sẵn để điền thông tin.</p>
+              </div>
+              <button
+                type="button"
+                onClick={downloadTemplate}
+                className="px-3.5 py-1.5 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/30 rounded-xl border border-emerald-100 dark:border-emerald-900/20"
+              >
+                Tải tệp mẫu
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={downloadTemplate}
-              className="px-3.5 py-1.5 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/30 rounded-xl border border-emerald-100 dark:border-emerald-900/20"
-            >
-              Tải tệp mẫu
-            </button>
+
+            {selectedType === 'student' && (
+              <div className="p-3 bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 rounded-xl text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                <p>
+                  <strong className="text-slate-700 dark:text-slate-300">username:</strong> Tự động sinh từ họ tên và số thứ tự bằng công thức Excel (ví dụ: nguyenvana001). Hệ thống tự tạo email nội bộ khi import.
+                </p>
+                <p>
+                  <strong className="text-slate-700 dark:text-slate-300">student_code:</strong> Tự động sinh bằng công thức Excel theo định dạng YYYY-CLASSCODE-NNN (ví dụ: 2026-LH61-001).
+                </p>
+                <p>
+                  <strong className="text-slate-700 dark:text-slate-300">class_code:</strong> Mã lớp trong hệ thống (ví dụ: LH61), không nhập tên lớp.
+                </p>
+                <p>
+                  <strong className="text-slate-700 dark:text-slate-300">academic_year_code:</strong> Mã năm học (ví dụ: 2026-2027) phải tồn tại trong hệ thống.
+                </p>
+                <p>
+                  <strong className="text-slate-700 dark:text-slate-300">sequence_no:</strong> Số thứ tự trong lớp (1–999), không trùng lặp trong cùng một lớp và năm học.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Step 3: Choose file */}
