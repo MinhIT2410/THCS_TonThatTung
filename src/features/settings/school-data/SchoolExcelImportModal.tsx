@@ -122,6 +122,10 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
               ''
             ).trim().toLowerCase();
 
+            if (!internalDomain) {
+              throw new Error('Chưa cấu hình domain email nội bộ cho học sinh.');
+            }
+
             const processedExcelStudentCodes = new Set<string>();
             const processedExcelUsernames = new Set<string>();
             const processedExcelEmails = new Set<string>();
@@ -300,7 +304,7 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
                   row_number: rowNumber,
                   full_name: fullName,
                   student_code: finalStudentCode,
-                  email: finalEmail || undefined,
+                  email: undefined,
                   roles: ['STUDENT'],
                   class_id: matchedClass?.id || null,
                   academic_year_id: matchedYear?.id || null,
@@ -717,32 +721,48 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
     try {
       if (selectedType === 'student') {
         const payloads = validRows.map(r => r.payload);
-        const BATCH_SIZE = 50;
+        const BATCH_SIZE = 25;
         const allResults: any[] = [];
+        const batchErrors: string[] = [];
 
         for (let i = 0; i < payloads.length; i += BATCH_SIZE) {
           const batch = payloads.slice(i, i + BATCH_SIZE);
           const currentEnd = Math.min(i + BATCH_SIZE, payloads.length);
-          setProgress(`Đang khởi tạo tài khoản học sinh (${currentEnd}/${payloads.length})...`);
+          setProgress(`Đang khởi tạo tài khoản học sinh (${i + 1}-${currentEnd}/${payloads.length})...`);
 
-          const result = await userCreationApi.createManyUsers(batch);
+          try {
+            const result = await userCreationApi.createManyUsers(batch);
 
-          if (result && result.success === false) {
-            throw new Error(result.message || `Lỗi xảy ra ở lô học sinh từ ${i + 1} đến ${currentEnd}.`);
-          }
+            if (result && result.success === false) {
+              throw new Error(result.message || `Lỗi xảy ra ở lô học sinh từ ${i + 1} đến ${currentEnd}.`);
+            }
 
-          if (result?.data) {
-            allResults.push(...result.data);
+            if (result?.data && Array.isArray(result.data)) {
+              allResults.push(...result.data);
+            }
+          } catch (batchErr: any) {
+            console.error('Batch error:', batchErr);
+            batchErrors.push(`Lô ${i + 1}-${currentEnd}: ${batchErr.message || 'Lỗi kết nối máy chủ'}`);
           }
         }
 
-        const successCount = allResults.filter((r: any) => r.success !== false).length;
-        const failCount = allResults.length - successCount;
+        const successResults = allResults.filter((r: any) => r.success === true);
+        const failedResults = allResults.filter((r: any) => r.success === false);
+
+        const successCount = successResults.length;
+        const failCount = failedResults.length + (payloads.length - allResults.length);
+
+        if (successCount === 0) {
+          const sampleErr = failedResults[0]?.error || batchErrors[0] || 'Lỗi không xác định khi lưu vào CSDL';
+          throw new Error(`Tất cả ${payloads.length} học sinh đều tạo thất bại. Chi tiết lỗi: ${sampleErr}`);
+        }
 
         if (failCount > 0) {
-          setSuccess(`Đã tạo thành công ${successCount}/${payloads.length} học sinh. Bỏ qua ${failCount} học sinh do lỗi.`);
+          const firstFail = failedResults[0];
+          const sampleErr = firstFail ? `Dòng ${firstFail.row_number || '?'}: ${firstFail.error || 'Lỗi không xác định'}` : batchErrors[0] || '';
+          setSuccess(`Thành công: ${successCount}/${payloads.length} học sinh | Thất bại: ${failCount} học sinh (${sampleErr}).`);
         } else {
-          setSuccess(`Đã tạo tài khoản và phân lớp thành công cho toàn bộ ${payloads.length} học sinh!`);
+          setSuccess(`Tạo thành công toàn bộ ${successCount}/${payloads.length} học sinh vào hệ thống (gồm Auth, Profiles, Roles, Enrollments)!`);
         }
 
         onImportSuccess();
