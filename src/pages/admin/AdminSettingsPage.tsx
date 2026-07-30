@@ -17,6 +17,7 @@ import SubjectsTab from '../../features/settings/school-data/SubjectsTab';
 import ClassroomsTab from '../../features/settings/school-data/ClassroomsTab';
 import HomeroomTeachersTab from '../../features/settings/school-data/HomeroomTeachersTab';
 import TeacherAssignmentsTab from '../../features/settings/school-data/TeacherAssignmentsTab';
+import StudentsTab from '../../features/settings/school-data/StudentsTab';
 
 // Excel import modal
 import SchoolExcelImportModal from '../../features/settings/school-data/SchoolExcelImportModal';
@@ -27,6 +28,7 @@ type TabType =
   | 'academic_terms'
   | 'grade_levels'
   | 'classes'
+  | 'students'
   | 'departments'
   | 'subjects'
   | 'classrooms'
@@ -43,6 +45,7 @@ export default function AdminSettingsPage() {
     { id: 'academic_terms', label: 'Học kỳ' },
     { id: 'grade_levels', label: 'Khối lớp' },
     { id: 'classes', label: 'Lớp học' },
+    { id: 'students', label: 'Học sinh' },
     { id: 'departments', label: 'Tổ chuyên môn' },
     { id: 'subjects', label: 'Môn học' },
     { id: 'classrooms', label: 'Phòng học' },
@@ -109,6 +112,7 @@ export default function AdminSettingsPage() {
         {activeTab === 'academic_terms' && <AcademicTermsTab />}
         {activeTab === 'grade_levels' && <GradeLevelsTab />}
         {activeTab === 'classes' && <ClassesTab />}
+        {activeTab === 'students' && <StudentsTab />}
         {activeTab === 'departments' && <DepartmentsTab />}
         {activeTab === 'subjects' && <SubjectsTab />}
         {activeTab === 'classrooms' && <ClassroomsTab />}

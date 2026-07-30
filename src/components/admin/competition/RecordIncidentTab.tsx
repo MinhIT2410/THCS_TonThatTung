@@ -423,11 +423,11 @@ export default function RecordIncidentTab({ onNavigateToPrograms }: RecordIncide
                     </p>
                     {unitInfo?.has_unit ? (
                       <span className="inline-block mt-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-semibold">
-                        Chi đội: {unitInfo.class_name}
+                        Chi đội / Lớp: {unitInfo.class_name}
                       </span>
                     ) : (
                       <span className="inline-block mt-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[11px] font-semibold">
-                        ⚠️ Chưa được phân vào chi đội
+                        ⚠️ Học sinh chưa được phân vào lớp trong năm học hiện tại.
                       </span>
                     )}
                   </div>
@@ -480,12 +480,23 @@ export default function RecordIncidentTab({ onNavigateToPrograms }: RecordIncide
                             {s.full_name}
                           </div>
                           <div className="text-xs text-slate-400 font-mono">
-                            Mã: {s.student_code || '---'}
+                            Mã: {s.student_code || 'Chưa cập nhật'}
                           </div>
                         </div>
-                        {s.unit?.class_name && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                            {s.unit.class_name}
+                        {s.unit?.class_name ? (
+                          <div className="text-right">
+                            <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold block">
+                              Lớp {s.unit.class_name}
+                            </span>
+                            {s.unit.academic_year_name && (
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                {s.unit.academic_year_name}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 font-medium">
+                            Chưa phân lớp
                           </span>
                         )}
                       </button>

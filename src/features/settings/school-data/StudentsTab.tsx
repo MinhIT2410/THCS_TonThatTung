@@ -1,0 +1,823 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Users,
+  Search,
+  Filter,
+  ArrowRightLeft,
+  UserPlus,
+  CheckSquare,
+  Square,
+  AlertCircle,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  GraduationCap,
+  CheckCircle2,
+  Info,
+  UserX,
+} from 'lucide-react';
+import {
+  studentEnrollmentService,
+  StudentEnrollmentItem,
+} from '../../../services/studentEnrollmentService';
+
+export default function StudentsTab() {
+  const [students, setStudents] = useState<StudentEnrollmentItem[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+
+  // Filter states
+  const [selectedYearId, setSelectedYearId] = useState<string>('');
+  const [selectedClassId, setSelectedClassId] = useState<string>('all'); // 'all' | 'unassigned' | uuid
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all' | 'active' | 'inactive'
+
+  // Pagination states
+  const [page, setPage] = useState<number>(1);
+  const [pageSize] = useState<number>(15);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
+  // Selection states
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+
+  // Loading & Alert states
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Modal states
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState<boolean>(false);
+  const [modalTargetStudents, setModalTargetStudents] = useState<StudentEnrollmentItem[]>([]);
+  const [targetClassId, setTargetClassId] = useState<string>('');
+  const [targetYearId, setTargetYearId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Transfer single student modal
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState<boolean>(false);
+  const [transferStudent, setTransferStudent] = useState<StudentEnrollmentItem | null>(null);
+  const [newClassId, setNewClassId] = useState<string>('');
+
+  // 1. Initial Load: Academic Years
+  useEffect(() => {
+    loadAcademicYears();
+  }, []);
+
+  const loadAcademicYears = async () => {
+    try {
+      setLoading(true);
+      const years = await studentEnrollmentService.getAcademicYears();
+      setAcademicYears(years);
+
+      if (years && years.length > 0) {
+        // Find current or first year
+        const current = years.find((y: any) => y.is_current || y.is_active) || years[0];
+        setSelectedYearId(current.id);
+        setTargetYearId(current.id);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Không thể tải danh sách năm học.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Load classes when year changes
+  useEffect(() => {
+    if (selectedYearId) {
+      loadClasses(selectedYearId);
+    }
+  }, [selectedYearId]);
+
+  const loadClasses = async (yearId: string) => {
+    try {
+      const clsList = await studentEnrollmentService.getClassesByAcademicYear(yearId);
+      setClasses(clsList);
+    } catch (err: any) {
+      console.error('Lỗi tải danh sách lớp:', err);
+    }
+  };
+
+  // 3. Fetch students when filters or pagination changes
+  const fetchStudents = useCallback(async () => {
+    if (!selectedYearId) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await studentEnrollmentService.getStudentsWithEnrollment({
+        academicYearId: selectedYearId,
+        classId: selectedClassId,
+        search: searchTerm,
+        isActive: statusFilter === 'all' ? null : statusFilter === 'active',
+        page,
+        pageSize,
+      });
+
+      setStudents(res.data);
+      setTotalItems(res.total);
+      setTotalPages(res.totalPages);
+    } catch (err: any) {
+      setError(err?.message || 'Không thể tải danh sách học sinh.');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedYearId, selectedClassId, searchTerm, statusFilter, page, pageSize]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  // Handle auto toast timeout
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // Selection toggle
+  const toggleSelectStudent = (id: string) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllPage = () => {
+    if (selectedStudentIds.length === students.length && students.length > 0) {
+      setSelectedStudentIds([]);
+    } else {
+      setSelectedStudentIds(students.map(s => s.id));
+    }
+  };
+
+  // Open Assign Modal for bulk or single
+  const openAssignModal = (targetList?: StudentEnrollmentItem[]) => {
+    const listToAssign = targetList || students.filter(s => selectedStudentIds.includes(s.id));
+    if (listToAssign.length === 0) {
+      setError('Vui lòng chọn ít nhất một học sinh.');
+      return;
+    }
+    setModalTargetStudents(listToAssign);
+    setTargetYearId(selectedYearId);
+    setTargetClassId(classes[0]?.id || '');
+    setIsAssignModalOpen(true);
+  };
+
+  // Confirm Assign
+  const handleConfirmAssign = async () => {
+    if (!targetClassId) {
+      setError('Vui lòng chọn lớp học.');
+      return;
+    }
+    if (!targetYearId) {
+      setError('Vui lòng chọn năm học.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const studentIds = modalTargetStudents.map(s => s.id);
+      await studentEnrollmentService.assignStudentsToClass(studentIds, targetClassId, targetYearId);
+
+      const targetClassName = classes.find(c => c.id === targetClassId)?.name || 'mới';
+      setSuccess(`Đã phân ${studentIds.length} học sinh vào lớp ${targetClassName} thành công!`);
+      setIsAssignModalOpen(false);
+      setSelectedStudentIds([]);
+      fetchStudents();
+    } catch (err: any) {
+      setError(err?.message || 'Có lỗi xảy ra khi phân lớp học sinh.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Open Transfer Modal
+  const openTransferModal = (student: StudentEnrollmentItem) => {
+    setTransferStudent(student);
+    const availableNewClasses = classes.filter(c => c.id !== student.enrollment?.class_id);
+    setNewClassId(availableNewClasses[0]?.id || '');
+    setIsTransferModalOpen(true);
+  };
+
+  // Confirm Transfer Class
+  const handleConfirmTransfer = async () => {
+    if (!transferStudent || !newClassId || !selectedYearId) return;
+
+    try {
+      setIsSubmitting(true);
+      await studentEnrollmentService.transferStudentClass(
+        transferStudent.id,
+        newClassId,
+        selectedYearId
+      );
+
+      const newClassName = classes.find(c => c.id === newClassId)?.name || 'mới';
+      setSuccess(`Đã chuyển học sinh ${transferStudent.full_name} sang lớp ${newClassName}!`);
+      setIsTransferModalOpen(false);
+      setTransferStudent(null);
+      fetchStudents();
+    } catch (err: any) {
+      setError(err?.message || 'Không thể chuyển lớp học sinh.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const selectedYearName = academicYears.find(y => y.id === selectedYearId)?.name || '---';
+
+  return (
+    <div className="space-y-6" id="students-tab">
+      {/* Toast Messages */}
+      {success && (
+        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-medium">{success}</span>
+          </div>
+          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-800">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-xs flex items-center justify-between shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            <span className="font-medium">{error}</span>
+          </div>
+          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Header & Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-blue-600" />
+            Danh Sách Học Sinh & Phân Lớp
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Quản lý danh sách học sinh, phân học sinh vào lớp và thực hiện chuyển lớp trong niên khóa.
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {selectedStudentIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => openAssignModal()}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Phân vào lớp ({selectedStudentIds.length})</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={fetchStudents}
+            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Làm mới dữ liệu"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        {/* Search */}
+        <div className="lg:col-span-2 relative">
+          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={e => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Tìm tên hoặc Mã học sinh..."
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+          />
+        </div>
+
+        {/* Academic Year Filter */}
+        <div>
+          <select
+            value={selectedYearId}
+            onChange={e => {
+              setSelectedYearId(e.target.value);
+              setSelectedClassId('all');
+              setPage(1);
+            }}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
+          >
+            {academicYears.map(y => (
+              <option key={y.id} value={y.id}>
+                Năm học {y.name} {y.is_current ? '(Hiện tại)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Class Filter */}
+        <div>
+          <select
+            value={selectedClassId}
+            onChange={e => {
+              setSelectedClassId(e.target.value);
+              setPage(1);
+            }}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
+          >
+            <option value="all">Tất cả các lớp</option>
+            <option value="unassigned">⚠️ Chưa phân lớp</option>
+            {classes.map(c => (
+              <option key={c.id} value={c.id}>
+                Lớp {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Status Filter */}
+        <div>
+          <select
+            value={statusFilter}
+            onChange={e => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
+          >
+            <option value="all">Mọi trạng thái tài khoản</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="inactive">Đã khóa</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Quick Filter Shortcuts */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-slate-500 font-medium">Bộ lọc nhanh:</span>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedClassId('unassigned');
+              setPage(1);
+            }}
+            className={`px-3 py-1 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 border ${
+              selectedClassId === 'unassigned'
+                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            <UserX className="w-3.5 h-3.5 text-amber-600" />
+            <span>Học sinh chưa phân lớp</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedClassId('all');
+              setSearchTerm('');
+              setStatusFilter('all');
+              setPage(1);
+            }}
+            className="px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 font-medium"
+          >
+            Xóa bộ lọc
+          </button>
+        </div>
+
+        <div className="text-slate-500">
+          Tổng cộng: <strong className="text-slate-900 dark:text-white font-bold">{totalItems}</strong> học sinh
+        </div>
+      </div>
+
+      {/* Table Section */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                <th className="p-3.5 w-10 text-center">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAllPage}
+                    className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                  >
+                    {selectedStudentIds.length === students.length && students.length > 0 ? (
+                      <CheckSquare className="w-4 h-4 text-blue-600" />
+                    ) : (
+                      <Square className="w-4 h-4" />
+                    )}
+                  </button>
+                </th>
+                <th className="p-3.5">Mã học sinh</th>
+                <th className="p-3.5">Họ và tên</th>
+                <th className="p-3.5">Năm học</th>
+                <th className="p-3.5">Lớp hiện tại</th>
+                <th className="p-3.5 text-center">Phân lớp</th>
+                <th className="p-3.5 text-center">Tài khoản</th>
+                <th className="p-3.5 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-slate-400">
+                    <div className="inline-flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                      <span>Đang tải danh sách học sinh...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : students.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-12 text-center text-slate-500 dark:text-slate-400">
+                    {selectedClassId === 'unassigned' ? (
+                      <div className="space-y-2">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                        <p className="font-bold text-slate-800 dark:text-slate-200">
+                          Không có học sinh chưa được phân lớp trong năm học này.
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          Tất cả học sinh trong niên khóa {selectedYearName} đều đã có lớp học.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <Info className="w-6 h-6 text-slate-400 mx-auto" />
+                        <p className="font-bold text-slate-700 dark:text-slate-300">
+                          Không tìm thấy học sinh nào phù hợp.
+                        </p>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                students.map(student => {
+                  const isSelected = selectedStudentIds.includes(student.id);
+                  const isAssigned = !!student.enrollment;
+
+                  return (
+                    <tr
+                      key={student.id}
+                      className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${
+                        isSelected ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
+                      }`}
+                    >
+                      <td className="p-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectStudent(student.id)}
+                          className="text-slate-500 hover:text-slate-800"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-blue-600" />
+                          ) : (
+                            <Square className="w-4 h-4" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="p-3.5 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                        {student.student_code || '---'}
+                      </td>
+                      <td className="p-3.5 font-bold text-slate-900 dark:text-white">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center justify-center shrink-0">
+                            {student.full_name?.charAt(0) || 'S'}
+                          </div>
+                          <span>{student.full_name}</span>
+                        </div>
+                      </td>
+                      <td className="p-3.5 text-slate-600 dark:text-slate-400 font-medium">
+                        {selectedYearName}
+                      </td>
+                      <td className="p-3.5">
+                        {isAssigned ? (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold text-xs inline-block">
+                            Lớp {student.enrollment?.class_name}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic">Chưa phân lớp</span>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-center">
+                        {isAssigned ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-[11px] inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Đã phân lớp
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-bold text-[11px] inline-flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            Chưa phân lớp
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-center">
+                        {student.is_active ? (
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[11px] font-medium">
+                            Hoạt động
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 text-[11px] font-medium">
+                            Khóa
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-right">
+                        {isAssigned ? (
+                          <button
+                            type="button"
+                            onClick={() => openTransferModal(student)}
+                            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 dark:bg-slate-800 dark:hover:bg-blue-950/60 dark:text-slate-300 dark:hover:text-blue-300 font-bold text-xs transition-colors inline-flex items-center gap-1"
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5" />
+                            <span>Chuyển lớp</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openAssignModal([student])}
+                            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors inline-flex items-center gap-1 shadow-sm"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>Phân vào lớp</span>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs text-slate-500">
+            <div>
+              Trang {page} / {totalPages} (Hiện {students.length} dòng)
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* --- MODAL 1: ASSIGN / BULK ASSIGN STUDENTS TO CLASS --- */}
+      {isAssignModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-blue-600" />
+                Phân Học Sinh Vào Lớp
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAssignModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Selected Academic Year */}
+              <div>
+                <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  Năm học áp dụng
+                </label>
+                <select
+                  value={targetYearId}
+                  onChange={e => {
+                    setTargetYearId(e.target.value);
+                    loadClasses(e.target.value);
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium outline-none"
+                >
+                  {academicYears.map(y => (
+                    <option key={y.id} value={y.id}>
+                      Năm học {y.name} {y.is_current ? '(Hiện tại)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Class Select */}
+              <div>
+                <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  Lớp học phân vào <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={targetClassId}
+                  onChange={e => setTargetClassId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500/20"
+                  required
+                >
+                  <option value="">-- Chọn lớp học --</option>
+                  {classes.map(c => (
+                    <option key={c.id} value={c.id}>
+                      Lớp {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* List of target students */}
+              <div>
+                <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  Danh sách học sinh sẽ phân lớp ({modalTargetStudents.length})
+                </label>
+                <div className="max-h-36 overflow-y-auto p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 divide-y divide-slate-100 dark:divide-slate-800">
+                  {modalTargetStudents.map(s => (
+                    <div key={s.id} className="py-1.5 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-900 dark:text-white">{s.full_name}</span>
+                        <span className="ml-2 font-mono text-slate-400">({s.student_code || 'Chưa có mã'})</span>
+                      </div>
+                      {s.enrollment && (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-medium">
+                          Đang ở Lớp {s.enrollment.class_name}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[11px] flex items-start gap-2">
+                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <span>
+                  Hệ thống tự động liên kết học sinh vào lớp theo niên khóa được chọn. Học sinh đã phân lớp sẽ được cập nhật sang lớp mới.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-4">
+              <button
+                type="button"
+                onClick={() => setIsAssignModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting || !targetClassId}
+                onClick={handleConfirmAssign}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isSubmitting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>Xác nhận phân lớp</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 2: TRANSFER CLASS --- */}
+      {isTransferModalOpen && transferStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <ArrowRightLeft className="w-5 h-5 text-blue-600" />
+                Chuyển Lớp Cho Học Sinh
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTransferModalOpen(false);
+                  setTransferStudent(null);
+                }}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Student info summary */}
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-slate-900 dark:text-white text-sm">
+                    {transferStudent.full_name}
+                  </div>
+                  <div className="text-slate-500 font-mono text-[11px]">
+                    Mã học sinh: {transferStudent.student_code || 'Chưa cập nhật'}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Năm học</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{selectedYearName}</span>
+                </div>
+              </div>
+
+              {/* Class transition display */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-bold">Lớp hiện tại</span>
+                  <span className="font-bold text-sm text-slate-900 dark:text-white">
+                    Lớp {transferStudent.enrollment?.class_name || '---'}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Lớp mới chuyển sang <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={newClassId}
+                    onChange={e => setNewClassId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold outline-none focus:ring-2 focus:ring-blue-500/20"
+                    required
+                  >
+                    <option value="">-- Chọn lớp mới --</option>
+                    {classes
+                      .filter(c => c.id !== transferStudent.enrollment?.class_id)
+                      .map(c => (
+                        <option key={c.id} value={c.id}>
+                          Lớp {c.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Warning Notice */}
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[11px] flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  Chuyển lớp chỉ cập nhật phân lớp trong niên khóa <strong>{selectedYearName}</strong>. Dữ liệu lịch sử phân lớp ở các năm học trước không bị thay đổi.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTransferModalOpen(false);
+                  setTransferStudent(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting || !newClassId}
+                onClick={handleConfirmTransfer}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isSubmitting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>Xác nhận chuyển lớp</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

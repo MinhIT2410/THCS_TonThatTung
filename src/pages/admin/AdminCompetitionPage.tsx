@@ -17,6 +17,13 @@ import {
   HelpCircle
 } from 'lucide-react';
 import ProgramsAndRulesTab from '../../components/admin/competition/ProgramsAndRulesTab';
+import WeeklyUnitsTab from '../../components/admin/competition/WeeklyUnitsTab';
+import RecordIncidentTab from '../../components/admin/competition/RecordIncidentTab';
+import PendingIncidentsTab from '../../components/admin/competition/PendingIncidentsTab';
+import IncidentsHistoryTab from '../../components/admin/competition/IncidentsHistoryTab';
+import { RedemptionsTab } from '../../components/admin/competition/RedemptionsTab';
+import { RewardsTab } from '../../components/admin/competition/RewardsTab';
+import { ReviewRequestsTab } from '../../components/admin/competition/ReviewRequestsTab';
 
 type AdminCompetitionSubTab =
   | 'programs_rules'

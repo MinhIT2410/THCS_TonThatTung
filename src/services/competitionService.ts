@@ -336,16 +336,17 @@ export const competitionService = {
     const studentIds = students.map(s => s.id);
     const { data: enrollments } = await supabase
       .from('student_enrollments')
-      .select('student_id, class_id, classes(id, name)')
+      .select('student_id, class_id, classes(id, name), academic_years(id, name)')
       .in('student_id', studentIds);
 
-    const enrollmentMap: Record<string, { class_id: string; class_name: string }> = {};
+    const enrollmentMap: Record<string, { class_id: string; class_name: string; academic_year_name: string }> = {};
     if (enrollments) {
       enrollments.forEach((e: any) => {
         if (e.classes) {
           enrollmentMap[e.student_id] = {
             class_id: e.class_id,
             class_name: e.classes.name,
+            academic_year_name: e.academic_years?.name || '',
           };
         }
       });
@@ -529,20 +530,6 @@ export const competitionService = {
       approver_name: i.approver?.full_name,
       evidence_items: i.competition_incident_evidence || [],
     })) as CompetitionIncident[];
-  },
-
-  // --- ACADEMIC YEARS ---
-  async getAcademicYears() {
-    const { data, error } = await supabase
-      .from('academic_years')
-      .select('*')
-      .order('start_date', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching academic years:', error);
-      throw error;
-    }
-    return data || [];
   },
 
   // --- CLASSES / UNITS ---
