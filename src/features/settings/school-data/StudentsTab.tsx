@@ -40,12 +40,13 @@ export default function StudentsTab() {
   // Filter states
   const [selectedYearId, setSelectedYearId] = useState<string>('');
   const [selectedClassId, setSelectedClassId] = useState<string>('all'); // 'all' | 'unassigned' | uuid
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all' | 'active' | 'inactive'
 
   // Pagination states
   const [page, setPage] = useState<number>(1);
-  const [pageSize] = useState<number>(15);
+  const [pageSize, setPageSize] = useState<number>(50);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
 
@@ -56,6 +57,19 @@ export default function StudentsTab() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Debounce search input (400ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Reset page to 1 on filter or page size change
+  useEffect(() => {
+    setPage(1);
+  }, [selectedYearId, selectedClassId, statusFilter, debouncedSearch, pageSize]);
 
   // Modal states
   const [isAssignModalOpen, setIsAssignModalOpen] = useState<boolean>(false);
@@ -119,21 +133,21 @@ export default function StudentsTab() {
       const res = await studentEnrollmentService.getStudentsWithEnrollment({
         academicYearId: selectedYearId,
         classId: selectedClassId,
-        search: searchTerm,
+        search: debouncedSearch,
         isActive: statusFilter === 'all' ? null : statusFilter === 'active',
         page,
         pageSize,
       });
 
-      setStudents(res.data);
-      setTotalItems(res.total);
+      setStudents(res.students);
+      setTotalItems(res.totalCount);
       setTotalPages(res.totalPages);
     } catch (err: any) {
       setError(err?.message || 'Không thể tải danh sách học sinh.');
     } finally {
       setLoading(false);
     }
-  }, [selectedYearId, selectedClassId, searchTerm, statusFilter, page, pageSize]);
+  }, [selectedYearId, selectedClassId, debouncedSearch, statusFilter, page, pageSize]);
 
   useEffect(() => {
     fetchStudents();
@@ -323,11 +337,8 @@ export default function StudentsTab() {
           <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
           <input
             type="text"
-            value={searchTerm}
-            onChange={e => {
-              setSearchTerm(e.target.value);
-              setPage(1);
-            }}
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
             placeholder="Tìm tên hoặc Mã học sinh..."
             className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
           />
@@ -340,7 +351,6 @@ export default function StudentsTab() {
             onChange={e => {
               setSelectedYearId(e.target.value);
               setSelectedClassId('all');
-              setPage(1);
             }}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
           >
@@ -358,7 +368,6 @@ export default function StudentsTab() {
             value={selectedClassId}
             onChange={e => {
               setSelectedClassId(e.target.value);
-              setPage(1);
             }}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
           >
@@ -378,7 +387,6 @@ export default function StudentsTab() {
             value={statusFilter}
             onChange={e => {
               setStatusFilter(e.target.value);
-              setPage(1);
             }}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
           >
@@ -397,7 +405,6 @@ export default function StudentsTab() {
             type="button"
             onClick={() => {
               setSelectedClassId('unassigned');
-              setPage(1);
             }}
             className={`px-3 py-1 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 border ${
               selectedClassId === 'unassigned'
@@ -413,9 +420,8 @@ export default function StudentsTab() {
             type="button"
             onClick={() => {
               setSelectedClassId('all');
-              setSearchTerm('');
+              setSearchInput('');
               setStatusFilter('all');
-              setPage(1);
             }}
             className="px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 font-medium"
           >
@@ -591,31 +597,49 @@ export default function StudentsTab() {
         </div>
 
         {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs text-slate-500">
-            <div>
-              Trang {page} / {totalPages} (Hiện {students.length} dòng)
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+        <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="flex items-center gap-3">
+            <span>
+              Trang <strong className="text-slate-900 dark:text-white font-bold">{page}</strong> / <strong className="text-slate-900 dark:text-white font-bold">{totalPages || 1}</strong> (Tổng số <strong className="text-slate-900 dark:text-white font-bold">{totalItems}</strong> học sinh)
+            </span>
+            <div className="flex items-center gap-1.5 ml-2">
+              <span className="text-slate-400 font-medium">Hiển thị:</span>
+              <select
+                value={pageSize}
+                onChange={e => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 outline-none"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                disabled={page >= totalPages}
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40 hover:bg-slate-50 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                <option value={25}>25 / trang</option>
+                <option value={50}>50 / trang</option>
+                <option value={100}>100 / trang</option>
+              </select>
             </div>
           </div>
-        )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 shadow-sm"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Trang trước</span>
+            </button>
+            <button
+              type="button"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 shadow-sm"
+            >
+              <span>Trang sau</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* --- MODAL 1: ASSIGN / BULK ASSIGN STUDENTS TO CLASS --- */}

@@ -26,6 +26,7 @@ export interface FetchStudentsParams {
   classId?: string; // 'all' | 'unassigned' | specific class_id
   search?: string;
   isActive?: boolean | null;
+  unassignedOnly?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -72,7 +73,7 @@ export const studentEnrollmentService = {
   },
 
   /**
-   * Fetch list of students with enrollment info for specified academic year
+   * Fetch list of students with enrollment info for specified academic year using paginated RPC
    */
   async getStudentsWithEnrollment(params: FetchStudentsParams) {
     const {
@@ -80,108 +81,60 @@ export const studentEnrollmentService = {
       classId = 'all',
       search,
       isActive = null,
+      unassignedOnly = false,
       page = 1,
-      pageSize = 20,
+      pageSize = 50,
     } = params;
 
-    // 1. Get student user_ids from user_roles
-    const { data: userRoles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role_code', 'STUDENT');
+    let targetClassId: string | null = null;
+    let targetUnassignedOnly = unassignedOnly;
 
-    if (rolesError) {
-      console.error('Error fetching student roles:', rolesError);
-      throw rolesError;
+    if (classId === 'unassigned') {
+      targetUnassignedOnly = true;
+      targetClassId = null;
+    } else if (classId && classId !== 'all') {
+      targetClassId = classId;
     }
 
-    const studentIds = (userRoles || []).map((ur: any) => ur.user_id);
-    if (studentIds.length === 0) {
-      return { data: [], total: 0, page, totalPages: 0 };
-    }
-
-    // 2. Fetch profiles
-    let profileQuery = supabase
-      .from('profiles')
-      .select('id, full_name, student_code, is_active, created_at')
-      .in('id', studentIds)
-      .order('full_name', { ascending: true });
-
-    if (isActive !== null) {
-      profileQuery = profileQuery.eq('is_active', isActive);
-    }
-
-    if (search && search.trim()) {
-      const term = search.trim();
-      profileQuery = profileQuery.or(`full_name.ilike.%${term}%,student_code.ilike.%${term}%`);
-    }
-
-    const { data: profiles, error: profileError } = await profileQuery;
-    if (profileError) {
-      console.error('Error fetching student profiles:', profileError);
-      throw profileError;
-    }
-
-    if (!profiles || profiles.length === 0) {
-      return { data: [], total: 0, page, totalPages: 0 };
-    }
-
-    // 3. Fetch enrollments for filtered student profiles
-    const profileIds = profiles.map(p => p.id);
-    let enrollmentQuery = supabase
-      .from('student_enrollments')
-      .select('id, student_id, class_id, academic_year_id, classes(id, name, code), academic_years(id, name)')
-      .in('student_id', profileIds);
-
-    if (academicYearId) {
-      enrollmentQuery = enrollmentQuery.eq('academic_year_id', academicYearId);
-    }
-
-    const { data: enrollments, error: enrollError } = await enrollmentQuery;
-    if (enrollError) {
-      console.error('Error fetching enrollments:', enrollError);
-      throw enrollError;
-    }
-
-    // Map enrollments by student_id
-    const enrollmentMap = new Map<string, any>();
-    (enrollments || []).forEach((e: any) => {
-      enrollmentMap.set(e.student_id, {
-        id: e.id,
-        class_id: e.class_id,
-        class_name: e.classes?.name || '---',
-        class_code: e.classes?.code || null,
-        academic_year_id: e.academic_year_id,
-        academic_year_name: e.academic_years?.name || '---',
-      });
+    const { data, error } = await supabase.rpc('get_students_with_enrollment', {
+      p_academic_year_id: academicYearId || null,
+      p_class_id: targetClassId,
+      p_search: search?.trim() || null,
+      p_is_active: isActive ?? null,
+      p_unassigned_only: targetUnassignedOnly,
+      p_page: page,
+      p_page_size: pageSize,
     });
 
-    // 4. Combine profile and enrollment
-    let combined: StudentEnrollmentItem[] = profiles.map((p: any) => ({
-      id: p.id,
-      full_name: p.full_name || 'Chưa đặt tên',
-      student_code: p.student_code || null,
-      is_active: p.is_active ?? true,
-      created_at: p.created_at,
-      enrollment: enrollmentMap.get(p.id) || null,
-    }));
-
-    // 5. Filter by classId
-    if (classId === 'unassigned') {
-      combined = combined.filter(s => s.enrollment === null);
-    } else if (classId && classId !== 'all') {
-      combined = combined.filter(s => s.enrollment?.class_id === classId);
+    if (error) {
+      console.error('Error fetching students via RPC:', error);
+      throw error;
     }
 
-    // 6. Paginate results
-    const total = combined.length;
-    const totalPages = Math.ceil(total / pageSize) || 1;
-    const startIndex = (page - 1) * pageSize;
-    const paginated = combined.slice(startIndex, startIndex + pageSize);
+    const students: StudentEnrollmentItem[] = (data || []).map((row: any) => ({
+      id: row.student_id,
+      full_name: row.full_name || 'Chưa đặt tên',
+      student_code: row.student_code || null,
+      is_active: row.is_active ?? true,
+      created_at: new Date().toISOString(),
+      enrollment: row.class_id ? {
+        id: `${row.student_id}_${row.academic_year_id || 'no_year'}`,
+        class_id: row.class_id,
+        class_name: row.class_name || '---',
+        class_code: null,
+        academic_year_id: row.academic_year_id || '',
+        academic_year_name: row.academic_year_name || '---',
+      } : null,
+    }));
+
+    const totalCount = data && data.length > 0 ? Number(data[0].total_count) : 0;
+    const totalPages = Math.ceil(totalCount / pageSize) || 1;
 
     return {
-      data: paginated,
-      total,
+      students,
+      totalCount,
+      data: students,
+      total: totalCount,
       page,
       totalPages,
     };
