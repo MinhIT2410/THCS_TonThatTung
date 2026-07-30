@@ -29,36 +29,6 @@ function removeVietnameseTones(str: string): string {
     .toLowerCase();
 }
 
-function buildExcelUsernameFormula(r: number): string {
-  const replacePairs: [string, string][] = [
-    [' ', ''],
-    ['à', 'a'], ['á', 'a'], ['ạ', 'a'], ['ả', 'a'], ['ã', 'a'],
-    ['â', 'a'], ['ầ', 'a'], ['ấ', 'a'], ['ậ', 'a'], ['ẩ', 'a'], ['ẫ', 'a'],
-    ['ă', 'a'], ['ằ', 'a'], ['ắ', 'a'], ['ặ', 'a'], ['ẳ', 'a'], ['ẵ', 'a'],
-    ['è', 'e'], ['é', 'e'], ['ẹ', 'e'], ['ẻ', 'e'], ['ẽ', 'e'],
-    ['ê', 'e'], ['ề', 'e'], ['ế', 'e'], ['ệ', 'e'], ['ể', 'e'], ['ễ', 'e'],
-    ['ì', 'i'], ['í', 'i'], ['ị', 'i'], ['ỉ', 'i'], ['ĩ', 'i'],
-    ['ò', 'o'], ['ó', 'o'], ['ọ', 'o'], ['ỏ', 'o'], ['õ', 'o'],
-    ['ô', 'o'], ['ồ', 'o'], ['ố', 'o'], ['ộ', 'o'], ['ổ', 'o'], ['ỗ', 'o'],
-    ['ơ', 'o'], ['ờ', 'o'], ['ớ', 'o'], ['ợ', 'o'], ['ở', 'o'], ['ỡ', 'o'],
-    ['ù', 'u'], ['ú', 'u'], ['ụ', 'u'], ['ủ', 'u'], ['ũ', 'u'],
-    ['ư', 'u'], ['ừ', 'u'], ['ứ', 'u'], ['ự', 'u'], ['ử', 'u'], ['ữ', 'u'],
-    ['ỳ', 'y'], ['ý', 'y'], ['ỵ', 'y'], ['ỷ', 'y'], ['ỹ', 'y'],
-    ['đ', 'd'],
-  ];
-
-  let expr = `LOWER(TRIM(A${r}))`;
-  for (const [from, to] of replacePairs) {
-    expr = `SUBSTITUTE(${expr}, "${from}", "${to}")`;
-  }
-
-  return `IF(OR(A${r}="", D${r}=""), "", ${expr} & TEXT(D${r}, "000"))`;
-}
-
-function buildExcelStudentCodeFormula(r: number): string {
-  return `IF(OR(B${r}="", C${r}="", D${r}=""), "", LEFT(TRIM(B${r}), 4) & "-" & UPPER(TRIM(C${r})) & "-" & TEXT(D${r}, "000"))`;
-}
-
 interface ParsedRow {
   index: number;
   rowNumber: number;
@@ -133,8 +103,8 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
             throw new Error('Tệp Excel rỗng hoặc không đúng định dạng.');
           }
 
-          if (rawRows.length > 100) {
-            throw new Error('Số lượng dòng vượt quá giới hạn cho phép (tối đa 100 dòng mỗi lần import).');
+          if (rawRows.length > 2000) {
+            throw new Error('Số lượng dòng vượt quá giới hạn cho phép (tối đa 2000 dòng mỗi lần import).');
           }
 
           setProgress('Đang đối chiếu dữ liệu hệ thống để kiểm tra lỗi...');
@@ -171,6 +141,11 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
 
               const excelUsername = String(r.username || r['Tên đăng nhập'] || '').trim().toLowerCase();
               const excelStudentCode = String(r.student_code || r['Mã học sinh'] || r['Mã HS'] || '').trim().toUpperCase();
+
+              // Skip completely empty row (common in template files with pre-formatted rows)
+              if (!fullName && !yearInput && !classInput && !rawSeqInput && !excelUsername && !excelStudentCode) {
+                return;
+              }
 
               // 1. Validate full_name
               if (!fullName) {
@@ -559,46 +534,23 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
         'academic_year_code',
         'class_code',
         'sequence_no',
-        'username',
-        'student_code',
         'is_active',
         'temporary_password'
       ];
 
       const rowsData: any[][] = [headers];
 
-      for (let i = 2; i <= 101; i++) {
+      for (let i = 2; i <= 1001; i++) {
         if (i === 2) {
-          rowsData.push(['Nguyễn Văn A', '2026-2027', 'LH61', 1, '', '', 'TRUE', 'Student@2026']);
+          rowsData.push(['Nguyễn Văn A', '2026-2027', 'LH61', 1, 'TRUE', 'Student@2026']);
         } else if (i === 3) {
-          rowsData.push(['Trần Thị B', '2026-2027', 'LH61', 2, '', '', 'TRUE', 'Student@2026']);
+          rowsData.push(['Trần Thị B', '2026-2027', 'LH61', 2, 'TRUE', 'Student@2026']);
         } else {
-          rowsData.push(['', '2026-2027', 'LH61', i - 1, '', '', 'TRUE', 'Student@2026']);
+          rowsData.push(['', '', '', '', 'TRUE', 'Student@2026']);
         }
       }
 
       const wsStudent = XLSX.utils.aoa_to_sheet(rowsData);
-
-      // Attach formulas to columns E (username) and F (student_code) for rows 2..101
-      for (let i = 2; i <= 101; i++) {
-        const eRef = `E${i}`;
-        const fRef = `F${i}`;
-        const uFormula = buildExcelUsernameFormula(i);
-        const cFormula = buildExcelStudentCodeFormula(i);
-
-        let valU = '';
-        let valF = '';
-        if (i === 2) {
-          valU = 'nguyenvana001';
-          valF = '2026-LH61-001';
-        } else if (i === 3) {
-          valU = 'tranthib002';
-          valF = '2026-LH61-002';
-        }
-
-        wsStudent[eRef] = { t: 's', v: valU, f: uFormula };
-        wsStudent[fRef] = { t: 's', v: valF, f: cFormula };
-      }
 
       // Column widths, frozen panes, autofilter
       wsStudent['!cols'] = [
@@ -606,21 +558,22 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
         { wch: 20 }, // academic_year_code
         { wch: 15 }, // class_code
         { wch: 14 }, // sequence_no
-        { wch: 22 }, // username
-        { wch: 22 }, // student_code
         { wch: 12 }, // is_active
         { wch: 20 }, // temporary_password
       ];
       wsStudent['!views'] = [{ state: 'frozen', ySplit: 1 }];
-      wsStudent['!autofilter'] = { ref: 'A1:H101' };
+      wsStudent['!autofilter'] = { ref: 'A1:F1001' };
 
       // Guide sheet
       const huongDanRows = [
         ['TỆP EXCEL MẪU NHẬP DỮ LIỆU HỌC SINH'],
         [''],
         ['HƯỚNG DẪN NHẬP LIỆU:'],
-        ['1. Chỉ nhập dữ liệu vào các cột nền trắng: full_name, academic_year_code, class_code, sequence_no, is_active, temporary_password.'],
-        ['2. Cột "username" và "student_code" TỰ ĐỘNG TÍNH bằng công thức Excel từ họ tên, năm học, mã lớp và số thứ tự.'],
+        ['1. Chỉ nhập dữ liệu vào các cột: full_name, academic_year_code, class_code, sequence_no, is_active, temporary_password.'],
+        ['2. HỆ THỐNG TỰ ĐỘNG SINH username và student_code từ họ tên, năm học, mã lớp và số thứ tự khi upload:'],
+        ['   - username = họ tên viết liền không dấu + số thứ tự 3 chữ số (ví dụ: nguyenvana001)'],
+        ['   - student_code = YYYY-CLASSCODE-NNN (ví dụ: 2026-LH61-001)'],
+        ['   - email nội bộ = username@domain (ví dụ: nguyenvana001@school.edu.vn)'],
         ['3. full_name: Nhập họ và tên đầy đủ của học sinh (ví dụ: Nguyễn Văn A).'],
         ['4. academic_year_code: Nhập mã năm học hợp lệ đã có trong hệ thống (ví dụ: 2026-2027).'],
         ['5. class_code: Nhập mã lớp (class_code) thực tế trong hệ thống (ví dụ: LH61). Không dùng tên lớp (ví dụ 6/1).'],
@@ -760,20 +713,31 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
     setLoading(true);
     setError(null);
     setSuccess(null);
-    setProgress(`Đang tải lên ${validRows.length} dòng dữ liệu hợp lệ...`);
 
     try {
       if (selectedType === 'student') {
         const payloads = validRows.map(r => r.payload);
-        const result = await userCreationApi.createManyUsers(payloads);
+        const BATCH_SIZE = 50;
+        const allResults: any[] = [];
 
-        if (result && result.success === false) {
-          throw new Error(result.message || 'Có lỗi xảy ra khi khởi tạo danh sách học sinh.');
+        for (let i = 0; i < payloads.length; i += BATCH_SIZE) {
+          const batch = payloads.slice(i, i + BATCH_SIZE);
+          const currentEnd = Math.min(i + BATCH_SIZE, payloads.length);
+          setProgress(`Đang khởi tạo tài khoản học sinh (${currentEnd}/${payloads.length})...`);
+
+          const result = await userCreationApi.createManyUsers(batch);
+
+          if (result && result.success === false) {
+            throw new Error(result.message || `Lỗi xảy ra ở lô học sinh từ ${i + 1} đến ${currentEnd}.`);
+          }
+
+          if (result?.data) {
+            allResults.push(...result.data);
+          }
         }
 
-        const resultsList = result?.data || [];
-        const successCount = resultsList.filter((r: any) => r.success !== false).length;
-        const failCount = resultsList.length - successCount;
+        const successCount = allResults.filter((r: any) => r.success !== false).length;
+        const failCount = allResults.length - successCount;
 
         if (failCount > 0) {
           setSuccess(`Đã tạo thành công ${successCount}/${payloads.length} học sinh. Bỏ qua ${failCount} học sinh do lỗi.`);
@@ -789,9 +753,16 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
 
       const table = selectedType === 'class' ? 'classes' : selectedType === 'subject' ? 'subjects' : 'classrooms';
       const payloads = validRows.map(r => r.payload);
+      const BATCH_SIZE = 100;
 
-      const { error: insertErr } = await supabase.from(table).insert(payloads);
-      if (insertErr) throw insertErr;
+      for (let i = 0; i < payloads.length; i += BATCH_SIZE) {
+        const batch = payloads.slice(i, i + BATCH_SIZE);
+        const currentEnd = Math.min(i + BATCH_SIZE, payloads.length);
+        setProgress(`Đang lưu dữ liệu (${currentEnd}/${payloads.length})...`);
+
+        const { error: insertErr } = await supabase.from(table).insert(batch);
+        if (insertErr) throw insertErr;
+      }
 
       setSuccess(`Đã nhập dữ liệu thành công cho ${payloads.length} bản ghi hợp lệ!`);
       if (validRows.length < parsedRows.length) {
