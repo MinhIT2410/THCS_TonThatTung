@@ -21,7 +21,6 @@ import {
   GraduationCap,
   CheckCircle2,
   Info,
-  UserX,
 } from 'lucide-react';
 import {
   studentEnrollmentService,
@@ -39,7 +38,9 @@ export default function StudentsTab() {
 
   // Filter states
   const [selectedYearId, setSelectedYearId] = useState<string>('');
-  const [selectedClassId, setSelectedClassId] = useState<string>('all'); // 'all' | 'unassigned' | uuid
+  const [gradeLevels, setGradeLevels] = useState<any[]>([]);
+  const [selectedScope, setSelectedScope] = useState<string>('all'); // 'all' | 'unassigned' | grade_level_id
+  const [selectedClassId, setSelectedClassId] = useState<string>('all'); // 'all' | uuid
   const [searchInput, setSearchInput] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all'); // 'all' | 'active' | 'inactive'
@@ -69,7 +70,7 @@ export default function StudentsTab() {
   // Reset page to 1 on filter or page size change
   useEffect(() => {
     setPage(1);
-  }, [selectedYearId, selectedClassId, statusFilter, debouncedSearch, pageSize]);
+  }, [selectedYearId, selectedScope, selectedClassId, statusFilter, debouncedSearch, pageSize]);
 
   // Modal states
   const [isAssignModalOpen, setIsAssignModalOpen] = useState<boolean>(false);
@@ -83,16 +84,20 @@ export default function StudentsTab() {
   const [transferStudent, setTransferStudent] = useState<StudentEnrollmentItem | null>(null);
   const [newClassId, setNewClassId] = useState<string>('');
 
-  // 1. Initial Load: Academic Years
+  // 1. Initial Load: Academic Years & Grade Levels
   useEffect(() => {
-    loadAcademicYears();
+    loadInitialData();
   }, []);
 
-  const loadAcademicYears = async () => {
+  const loadInitialData = async () => {
     try {
       setLoading(true);
-      const years = await studentEnrollmentService.getAcademicYears();
+      const [years, grades] = await Promise.all([
+        studentEnrollmentService.getAcademicYears(),
+        studentEnrollmentService.getGradeLevels(),
+      ]);
       setAcademicYears(years);
+      setGradeLevels(grades);
 
       if (years && years.length > 0) {
         // Find current or first year
@@ -101,7 +106,7 @@ export default function StudentsTab() {
         setTargetYearId(current.id);
       }
     } catch (err: any) {
-      setError(err?.message || 'Không thể tải danh sách năm học.');
+      setError(err?.message || 'Không thể tải dữ liệu khởi tạo.');
     } finally {
       setLoading(false);
     }
@@ -130,11 +135,17 @@ export default function StudentsTab() {
     setLoading(true);
     setError(null);
     try {
+      const isUnassigned = selectedScope === 'unassigned';
+      const targetGradeLevelId =
+        selectedScope !== 'all' && selectedScope !== 'unassigned' ? selectedScope : null;
+
       const res = await studentEnrollmentService.getStudentsWithEnrollment({
         academicYearId: selectedYearId,
+        gradeLevelId: targetGradeLevelId,
         classId: selectedClassId,
         search: debouncedSearch,
         isActive: statusFilter === 'all' ? null : statusFilter === 'active',
+        unassignedOnly: isUnassigned,
         page,
         pageSize,
       });
@@ -147,7 +158,7 @@ export default function StudentsTab() {
     } finally {
       setLoading(false);
     }
-  }, [selectedYearId, selectedClassId, debouncedSearch, statusFilter, page, pageSize]);
+  }, [selectedYearId, selectedScope, selectedClassId, debouncedSearch, statusFilter, page, pageSize]);
 
   useEffect(() => {
     fetchStudents();
@@ -256,6 +267,34 @@ export default function StudentsTab() {
     }
   };
 
+  // Helper to determine empty state message
+  const getEmptyStateMessage = () => {
+    if (selectedScope === 'unassigned') {
+      return 'Không có học sinh chưa được phân lớp trong năm học này.';
+    }
+    const isGradeScope = selectedScope !== 'all' && selectedScope !== 'unassigned';
+    if (isGradeScope) {
+      const currentGradeObj = gradeLevels.find(g => g.id === selectedScope);
+      const gradeNum = currentGradeObj?.level_number || (currentGradeObj?.name?.match(/\d+/)?.[0]);
+      const classesInGrade = classes.filter(c => {
+        if (c.grade_level_id) return c.grade_level_id === selectedScope;
+        if (gradeNum && c.name) return c.name.startsWith(String(gradeNum));
+        return false;
+      });
+
+      if (classesInGrade.length === 0) {
+        return 'Chưa có lớp nào thuộc khối này trong năm học đã chọn.';
+      }
+      if (selectedClassId && selectedClassId !== 'all') {
+        return 'Không có học sinh phù hợp trong lớp đã chọn.';
+      }
+    }
+    if (selectedClassId && selectedClassId !== 'all') {
+      return 'Không có học sinh phù hợp trong lớp đã chọn.';
+    }
+    return 'Không tìm thấy học sinh nào phù hợp.';
+  };
+
   const selectedYearName = academicYears.find(y => y.id === selectedYearId)?.name || '---';
 
   return (
@@ -331,25 +370,34 @@ export default function StudentsTab() {
       </div>
 
       {/* Filters Bar */}
-      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-end">
         {/* Search */}
-        <div className="lg:col-span-2 relative">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            placeholder="Tìm tên hoặc Mã học sinh..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-          />
+        <div className="sm:col-span-2 lg:col-span-1 xl:col-span-1 relative">
+          <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+            Tìm kiếm
+          </label>
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Tìm tên hoặc Mã học sinh..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
+            />
+          </div>
         </div>
 
         {/* Academic Year Filter */}
         <div>
+          <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+            Năm học
+          </label>
           <select
             value={selectedYearId}
             onChange={e => {
               setSelectedYearId(e.target.value);
+              setSelectedScope('all');
               setSelectedClassId('all');
             }}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
@@ -362,27 +410,72 @@ export default function StudentsTab() {
           </select>
         </div>
 
-        {/* Class Filter */}
+        {/* Phạm vi học sinh Filter */}
         <div>
+          <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+            Phạm vi học sinh
+          </label>
           <select
-            value={selectedClassId}
+            value={selectedScope}
             onChange={e => {
-              setSelectedClassId(e.target.value);
+              setSelectedScope(e.target.value);
+              setSelectedClassId('all');
             }}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
           >
-            <option value="all">Tất cả các lớp</option>
-            <option value="unassigned">⚠️ Chưa phân lớp</option>
-            {classes.map(c => (
-              <option key={c.id} value={c.id}>
-                Lớp {c.name}
+            <option value="all">Tất cả học sinh</option>
+            <option value="unassigned">Chưa phân lớp</option>
+            {gradeLevels.map(g => (
+              <option key={g.id} value={g.id}>
+                {g.name}
               </option>
             ))}
           </select>
         </div>
 
+        {/* Lớp học Filter */}
+        <div>
+          <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+            Lớp học
+          </label>
+          <select
+            value={selectedClassId}
+            onChange={e => {
+              setSelectedClassId(e.target.value);
+            }}
+            disabled={selectedScope === 'all' || selectedScope === 'unassigned'}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium disabled:bg-slate-100 dark:disabled:bg-slate-800/50 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed"
+          >
+            {selectedScope === 'all' && <option value="all">Chọn khối trước</option>}
+            {selectedScope === 'unassigned' && <option value="all">Không áp dụng</option>}
+            {selectedScope !== 'all' && selectedScope !== 'unassigned' && (
+              <>
+                <option value="all">
+                  Tất cả lớp {gradeLevels.find(g => g.id === selectedScope)?.name || ''}
+                </option>
+                {classes
+                  .filter(c => {
+                    const currentGradeObj = gradeLevels.find(g => g.id === selectedScope);
+                    const gradeNum = currentGradeObj?.level_number || (currentGradeObj?.name?.match(/\d+/)?.[0]);
+                    if (c.grade_level_id) return c.grade_level_id === selectedScope;
+                    if (gradeNum && c.name) return c.name.startsWith(String(gradeNum));
+                    return false;
+                  })
+                  .map(c => (
+                    <option key={c.id} value={c.id}>
+                      Lớp {c.name}
+                    </option>
+                  ))}
+              </>
+            )}
+          </select>
+        </div>
+
         {/* Status Filter */}
         <div>
+          <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+            Trạng thái tài khoản
+          </label>
           <select
             value={statusFilter}
             onChange={e => {
@@ -390,48 +483,16 @@ export default function StudentsTab() {
             }}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-medium"
           >
-            <option value="all">Mọi trạng thái tài khoản</option>
+            <option value="all">Mọi trạng thái</option>
             <option value="active">Đang hoạt động</option>
             <option value="inactive">Đã khóa</option>
           </select>
         </div>
       </div>
 
-      {/* Quick Filter Shortcuts */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500 font-medium">Bộ lọc nhanh:</span>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedClassId('unassigned');
-            }}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 border ${
-              selectedClassId === 'unassigned'
-                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            <UserX className="w-3.5 h-3.5 text-amber-600" />
-            <span>Học sinh chưa phân lớp</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedClassId('all');
-              setSearchInput('');
-              setStatusFilter('all');
-            }}
-            className="px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 font-medium"
-          >
-            Xóa bộ lọc
-          </button>
-        </div>
-
-        <div className="text-slate-500">
-          Tổng cộng: <strong className="text-slate-900 dark:text-white font-bold">{totalItems}</strong> học sinh
-        </div>
+      {/* Total items info */}
+      <div className="flex justify-end text-xs text-slate-500 font-medium">
+        Tổng cộng: <strong className="text-slate-900 dark:text-white font-bold ml-1">{totalItems}</strong> học sinh
       </div>
 
       {/* Table Section */}
@@ -475,24 +536,12 @@ export default function StudentsTab() {
               ) : students.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-12 text-center text-slate-500 dark:text-slate-400">
-                    {selectedClassId === 'unassigned' ? (
-                      <div className="space-y-2">
-                        <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                        <p className="font-bold text-slate-800 dark:text-slate-200">
-                          Không có học sinh chưa được phân lớp trong năm học này.
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          Tất cả học sinh trong niên khóa {selectedYearName} đều đã có lớp học.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        <Info className="w-6 h-6 text-slate-400 mx-auto" />
-                        <p className="font-bold text-slate-700 dark:text-slate-300">
-                          Không tìm thấy học sinh nào phù hợp.
-                        </p>
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Info className="w-7 h-7 text-slate-400 mx-auto" />
+                      <p className="font-bold text-slate-800 dark:text-slate-200">
+                        {getEmptyStateMessage()}
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (

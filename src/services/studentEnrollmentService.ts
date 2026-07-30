@@ -23,6 +23,7 @@ export interface StudentEnrollmentItem {
 
 export interface FetchStudentsParams {
   academicYearId?: string;
+  gradeLevelId?: string | null;
   classId?: string; // 'all' | 'unassigned' | specific class_id
   search?: string;
   isActive?: boolean | null;
@@ -32,6 +33,24 @@ export interface FetchStudentsParams {
 }
 
 export const studentEnrollmentService = {
+  /**
+   * Fetch active grade levels
+   */
+  async getGradeLevels() {
+    const { data, error } = await supabase
+      .from('grade_levels')
+      .select('id, code, name, level_number, display_order, is_active')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+      .order('level_number', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching grade levels:', error);
+      throw error;
+    }
+    return data || [];
+  },
+
   /**
    * Fetch all academic years
    */
@@ -78,6 +97,7 @@ export const studentEnrollmentService = {
   async getStudentsWithEnrollment(params: FetchStudentsParams) {
     const {
       academicYearId,
+      gradeLevelId,
       classId = 'all',
       search,
       isActive = null,
@@ -104,6 +124,7 @@ export const studentEnrollmentService = {
       p_unassigned_only: targetUnassignedOnly,
       p_page: page,
       p_page_size: pageSize,
+      p_grade_level_id: gradeLevelId || null,
     });
 
     if (error) {
