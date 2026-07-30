@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../services/supabaseClient';
 import { userCreationApi } from '../../users/userCreationApi';
+import { env } from '../../../config/env';
 import * as XLSX from 'xlsx';
 import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2, X, AlertTriangle } from 'lucide-react';
 
@@ -105,7 +106,14 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
             const { data: classes } = await supabase.from('classes').select('id, name, code, academic_year_id, is_active');
             const { data: profiles } = await supabase.from('profiles').select('id, full_name, student_code, email');
 
+            const internalDomain = (
+              import.meta.env.VITE_STUDENT_INTERNAL_EMAIL_DOMAIN ||
+              env.studentInternalEmailDomain ||
+              ''
+            ).trim().toLowerCase();
+
             const processedExcelStudentCodes = new Set<string>();
+            const processedExcelUsernames = new Set<string>();
             const processedExcelEmails = new Set<string>();
 
             rawRows.forEach((r, idx) => {
@@ -114,7 +122,7 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
 
               const fullName = String(r.full_name || r['Họ và tên'] || r['Họ tên'] || r.name || '').trim();
               const studentCode = String(r.student_code || r['Mã học sinh'] || r['Mã HS'] || r.code || '').trim().toUpperCase();
-              const usernameOrEmail = String(r.username || r.email || r['Tên đăng nhập'] || r['Email'] || '').trim().toLowerCase();
+              const rawUsernameInput = String(r.username || r.email || r['Tên đăng nhập'] || r['Email'] || '').trim().toLowerCase();
               const yearInput = String(r.academic_year_code || r.academic_year_name || r['Năm học'] || r['Mã năm học'] || '').trim();
               const classInput = String(r.class_code || r.class_name || r['Lớp'] || r['Lớp học'] || r['Mã lớp'] || '').trim();
 
@@ -141,27 +149,53 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
                 }
               }
 
-              if (usernameOrEmail) {
-                if (processedExcelEmails.has(usernameOrEmail)) {
-                  errors.push(`Email/Tên đăng nhập "${usernameOrEmail}" bị trùng lặp trong tệp Excel.`);
+              let cleanUsername = '';
+              let finalEmail = '';
+
+              if (!rawUsernameInput) {
+                errors.push('Tên đăng nhập (username) không được bỏ trống.');
+              } else if (rawUsernameInput.includes('@')) {
+                const parts = rawUsernameInput.split('@');
+                cleanUsername = parts[0];
+                const inputDomain = (parts[1] || '').trim().toLowerCase();
+
+                if (internalDomain && inputDomain !== internalDomain) {
+                  errors.push(`Tên đăng nhập/Email "${rawUsernameInput}" chứa domain không đúng (yêu cầu domain nội bộ: @${internalDomain}).`);
+                }
+                finalEmail = rawUsernameInput;
+              } else {
+                cleanUsername = rawUsernameInput;
+                finalEmail = internalDomain ? `${cleanUsername}@${internalDomain}` : cleanUsername;
+              }
+
+              if (cleanUsername) {
+                if (processedExcelUsernames.has(cleanUsername)) {
+                  errors.push(`Tên đăng nhập "${cleanUsername}" bị trùng lặp trong tệp Excel.`);
                 } else {
-                  processedExcelEmails.add(usernameOrEmail);
+                  processedExcelUsernames.add(cleanUsername);
+                }
+              }
+
+              if (finalEmail) {
+                if (processedExcelEmails.has(finalEmail)) {
+                  errors.push(`Email nội bộ "${finalEmail}" bị trùng lặp trong tệp Excel.`);
+                } else {
+                  processedExcelEmails.add(finalEmail);
                 }
 
-                const existsInDb = profiles?.some(p => p.email?.toLowerCase() === usernameOrEmail);
+                const existsInDb = profiles?.some(p => p.email?.toLowerCase() === finalEmail.toLowerCase());
                 if (existsInDb) {
-                  errors.push(`Email/Tên đăng nhập "${usernameOrEmail}" đã tồn tại trên hệ thống.`);
+                  errors.push(`Tài khoản/Email "${finalEmail}" đã tồn tại trên hệ thống.`);
                 }
               }
 
               let matchedYear: any = null;
               if (!yearInput) {
-                errors.push('Năm học không được bỏ trống.');
+                errors.push('Mã năm học (academic_year_code) không được bỏ trống.');
               } else {
                 matchedYear = years?.find(y =>
                   y.code?.toLowerCase() === yearInput.toLowerCase() ||
-                  y.name?.toLowerCase() === yearInput.toLowerCase() ||
-                  y.name?.toLowerCase().includes(yearInput.toLowerCase())
+                  y.name?.toLowerCase() === yearInput.toLowerCase()
                 );
                 if (!matchedYear) {
                   errors.push(`Năm học "${yearInput}" không tồn tại trên hệ thống.`);
@@ -170,21 +204,24 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
 
               let matchedClass: any = null;
               if (!classInput) {
-                errors.push('Lớp học không được bỏ trống.');
+                errors.push('Mã lớp (class_code) không được bỏ trống.');
               } else {
                 const targetYearId = matchedYear?.id;
+                // Match class strictly by code first
                 matchedClass = classes?.find(c =>
                   (!targetYearId || c.academic_year_id === targetYearId) &&
-                  (c.code?.toLowerCase() === classInput.toLowerCase() ||
-                   c.name?.toLowerCase() === classInput.toLowerCase() ||
-                   c.name?.toLowerCase() === `lớp ${classInput.toLowerCase()}` ||
-                   c.name?.toLowerCase() === classInput.toLowerCase().replace(/^lớp\s+/i, ''))
+                  c.code?.toLowerCase() === classInput.toLowerCase()
                 );
 
                 if (!matchedClass) {
-                  errors.push(`Lớp "${classInput}" không tồn tại ${matchedYear ? `trong ${matchedYear.name}` : ''}.`);
+                  const existsOtherYear = classes?.find(c => c.code?.toLowerCase() === classInput.toLowerCase());
+                  if (existsOtherYear) {
+                    errors.push(`Mã lớp "${classInput}" không thuộc năm học ${matchedYear?.name || yearInput}.`);
+                  } else {
+                    errors.push(`Mã lớp (class_code) "${classInput}" không tồn tại trên hệ thống.`);
+                  }
                 } else if (matchedClass.is_active === false) {
-                  errors.push(`Lớp "${matchedClass.name}" đang tạm ngưng hoạt động.`);
+                  errors.push(`Lớp "${matchedClass.name}" (${matchedClass.code}) đang tạm ngưng hoạt động.`);
                 }
               }
 
@@ -193,14 +230,14 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
                 rowNumber,
                 name: fullName || 'Học sinh',
                 code: studentCode,
-                details: `Mã HS: ${studentCode || 'Trống'} | Lớp: ${matchedClass?.name || classInput || 'Trống'} | Năm: ${matchedYear?.name || yearInput || 'Trống'}${usernameOrEmail ? ` | Email: ${usernameOrEmail}` : ''}`,
+                details: `Mã HS: ${studentCode || 'Trống'} | Lớp: ${matchedClass?.code || classInput || 'Trống'} | Năm: ${matchedYear?.code || yearInput || 'Trống'} | Username: ${cleanUsername || 'Trống'}${finalEmail ? ` (${finalEmail})` : ''}`,
                 isValid: errors.length === 0,
                 errors,
                 payload: {
                   row_number: rowNumber,
                   full_name: fullName,
                   student_code: studentCode,
-                  email: usernameOrEmail || undefined,
+                  email: finalEmail || undefined,
                   roles: ['STUDENT'],
                   class_id: matchedClass?.id || null,
                   academic_year_id: matchedYear?.id || null,
@@ -439,18 +476,18 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
         {
           full_name: 'Nguyễn Văn A',
           student_code: 'HS2026001',
-          username: 'nguyenvana@school.edu.vn',
+          username: 'nguyenvana',
           academic_year_code: '2026-2027',
-          class_code: '6A1',
+          class_code: 'LH61',
           is_active: 'TRUE',
           temporary_password: 'Student@2026',
         },
         {
           full_name: 'Trần Thị B',
           student_code: 'HS2026002',
-          username: 'tranthib@school.edu.vn',
+          username: 'tranthib',
           academic_year_code: '2026-2027',
-          class_code: '6A1',
+          class_code: 'LH61',
           is_active: 'TRUE',
           temporary_password: 'Student@2026',
         },
@@ -623,9 +660,9 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
 
         <div className="space-y-4 text-xs overflow-y-auto flex-1 pr-1 pb-1">
           {/* Select Import Type */}
-          <div className="space-y-1.5 shrink-0">
-            <label className="font-bold text-slate-500">Bước 1: Chọn bảng dữ liệu cần nhập</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="shrink-0 mb-4">
+            <label className="font-bold text-slate-500 block mb-3">Bước 1: Chọn bảng dữ liệu cần nhập</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
               {[
                 { type: 'student', label: 'Học sinh' },
                 { type: 'class', label: 'Lớp học' },
@@ -649,17 +686,34 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
           </div>
 
           {/* Download template */}
-          <div className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800 rounded-2xl shrink-0">
-            <div className="space-y-0.5">
-              <p className="font-bold text-slate-700 dark:text-slate-300">Tệp Excel mẫu chuẩn</p>
-              <p className="text-[10px] text-slate-400">Tải xuống tệp mẫu cấu hình sẵn để điền thông tin.</p>
+          <div className="space-y-2 shrink-0">
+            <div className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800 rounded-2xl">
+              <div className="space-y-0.5">
+                <p className="font-bold text-slate-700 dark:text-slate-300">Tệp Excel mẫu chuẩn</p>
+                <p className="text-[10px] text-slate-400">Tải xuống tệp mẫu cấu hình sẵn để điền thông tin.</p>
+              </div>
+              <button
+                type="button"
+                onClick={downloadTemplate}
+                className="px-3.5 py-1.5 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/30 rounded-xl border border-emerald-100 dark:border-emerald-900/20"
+              >
+                Tải tệp mẫu
+              </button>
             </div>
-            <button
-              onClick={downloadTemplate}
-              className="px-3.5 py-1.5 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/30 rounded-xl border border-emerald-100 dark:border-emerald-900/20"
-            >
-              Tải tệp mẫu
-            </button>
+
+            {selectedType === 'student' && (
+              <div className="p-3 bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 rounded-xl text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                <p>
+                  <strong className="text-slate-700 dark:text-slate-300">username:</strong> chỉ nhập tên đăng nhập (ví dụ: nguyenvana), không nhập domain; hệ thống tự thêm domain nội bộ.
+                </p>
+                <p>
+                  <strong className="text-slate-700 dark:text-slate-300">class_code:</strong> mã lớp (ví dụ: LH61), không phải tên lớp.
+                </p>
+                <p>
+                  <strong className="text-slate-700 dark:text-slate-300">academic_year_code:</strong> mã năm học (ví dụ: 2026-2027) phải tồn tại trong hệ thống.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Step 3: Choose file */}
