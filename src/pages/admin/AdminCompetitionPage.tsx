@@ -16,17 +16,10 @@ import {
   PackageCheck,
   HelpCircle
 } from 'lucide-react';
-import RecordIncidentTab from '../../components/admin/competition/RecordIncidentTab';
-import PendingIncidentsTab from '../../components/admin/competition/PendingIncidentsTab';
-import IncidentsHistoryTab from '../../components/admin/competition/IncidentsHistoryTab';
-import RulesTab from '../../components/admin/competition/RulesTab';
-import ProgramsTab from '../../components/admin/competition/ProgramsTab';
-import WeeklyUnitsTab from '../../components/admin/competition/WeeklyUnitsTab';
-import { RewardsTab } from '../../components/admin/competition/RewardsTab';
-import { RedemptionsTab } from '../../components/admin/competition/RedemptionsTab';
-import { ReviewRequestsTab } from '../../components/admin/competition/ReviewRequestsTab';
+import ProgramsAndRulesTab from '../../components/admin/competition/ProgramsAndRulesTab';
 
 type AdminCompetitionSubTab =
+  | 'programs_rules'
   | 'units'
   | 'record'
   | 'pending'
@@ -38,7 +31,7 @@ type AdminCompetitionSubTab =
   | 'programs';
 
 export default function AdminCompetitionPage() {
-  const [activeTab, setActiveTab] = useState<AdminCompetitionSubTab>('units');
+  const [activeTab, setActiveTab] = useState<AdminCompetitionSubTab>('programs_rules');
 
   return (
     <div className="space-y-8 font-sans pb-16">
@@ -59,6 +52,18 @@ export default function AdminCompetitionPage() {
 
       {/* Tabs Bar */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1 scrollbar-none">
+        <button
+          onClick={() => setActiveTab('programs_rules')}
+          className={`px-4 py-2.5 rounded-2xl font-bold text-xs transition-all whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'programs_rules'
+              ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Chương Trình & Quy Tắc</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('units')}
           className={`px-4 py-2.5 rounded-2xl font-bold text-xs transition-all whitespace-nowrap flex items-center gap-2 ${
@@ -142,43 +147,20 @@ export default function AdminCompetitionPage() {
           <HelpCircle className="w-4 h-4" />
           <span>Đề Nghị Xem Lại</span>
         </button>
-
-        <button
-          onClick={() => setActiveTab('rules')}
-          className={`px-4 py-2.5 rounded-2xl font-bold text-xs transition-all whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'rules'
-              ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <FileCheck className="w-4 h-4" />
-          <span>Quy Tắc Tính Điểm</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('programs')}
-          className={`px-4 py-2.5 rounded-2xl font-bold text-xs transition-all whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'programs'
-              ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          <span>Chương Trình Thi Đua</span>
-        </button>
       </div>
 
       {/* Tab Content */}
       <div>
+        {activeTab === 'programs_rules' && <ProgramsAndRulesTab />}
         {activeTab === 'units' && <WeeklyUnitsTab />}
-        {activeTab === 'record' && <RecordIncidentTab />}
+        {activeTab === 'record' && <RecordIncidentTab onNavigateToPrograms={() => setActiveTab('programs_rules')} />}
         {activeTab === 'pending' && <PendingIncidentsTab />}
         {activeTab === 'history' && <IncidentsHistoryTab />}
         {activeTab === 'redemptions' && <RedemptionsTab />}
         {activeTab === 'rewards' && <RewardsTab />}
         {activeTab === 'reviews' && <ReviewRequestsTab />}
-        {activeTab === 'rules' && <RulesTab />}
-        {activeTab === 'programs' && <ProgramsTab />}
+        {activeTab === 'rules' && <ProgramsAndRulesTab initialSubTab="rules" />}
+        {activeTab === 'programs' && <ProgramsAndRulesTab initialSubTab="programs" />}
       </div>
     </div>
   );

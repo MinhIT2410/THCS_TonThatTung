@@ -26,7 +26,11 @@ import {
   COMPETITION_SCOPE_LABELS 
 } from '../../../types/competition';
 
-export default function RecordIncidentTab() {
+interface RecordIncidentTabProps {
+  onNavigateToPrograms?: () => void;
+}
+
+export default function RecordIncidentTab({ onNavigateToPrograms }: RecordIncidentTabProps) {
   const [programs, setPrograms] = useState<CompetitionProgram[]>([]);
   const [rules, setRules] = useState<CompetitionRule[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState<string>('');
@@ -307,45 +311,63 @@ export default function RecordIncidentTab() {
               1. Chọn Chương Trình & Quy Tắc Thi Đua
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Chương trình thi đua <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedProgramId}
-                  onChange={e => setSelectedProgramId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none"
-                  required
-                >
-                  <option value="">-- Chọn chương trình --</option>
-                  {programs.map(p => (
-                    <option key={p.id} value={p.id}>
-                      [{p.code}] {p.name}
-                    </option>
-                  ))}
-                </select>
+            {programs.length === 0 ? (
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Chưa có chương trình thi đua. Hãy tạo chương trình đầu tiên.</span>
+                </div>
+                {onNavigateToPrograms && (
+                  <button
+                    type="button"
+                    onClick={onNavigateToPrograms}
+                    className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm shrink-0"
+                  >
+                    Tạo chương trình
+                  </button>
+                )}
               </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                    Chương trình thi đua <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedProgramId}
+                    onChange={e => setSelectedProgramId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none"
+                    required
+                  >
+                    <option value="">-- Chọn chương trình --</option>
+                    {programs.map(p => (
+                      <option key={p.id} value={p.id}>
+                        [{p.code}] {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Quy tắc thi đua / Hành vi <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedRuleId}
-                  onChange={e => handleRuleChange(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none"
-                  required
-                >
-                  <option value="">-- Chọn quy tắc --</option>
-                  {rules.map(r => (
-                    <option key={r.id} value={r.id}>
-                      [{r.code}] {r.name}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                    Quy tắc thi đua / Hành vi <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedRuleId}
+                    onChange={e => handleRuleChange(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none"
+                    required
+                  >
+                    <option value="">-- Chọn quy tắc --</option>
+                    {rules.map(r => (
+                      <option key={r.id} value={r.id}>
+                        [{r.code}] {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
 
             {selectedRule && (
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-2 text-xs">

@@ -76,6 +76,7 @@ export interface CompetitionProgram {
   name: string;
   description?: string | null;
   academic_year_id?: string | null;
+  academic_year_name?: string | null;
   starts_at?: string | null;
   ends_at?: string | null;
   is_active: boolean;

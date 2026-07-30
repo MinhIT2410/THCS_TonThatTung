@@ -23,80 +23,143 @@ import {
 } from '../types/competition';
 
 export const competitionService = {
-  // --- PROGRAMS ---
-  async getPrograms(): Promise<CompetitionProgram[]> {
-    const { data, error } = await supabase
+  // --- COMPETITION PROGRAMS ---
+  async getCompetitionPrograms(includeInactive = true): Promise<CompetitionProgram[]> {
+    let query = supabase
       .from('competition_programs')
-      .select('*')
+      .select('*, academic_years(name)')
       .order('created_at', { ascending: false });
 
+    if (!includeInactive) {
+      query = query.eq('is_active', true);
+    }
+
+    const { data, error } = await query;
     if (error) {
-      console.error('Error fetching programs:', error);
+      console.error('Error fetching competition programs:', error);
       throw error;
     }
-    return data as CompetitionProgram[];
+
+    return (data || []).map((p: any) => ({
+      ...p,
+      academic_year_name: p.academic_years?.name || null,
+    })) as CompetitionProgram[];
+  },
+
+  async createCompetitionProgram(program: Partial<CompetitionProgram>): Promise<CompetitionProgram> {
+    const user = (await supabase.auth.getUser()).data.user;
+    const { data, error } = await supabase
+      .from('competition_programs')
+      .insert({
+        code: program.code,
+        name: program.name,
+        description: program.description || null,
+        academic_year_id: program.academic_year_id || null,
+        starts_at: program.starts_at || null,
+        ends_at: program.ends_at || null,
+        is_active: program.is_active ?? true,
+        created_by: user?.id || null,
+        updated_by: user?.id || null,
+      })
+      .select('*, academic_years(name)')
+      .single();
+
+    if (error) {
+      console.error('Error creating competition program:', error);
+      throw error;
+    }
+
+    return {
+      ...data,
+      academic_year_name: (data as any).academic_years?.name || null,
+    } as CompetitionProgram;
+  },
+
+  async updateCompetitionProgram(id: string, program: Partial<CompetitionProgram>): Promise<CompetitionProgram> {
+    const user = (await supabase.auth.getUser()).data.user;
+    const { data, error } = await supabase
+      .from('competition_programs')
+      .update({
+        code: program.code,
+        name: program.name,
+        description: program.description || null,
+        academic_year_id: program.academic_year_id || null,
+        starts_at: program.starts_at || null,
+        ends_at: program.ends_at || null,
+        is_active: program.is_active ?? true,
+        updated_by: user?.id || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select('*, academic_years(name)')
+      .single();
+
+    if (error) {
+      console.error('Error updating competition program:', error);
+      throw error;
+    }
+
+    return {
+      ...data,
+      academic_year_name: (data as any).academic_years?.name || null,
+    } as CompetitionProgram;
+  },
+
+  async archiveCompetitionProgram(id: string): Promise<CompetitionProgram> {
+    const user = (await supabase.auth.getUser()).data.user;
+    const { data, error } = await supabase
+      .from('competition_programs')
+      .update({
+        is_active: false,
+        updated_by: user?.id || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select('*, academic_years(name)')
+      .single();
+
+    if (error) {
+      console.error('Error archiving competition program:', error);
+      throw error;
+    }
+
+    return {
+      ...data,
+      academic_year_name: (data as any).academic_years?.name || null,
+    } as CompetitionProgram;
+  },
+
+  // Backward compatibility aliases
+  async getPrograms(includeInactive = true): Promise<CompetitionProgram[]> {
+    return this.getCompetitionPrograms(includeInactive);
   },
 
   async saveProgram(program: Partial<CompetitionProgram>): Promise<CompetitionProgram> {
-    const user = (await supabase.auth.getUser()).data.user;
-
     if (program.id) {
-      const { data, error } = await supabase
-        .from('competition_programs')
-        .update({
-          code: program.code,
-          name: program.name,
-          description: program.description,
-          academic_year_id: program.academic_year_id || null,
-          starts_at: program.starts_at || null,
-          ends_at: program.ends_at || null,
-          is_active: program.is_active ?? true,
-          updated_by: user?.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', program.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as CompetitionProgram;
-    } else {
-      const { data, error } = await supabase
-        .from('competition_programs')
-        .insert({
-          code: program.code,
-          name: program.name,
-          description: program.description,
-          academic_year_id: program.academic_year_id || null,
-          starts_at: program.starts_at || null,
-          ends_at: program.ends_at || null,
-          is_active: program.is_active ?? true,
-          created_by: user?.id,
-          updated_by: user?.id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as CompetitionProgram;
+      return this.updateCompetitionProgram(program.id, program);
     }
+    return this.createCompetitionProgram(program);
   },
 
-  // --- RULES ---
-  async getRules(programId?: string): Promise<CompetitionRule[]> {
+  // --- COMPETITION RULES ---
+  async getCompetitionRules(programId?: string, includeInactive = true): Promise<CompetitionRule[]> {
     let query = supabase
       .from('competition_rules')
       .select('*, competition_programs(name, code)')
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: false });
 
-    if (programId) {
+    if (programId && programId !== 'ALL') {
       query = query.eq('program_id', programId);
+    }
+
+    if (!includeInactive) {
+      query = query.eq('is_active', true);
     }
 
     const { data, error } = await query;
     if (error) {
-      console.error('Error fetching rules:', error);
+      console.error('Error fetching competition rules:', error);
       throw error;
     }
 
@@ -106,58 +169,149 @@ export const competitionService = {
     })) as CompetitionRule[];
   },
 
+  async createCompetitionRule(rule: Partial<CompetitionRule>): Promise<CompetitionRule> {
+    const { data, error } = await supabase
+      .from('competition_rules')
+      .insert({
+        program_id: rule.program_id,
+        code: rule.code,
+        name: rule.name,
+        description: rule.description || null,
+        category: rule.category,
+        effect_scope: rule.effect_scope,
+        student_merit_points: rule.student_merit_points ?? 0,
+        student_reward_points: rule.student_reward_points ?? 0,
+        unit_points: rule.unit_points ?? 0,
+        requires_evidence: rule.requires_evidence ?? false,
+        requires_approval: rule.requires_approval ?? false,
+        daily_limit: rule.daily_limit || null,
+        is_active: rule.is_active ?? true,
+        display_order: rule.display_order ?? 0,
+      })
+      .select('*, competition_programs(name, code)')
+      .single();
+
+    if (error) {
+      console.error('Error creating competition rule:', error);
+      throw error;
+    }
+
+    return {
+      ...data,
+      program: (data as any).competition_programs,
+    } as CompetitionRule;
+  },
+
+  async updateCompetitionRule(id: string, rule: Partial<CompetitionRule>): Promise<CompetitionRule> {
+    const { data, error } = await supabase
+      .from('competition_rules')
+      .update({
+        program_id: rule.program_id,
+        code: rule.code,
+        name: rule.name,
+        description: rule.description || null,
+        category: rule.category,
+        effect_scope: rule.effect_scope,
+        student_merit_points: rule.student_merit_points ?? 0,
+        student_reward_points: rule.student_reward_points ?? 0,
+        unit_points: rule.unit_points ?? 0,
+        requires_evidence: rule.requires_evidence ?? false,
+        requires_approval: rule.requires_approval ?? false,
+        daily_limit: rule.daily_limit || null,
+        is_active: rule.is_active ?? true,
+        display_order: rule.display_order ?? 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select('*, competition_programs(name, code)')
+      .single();
+
+    if (error) {
+      console.error('Error updating competition rule:', error);
+      throw error;
+    }
+
+    return {
+      ...data,
+      program: (data as any).competition_programs,
+    } as CompetitionRule;
+  },
+
+  async archiveCompetitionRule(id: string): Promise<CompetitionRule> {
+    const { data, error } = await supabase
+      .from('competition_rules')
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select('*, competition_programs(name, code)')
+      .single();
+
+    if (error) {
+      console.error('Error archiving competition rule:', error);
+      throw error;
+    }
+
+    return {
+      ...data,
+      program: (data as any).competition_programs,
+    } as CompetitionRule;
+  },
+
+  // Backward compatibility aliases
+  async getRules(programId?: string, includeInactive = true): Promise<CompetitionRule[]> {
+    return this.getCompetitionRules(programId, includeInactive);
+  },
+
   async saveRule(rule: Partial<CompetitionRule>): Promise<CompetitionRule> {
     if (rule.id) {
-      const { data, error } = await supabase
-        .from('competition_rules')
-        .update({
-          program_id: rule.program_id,
-          code: rule.code,
-          name: rule.name,
-          description: rule.description,
-          category: rule.category,
-          effect_scope: rule.effect_scope,
-          student_merit_points: rule.student_merit_points ?? 0,
-          student_reward_points: rule.student_reward_points ?? 0,
-          unit_points: rule.unit_points ?? 0,
-          requires_evidence: rule.requires_evidence ?? false,
-          requires_approval: rule.requires_approval ?? false,
-          daily_limit: rule.daily_limit || null,
-          is_active: rule.is_active ?? true,
-          display_order: rule.display_order ?? 0,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', rule.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as CompetitionRule;
-    } else {
-      const { data, error } = await supabase
-        .from('competition_rules')
-        .insert({
-          program_id: rule.program_id,
-          code: rule.code,
-          name: rule.name,
-          description: rule.description,
-          category: rule.category,
-          effect_scope: rule.effect_scope,
-          student_merit_points: rule.student_merit_points ?? 0,
-          student_reward_points: rule.student_reward_points ?? 0,
-          unit_points: rule.unit_points ?? 0,
-          requires_evidence: rule.requires_evidence ?? false,
-          requires_approval: rule.requires_approval ?? false,
-          daily_limit: rule.daily_limit || null,
-          is_active: rule.is_active ?? true,
-          display_order: rule.display_order ?? 0,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as CompetitionRule;
+      return this.updateCompetitionRule(rule.id, rule);
     }
+    return this.createCompetitionRule(rule);
+  },
+
+  async canManageCompetition(): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      // 1. Check user_roles for SUPER_ADMIN or PRINCIPAL
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('role_code')
+        .eq('user_id', user.id);
+
+      const roles = (userRoles || []).map((r: any) => r.role_code);
+      if (roles.includes('SUPER_ADMIN') || roles.includes('PRINCIPAL')) {
+        return true;
+      }
+
+      // 2. Check user_competition_permissions for COMPETITION_MANAGE
+      const { data: compPerms } = await supabase
+        .from('user_competition_permissions')
+        .select('permission_code')
+        .eq('user_id', user.id)
+        .eq('permission_code', 'COMPETITION_MANAGE');
+
+      return !!(compPerms && compPerms.length > 0);
+    } catch (err) {
+      console.error('Error checking competition manage permission:', err);
+      return false;
+    }
+  },
+
+  async getAcademicYears(): Promise<{ id: string; name: string; is_active?: boolean }[]> {
+    const { data, error } = await supabase
+      .from('academic_years')
+      .select('id, name, is_active')
+      .order('name', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching academic years:', error);
+      return [];
+    }
+    return data || [];
   },
 
   // --- SEARCH STUDENTS & GET UNIT ---
