@@ -98,6 +98,8 @@ export const AccountMenu: React.FC = () => {
           <img
             src={profile.avatar_url}
             alt={displayName}
+            width={32}
+            height={32}
             referrerPolicy="no-referrer"
             className="h-8 w-8 rounded-full object-cover shrink-0 border border-blue-500/20"
           />
