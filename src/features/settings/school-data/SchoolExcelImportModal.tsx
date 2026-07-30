@@ -114,7 +114,7 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
           if (type === 'student') {
             const { data: years } = await supabase.from('academic_years').select('id, name, code, is_active');
             const { data: classes } = await supabase.from('classes').select('id, name, code, academic_year_id, is_active');
-            const { data: profiles } = await supabase.from('profiles').select('id, full_name, student_code, email');
+            const { data: profiles } = await supabase.from('profiles').select('id, full_name, student_code');
 
             const internalDomain = (
               import.meta.env.VITE_STUDENT_INTERNAL_EMAIL_DOMAIN ||
@@ -279,11 +279,6 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
                   errors.push(`Email nội bộ "${finalEmail}" bị trùng lặp trong tệp Excel.`);
                 } else {
                   processedExcelEmails.add(finalEmail.toLowerCase());
-                }
-
-                const existsInDb = profiles?.some(p => p.email?.toLowerCase() === finalEmail.toLowerCase());
-                if (existsInDb) {
-                  errors.push(`Tài khoản/Email "${finalEmail}" đã tồn tại trên hệ thống.`);
                 }
               }
 

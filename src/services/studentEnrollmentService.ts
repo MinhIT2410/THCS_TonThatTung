@@ -9,8 +9,6 @@ export interface StudentEnrollmentItem {
   id: string; // student user id
   full_name: string;
   student_code: string | null;
-  email: string | null;
-  phone: string | null;
   is_active: boolean;
   created_at: string;
   enrollment: {
@@ -105,7 +103,7 @@ export const studentEnrollmentService = {
     // 2. Fetch profiles
     let profileQuery = supabase
       .from('profiles')
-      .select('id, full_name, student_code, email, phone, is_active, created_at')
+      .select('id, full_name, student_code, is_active, created_at')
       .in('id', studentIds)
       .order('full_name', { ascending: true });
 
@@ -115,7 +113,7 @@ export const studentEnrollmentService = {
 
     if (search && search.trim()) {
       const term = search.trim();
-      profileQuery = profileQuery.or(`full_name.ilike.%${term}%,student_code.ilike.%${term}%,email.ilike.%${term}%`);
+      profileQuery = profileQuery.or(`full_name.ilike.%${term}%,student_code.ilike.%${term}%`);
     }
 
     const { data: profiles, error: profileError } = await profileQuery;
@@ -163,8 +161,6 @@ export const studentEnrollmentService = {
       id: p.id,
       full_name: p.full_name || 'Chưa đặt tên',
       student_code: p.student_code || null,
-      email: p.email || null,
-      phone: p.phone || null,
       is_active: p.is_active ?? true,
       created_at: p.created_at,
       enrollment: enrollmentMap.get(p.id) || null,
