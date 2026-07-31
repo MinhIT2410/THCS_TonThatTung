@@ -151,7 +151,8 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
                     className="hover:text-blue-400 hover:translate-x-1.5 transition-all duration-200 text-left block"
                   >
                     {link.id === 'about' ? 'Giới thiệu Liên đội' :
-                     link.id === 'news' ? 'Tin tức & Hoạt động' :
+                     link.id === 'news' ? 'Tin tức' :
+                     link.id === 'activities' ? 'Hoạt động & Phong trào' :
                      link.id === 'gallery' ? 'Thư viện ảnh Đội' :
                      link.id === 'documents' ? 'Văn bản - Hướng dẫn' :
                      link.id === 'contact' ? 'Liên hệ - Hỏi đáp' : link.title}
@@ -164,7 +165,7 @@ export default function Footer({ onNavigate, onSubmitSuggestion }: FooterProps) 
           {/* Column 3: Suggestion / Feedback Form */}
           <div className="lg:col-span-5 space-y-4">
             <h3 className="font-display text-sm font-bold tracking-wider text-slate-200 uppercase">
-              Hòm thư góp ý Liên đội
+              Hộp thư điều em muốn nói
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
               {siteSettings.contact_intro || "Mọi ý kiến đóng góp, hiến kế hoạt động Đội hoặc chia sẻ tâm tư, em hãy gửi trực tiếp về Ban chỉ huy Liên đội:"}
