@@ -101,10 +101,15 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
       setRules(rList);
       setAcademicYears(yList);
 
-      // Auto set filter if needed
-      if (selectedProgramFilter === 'ALL' && pList.length > 0) {
-        setSelectedProgramFilter(pList[0].id);
-      }
+      // Auto set filter to first active program if not set or invalid
+      setSelectedProgramFilter(prev => {
+        if (prev && prev !== 'ALL' && pList.some(p => p.id === prev)) return prev;
+        if (pList.length > 0) {
+          const activeProg = pList.find(p => p.is_active) || pList[0];
+          return activeProg.id;
+        }
+        return '';
+      });
     } catch (err: any) {
       console.error('Error fetching programs and rules:', err);
       setToast({ type: 'error', text: err.message || 'Lỗi khi tải dữ liệu chương trình & quy tắc.' });
@@ -452,11 +457,11 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
             className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
               subTab === 'programs'
                 ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>1. Chương Trình Thi Đua ({displayedPrograms.length})</span>
+            <span>Chương trình thi đua</span>
           </button>
 
           <button
@@ -464,11 +469,11 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
             className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
               subTab === 'rules'
                 ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
             <FileCheck className="w-4 h-4" />
-            <span>2. Quy Tắc Tính Điểm ({filteredRules.length})</span>
+            <span>Quy tắc tính điểm</span>
           </button>
         </div>
 
@@ -491,20 +496,20 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Layers className="w-5 h-5 text-red-600" />
-                Danh Sách Chương Trình Thi Đua
+                Danh sách chương trình thi đua
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Quản lý các chương trình, đợt thi đua trọng tâm trong năm học của Liên đội
+                Quản lý các chương trình và đợt thi đua trong từng năm học.
               </p>
             </div>
 
-            {canManage && (
+            {canManage && displayedPrograms.length > 0 && (
               <button
                 onClick={openNewProgramModal}
                 className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all flex items-center gap-1.5"
               >
                 <Plus className="w-4 h-4" />
-                <span>Thêm Chương Trình</span>
+                <span>Thêm chương trình</span>
               </button>
             )}
           </div>
@@ -520,10 +525,10 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
               </div>
               <div className="space-y-1">
                 <p className="font-bold text-sm text-slate-900 dark:text-white">
-                  Chưa có chương trình thi đua. Hãy tạo chương trình đầu tiên.
+                  Chưa có chương trình thi đua nào
                 </p>
                 <p className="text-xs text-slate-500">
-                  Tạo đợt thi đua để thiết lập các quy tắc cộng/trừ điểm cho Đội viên và Chi đội
+                  Tạo đợt thi đua để thiết lập các quy tắc cộng/trừ điểm cho Đội viên và Chi đội.
                 </p>
               </div>
               {canManage && (
@@ -532,97 +537,127 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                   className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-600/20 inline-flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Tạo Chương Trình</span>
+                  <span>Tạo chương trình đầu tiên</span>
                 </button>
               )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {displayedPrograms.map(prog => (
-                <div
-                  key={prog.id}
-                  className={`bg-white dark:bg-slate-900 border ${
-                    prog.is_active 
-                      ? 'border-slate-200/80 dark:border-slate-800 hover:border-red-500/50' 
-                      : 'border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/50'
-                  } rounded-3xl p-5 shadow-sm space-y-4 transition-colors flex flex-col justify-between`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2.5 py-0.5 rounded-md bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-mono font-bold text-xs">
-                        {prog.code}
+              {displayedPrograms.map(prog => {
+                const programRuleCount = rules.filter(r => r.program_id === prog.id).length;
+                
+                // Helper status determination
+                let statusBadge = (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Đang hoạt động
+                  </span>
+                );
+
+                if (!prog.is_active) {
+                  statusBadge = (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                      Ngừng sử dụng
+                    </span>
+                  );
+                } else {
+                  const now = new Date();
+                  now.setHours(0, 0, 0, 0);
+                  const startTime = prog.starts_at ? new Date(prog.starts_at).getTime() : null;
+                  const endTime = prog.ends_at ? new Date(prog.ends_at).getTime() : null;
+                  const nowTime = now.getTime();
+
+                  if (startTime && nowTime < startTime) {
+                    statusBadge = (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Sắp diễn ra
                       </span>
-                      {prog.is_active ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Đang hoạt động
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                          Ngừng hoạt động
-                        </span>
-                      )}
-                    </div>
+                    );
+                  } else if (endTime && nowTime > endTime) {
+                    statusBadge = (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                        Đã kết thúc
+                      </span>
+                    );
+                  }
+                }
 
-                    <div>
-                      <h4 className="font-bold text-base text-slate-900 dark:text-white">
-                        {prog.name}
-                      </h4>
-                      {prog.academic_year_name && (
-                        <span className="text-xs font-medium text-red-600 dark:text-red-400 block mt-0.5">
-                          Năm học: {prog.academic_year_name}
+                return (
+                  <div
+                    key={prog.id}
+                    className={`bg-white dark:bg-slate-900 border ${
+                      prog.is_active 
+                        ? 'border-slate-200/80 dark:border-slate-800 hover:border-red-500/50' 
+                        : 'border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/50'
+                    } rounded-3xl p-5 shadow-xs space-y-4 transition-colors flex flex-col justify-between`}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2.5 py-0.5 rounded-md bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-mono font-bold text-xs">
+                          {prog.code}
                         </span>
-                      )}
-                    </div>
+                        {statusBadge}
+                      </div>
 
-                    {prog.description && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3">
-                        {prog.description}
-                      </p>
-                    )}
-
-                    {(prog.starts_at || prog.ends_at) && (
-                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
-                        {prog.starts_at && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-400">Ngày bắt đầu:</span>
-                            <span className="font-mono font-medium">{new Date(prog.starts_at).toLocaleDateString('vi-VN')}</span>
-                          </div>
+                      <div>
+                        <h4 className="font-bold text-base text-slate-900 dark:text-white">
+                          {prog.name}
+                        </h4>
+                        {prog.academic_year_name && (
+                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mt-0.5">
+                            Năm học: {prog.academic_year_name}
+                          </span>
                         )}
-                        {prog.ends_at && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-400">Ngày kết thúc:</span>
-                            <span className="font-mono font-medium">{new Date(prog.ends_at).toLocaleDateString('vi-VN')}</span>
-                          </div>
+                      </div>
+
+                      {prog.description && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+                          {prog.description}
+                        </p>
+                      )}
+
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400">Thời gian:</span>
+                          <span className="font-medium">
+                            {prog.starts_at ? new Date(prog.starts_at).toLocaleDateString('vi-VN') : '---'} – {prog.ends_at ? new Date(prog.ends_at).toLocaleDateString('vi-VN') : '---'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400">Số quy tắc:</span>
+                          <span className="font-bold text-red-600 dark:text-red-400">
+                            {programRuleCount} quy tắc
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {canManage && (
+                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+                        <button
+                          onClick={() => openEditProgramModal(prog)}
+                          className="px-3 py-1.5 rounded-xl font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Chỉnh sửa
+                        </button>
+
+                        {prog.is_active && (
+                          <button
+                            onClick={() => handleArchiveProgram(prog)}
+                            className="px-3 py-1.5 rounded-xl font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors flex items-center gap-1.5"
+                            title="Ngừng sử dụng chương trình này"
+                          >
+                            <Power className="w-3.5 h-3.5" />
+                            Ngừng sử dụng
+                          </button>
                         )}
                       </div>
                     )}
                   </div>
-
-                  {canManage && (
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
-                      <button
-                        onClick={() => openEditProgramModal(prog)}
-                        className="px-3 py-1.5 rounded-xl font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        Chỉnh sửa
-                      </button>
-
-                      {prog.is_active && (
-                        <button
-                          onClick={() => handleArchiveProgram(prog)}
-                          className="px-3 py-1.5 rounded-xl font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors flex items-center gap-1.5"
-                          title="Ngừng sử dụng chương trình này"
-                        >
-                          <Power className="w-3.5 h-3.5" />
-                          Ngừng sử dụng
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -633,181 +668,204 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
       {/* ===================================================================== */}
       {subTab === 'rules' && (
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <FileCheck className="w-5 h-5 text-red-600" />
-                Danh Mục Quy Tắc Tính Điểm
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Cấu hình thang điểm rèn luyện, điểm thưởng và điểm Chi đội cho các hành vi thi đua
-              </p>
+          {/* Program Filter Bar at Top */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="flex items-center gap-3">
+              <label htmlFor="program-filter-select" className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                Chương trình thi đua:
+              </label>
+              <select
+                id="program-filter-select"
+                value={selectedProgramFilter}
+                onChange={e => setSelectedProgramFilter(e.target.value)}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
+              >
+                <option value="">-- Chọn chương trình thi đua --</option>
+                {programs.map(p => (
+                  <option key={p.id} value={p.id}>
+                    [{p.code}] {p.name} {!p.is_active ? '(Ngừng sử dụng)' : ''}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {canManage && (
+            {canManage && selectedProgramFilter !== '' && programs.length > 0 && (
               <button
                 onClick={openNewRuleModal}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
               >
                 <Plus className="w-4 h-4" />
-                <span>Thêm Quy Tắc</span>
+                <span>Thêm quy tắc</span>
               </button>
             )}
-          </div>
-
-          {/* Program Filter */}
-          <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">Lọc theo chương trình:</span>
-            <select
-              value={selectedProgramFilter}
-              onChange={e => setSelectedProgramFilter(e.target.value)}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
-            >
-              <option value="ALL">Tất cả chương trình ({rules.length})</option>
-              {programs.map(p => (
-                <option key={p.id} value={p.id}>
-                  [{p.code}] {p.name} {!p.is_active ? '(Đã khóa)' : ''}
-                </option>
-              ))}
-            </select>
           </div>
 
           {loading ? (
             <div className="p-12 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 animate-pulse">
               Đang tải danh mục quy tắc tính điểm...
             </div>
-          ) : filteredRules.length === 0 ? (
+          ) : programs.length === 0 ? (
             <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
-              <p className="text-xs text-slate-500">
-                Chưa có quy tắc thi đua nào thuộc chương trình được chọn. Bấm "Thêm Quy Tắc" để tạo quy tắc mới.
+              <FileCheck className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto" />
+              <p className="font-semibold text-sm text-slate-700 dark:text-slate-300">
+                Chưa có chương trình thi đua. Hãy tạo chương trình trước khi thiết lập quy tắc.
               </p>
-              {canManage && (
-                <button
-                  onClick={openNewRuleModal}
-                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-600/20 inline-flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Thêm Quy Tắc</span>
-                </button>
-              )}
+            </div>
+          ) : selectedProgramFilter === '' ? (
+            <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <Layers className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto" />
+              <p className="font-semibold text-sm text-slate-700 dark:text-slate-300">
+                Vui lòng chọn chương trình thi đua để xem và thiết lập quy tắc tính điểm.
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredRules.map(rule => (
-                <div
-                  key={rule.id}
-                  className={`bg-white dark:bg-slate-900 border ${
-                    rule.is_active 
-                      ? 'border-slate-200/80 dark:border-slate-800 hover:border-red-500/50' 
-                      : 'border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/50'
-                  } rounded-3xl p-5 shadow-sm space-y-4 transition-colors flex flex-col justify-between`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-mono font-bold text-[10px]">
-                            {rule.code}
-                          </span>
-                          <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-[10px]">
-                            {COMPETITION_CATEGORY_LABELS[rule.category] || rule.category}
-                          </span>
-                          {rule.program?.name && (
-                            <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium text-[10px]">
-                              {rule.program.name}
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <FileCheck className="w-5 h-5 text-red-600" />
+                    Danh sách quy tắc tính điểm
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Cấu hình thang điểm rèn luyện, điểm thưởng và điểm Chi đội cho các hành vi thi đua.
+                  </p>
+                </div>
+              </div>
+
+              {filteredRules.length === 0 ? (
+                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <p className="text-xs text-slate-500 font-medium">
+                    Chưa có quy tắc thi đua nào thuộc chương trình được chọn. Bấm "Thêm quy tắc" để tạo mới.
+                  </p>
+                  {canManage && (
+                    <button
+                      onClick={openNewRuleModal}
+                      className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-600/20 inline-flex items-center gap-1.5"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Thêm quy tắc</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredRules.map(rule => (
+                    <div
+                      key={rule.id}
+                      className={`bg-white dark:bg-slate-900 border ${
+                        rule.is_active 
+                          ? 'border-slate-200/80 dark:border-slate-800 hover:border-red-500/50' 
+                          : 'border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/50'
+                      } rounded-3xl p-5 shadow-xs space-y-4 transition-colors flex flex-col justify-between`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-mono font-bold text-[10px]">
+                                {rule.code}
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-[10px]">
+                                {COMPETITION_CATEGORY_LABELS[rule.category] || rule.category}
+                              </span>
+                              {rule.program?.name && (
+                                <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium text-[10px]">
+                                  {rule.program.name}
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-bold text-base text-slate-900 dark:text-white">
+                              {rule.name}
+                            </h4>
+                          </div>
+
+                          {rule.is_active ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md shrink-0">
+                              Đang hoạt động
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md shrink-0">
+                              Ngừng hoạt động
                             </span>
                           )}
                         </div>
-                        <h4 className="font-bold text-base text-slate-900 dark:text-white">
-                          {rule.name}
-                        </h4>
+
+                        {rule.description && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 italic">
+                            "{rule.description}"
+                          </p>
+                        )}
+
+                        {/* Point Values Grid */}
+                        <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 text-center text-xs">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-medium">Điểm rèn luyện</span>
+                            <span className={`font-mono font-bold ${rule.student_merit_points > 0 ? 'text-emerald-600' : rule.student_merit_points < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                              {rule.student_merit_points > 0 ? `+${rule.student_merit_points}` : rule.student_merit_points}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-medium">Điểm thưởng</span>
+                            <span className={`font-mono font-bold ${rule.student_reward_points > 0 ? 'text-amber-600' : rule.student_reward_points < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                              {rule.student_reward_points > 0 ? `+${rule.student_reward_points}` : rule.student_reward_points}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-medium">Điểm Chi đội</span>
+                            <span className={`font-mono font-bold ${rule.unit_points > 0 ? 'text-blue-600' : rule.unit_points < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                              {rule.unit_points > 0 ? `+${rule.unit_points}` : rule.unit_points}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Scope & Flags Footer */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                          <span>Phạm vi: <strong>{COMPETITION_SCOPE_LABELS[rule.effect_scope]}</strong></span>
+                          <div className="flex items-center gap-2">
+                            {rule.requires_approval ? (
+                              <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-0.5">
+                                <Clock className="w-3 h-3" /> Cần duyệt
+                              </span>
+                            ) : (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
+                                <ShieldCheck className="w-3 h-3" /> Tự động
+                              </span>
+                            )}
+                            {rule.requires_evidence && (
+                              <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                                • Cần minh chứng
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
-                      {rule.is_active ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md shrink-0">
-                          Đang hoạt động
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md shrink-0">
-                          Ngừng hoạt động
-                        </span>
+                      {canManage && (
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+                          <button
+                            onClick={() => openEditRuleModal(rule)}
+                            className="px-3 py-1.5 rounded-xl font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Chỉnh sửa
+                          </button>
+
+                          {rule.is_active && (
+                            <button
+                              onClick={() => handleArchiveRule(rule)}
+                              className="px-3 py-1.5 rounded-xl font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors flex items-center gap-1.5"
+                              title="Ngừng sử dụng quy tắc này"
+                            >
+                              <Power className="w-3.5 h-3.5" />
+                              Ngừng sử dụng
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-
-                    {rule.description && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 italic">
-                        "{rule.description}"
-                      </p>
-                    )}
-
-                    {/* Point Values Grid */}
-                    <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 text-center text-xs">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-medium">Điểm rèn luyện</span>
-                        <span className={`font-mono font-bold ${rule.student_merit_points > 0 ? 'text-emerald-600' : rule.student_merit_points < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                          {rule.student_merit_points > 0 ? `+${rule.student_merit_points}` : rule.student_merit_points}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-medium">Điểm thưởng</span>
-                        <span className={`font-mono font-bold ${rule.student_reward_points > 0 ? 'text-amber-600' : rule.student_reward_points < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                          {rule.student_reward_points > 0 ? `+${rule.student_reward_points}` : rule.student_reward_points}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-medium">Điểm Chi đội</span>
-                        <span className={`font-mono font-bold ${rule.unit_points > 0 ? 'text-blue-600' : rule.unit_points < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                          {rule.unit_points > 0 ? `+${rule.unit_points}` : rule.unit_points}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Scope & Flags Footer */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-                      <span>Phạm vi: <strong>{COMPETITION_SCOPE_LABELS[rule.effect_scope]}</strong></span>
-                      <div className="flex items-center gap-2">
-                        {rule.requires_approval ? (
-                          <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-0.5">
-                            <Clock className="w-3 h-3" /> Cần duyệt
-                          </span>
-                        ) : (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
-                            <ShieldCheck className="w-3 h-3" /> Tự động
-                          </span>
-                        )}
-                        {rule.requires_evidence && (
-                          <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                            • Cần minh chứng
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {canManage && (
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
-                      <button
-                        onClick={() => openEditRuleModal(rule)}
-                        className="px-3 py-1.5 rounded-xl font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        Chỉnh sửa
-                      </button>
-
-                      {rule.is_active && (
-                        <button
-                          onClick={() => handleArchiveRule(rule)}
-                          className="px-3 py-1.5 rounded-xl font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors flex items-center gap-1.5"
-                          title="Ngừng sử dụng quy tắc này"
-                        >
-                          <Power className="w-3.5 h-3.5" />
-                          Ngừng sử dụng
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>

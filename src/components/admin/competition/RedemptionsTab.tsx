@@ -70,7 +70,7 @@ export const RedemptionsTab: React.FC = () => {
   };
 
   const handleIssue = async (id: string) => {
-    if (!confirm('Xác nhận trao quà cho đội viên? Hệ thống sẽ trừ điểm thưởng chính thức và cập nhật số lượng tồn kho.')) return;
+    if (!confirm('Xác nhận trao quà cho đội viên? Hệ thống sẽ trừ điểm thưởng chính thức và cập nhật số lượng phần thưởng.')) return;
     try {
       setProcessingId(id);
       await competitionService.issueRewardRedemption(id);
