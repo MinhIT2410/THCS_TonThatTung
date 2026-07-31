@@ -165,7 +165,7 @@ export default function StudentCompetitionPage() {
         reason: reviewReason,
         evidence_url: reviewEvidenceUrl || undefined,
       });
-      alert('Đã gửi đề nghị xem lại thành công! Ban chỉ huy / Phụ trách sẽ phản hồi sớm.');
+      alert('Đã gửi đề nghị xem lại thành công! Ban chỉ huy / Phụ trách Đội sẽ phản hồi sớm.');
       setShowReviewModal(false);
       await loadData();
     } catch (err: any) {
@@ -181,43 +181,43 @@ export default function StudentCompetitionPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pb-16 pt-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        {/* Top Header Card */}
-        <div className="bg-gradient-to-r from-red-600 via-amber-600 to-amber-700 rounded-3xl text-white p-6 sm:p-8 shadow-xl relative overflow-hidden">
-          <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+    <div className="min-h-screen bg-slate-50/60 pb-12 pt-4 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-5">
+        {/* Top Header Card - Compact Height */}
+        <div className="bg-gradient-to-r from-red-600 via-amber-600 to-amber-700 rounded-2xl text-white p-4 sm:p-5 sm:px-6 shadow-lg relative overflow-hidden">
+          <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 backdrop-blur-md border-2 border-white/40 flex items-center justify-center shrink-0 shadow-lg">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center shrink-0 shadow-md overflow-hidden">
                 {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt={profile.full_name}
-                    className="w-full h-full rounded-2xl object-cover"
+                    className="w-full h-full rounded-xl object-cover"
                   />
                 ) : (
-                  <Award className="w-10 h-10 text-amber-200" />
+                  <Award className="w-7 h-7 text-amber-200" />
                 )}
               </div>
 
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="bg-amber-300 text-red-950 font-extrabold text-[11px] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    Hồ sơ Đội viên
+                  <span className="bg-amber-300 text-red-950 font-extrabold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    Hồ sơ đội viên
                   </span>
                   {profile?.unit_info?.has_unit && (
-                    <span className="bg-white/20 text-white font-semibold text-xs px-2.5 py-0.5 rounded-full backdrop-blur-xs">
+                    <span className="bg-white/20 text-white font-semibold text-[11px] px-2 py-0.5 rounded-full backdrop-blur-xs">
                       {profile.unit_info.class_name}
                     </span>
                   )}
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-extrabold font-display mt-1">
+                <h1 className="text-xl sm:text-2xl font-extrabold font-display mt-0.5">
                   {profile?.full_name || 'Đội viên'}
                 </h1>
 
-                <p className="text-xs sm:text-sm text-amber-100/90 mt-1 flex items-center gap-2">
+                <p className="text-xs text-amber-100/90 mt-0.5 flex items-center gap-2">
                   <span>Mã ĐV: {profile?.student_code || 'Chưa cập nhật'}</span>
                 </p>
               </div>
@@ -225,138 +225,138 @@ export default function StudentCompetitionPage() {
 
             <button
               onClick={loadData}
-              className="px-4 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-2xl transition backdrop-blur-md border border-white/30 flex items-center gap-2 self-start md:self-auto"
+              className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-xl transition backdrop-blur-md border border-white/30 flex items-center gap-1.5 self-start md:self-auto"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               Cập nhật dữ liệu
             </button>
           </div>
 
-          {/* 3 Mandated Separated Values Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 pt-6 border-t border-white/20">
+          {/* 3 Mandated Separated Values Bar - Compact 1-line view on desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/20">
             {/* Value A: STUDENT_MERIT */}
-            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 flex items-center justify-between">
+            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/20 flex items-center justify-between">
               <div>
-                <span className="text-xs font-medium text-amber-100 block">
-                  A. Điểm Thi Đua Tích Lũy (`STUDENT_MERIT`)
+                <span className="text-[11px] font-medium text-amber-100 block">
+                  A. Điểm thi đua tích lũy
                 </span>
-                <span className="text-2xl sm:text-3xl font-extrabold font-display mt-0.5 block">
+                <span className="text-xl sm:text-2xl font-black font-display mt-0.5 block">
                   {profile?.accumulated_merit_points ?? 0} <span className="text-xs font-normal">điểm</span>
                 </span>
-                <span className="text-[10px] text-amber-200/80 block mt-1">
+                <span className="text-[10px] text-amber-200/80 block mt-0.5">
                   Đánh giá rèn luyện & xếp loại thi đua
                 </span>
               </div>
-              <div className="p-3 bg-amber-400/20 rounded-xl text-amber-300">
-                <Star className="w-6 h-6" />
+              <div className="p-2.5 bg-amber-400/20 rounded-lg text-amber-300 shrink-0">
+                <Star className="w-5 h-5" />
               </div>
             </div>
 
             {/* Value B: STUDENT_REWARD */}
-            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 flex items-center justify-between">
+            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/20 flex items-center justify-between">
               <div>
-                <span className="text-xs font-medium text-amber-100 block">
-                  B. Điểm Thưởng Khả Dụng (`STUDENT_REWARD`)
+                <span className="text-[11px] font-medium text-amber-100 block">
+                  B. Điểm thưởng
                 </span>
-                <span className="text-2xl sm:text-3xl font-extrabold font-display text-amber-200 mt-0.5 block">
+                <span className="text-xl sm:text-2xl font-black font-display text-amber-200 mt-0.5 block">
                   {profile?.available_reward_points ?? 0} <span className="text-xs font-normal">điểm</span>
                 </span>
-                <span className="text-[10px] text-amber-200/80 block mt-1">
-                  Đang giữ: {profile?.reserved_reward_points ?? 0} đ • Đã nhận: {profile?.posted_reward_points ?? 0} đ
+                <span className="text-[10px] text-amber-200/80 block mt-0.5">
+                  Điểm thưởng các hoạt động
                 </span>
               </div>
-              <div className="p-3 bg-amber-400/20 rounded-xl text-amber-300">
-                <Gift className="w-6 h-6" />
+              <div className="p-2.5 bg-amber-400/20 rounded-lg text-amber-300 shrink-0">
+                <Gift className="w-5 h-5" />
               </div>
             </div>
 
             {/* Value C: UNIT_COMPETITION Contribution */}
-            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 flex items-center justify-between">
+            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/20 flex items-center justify-between">
               <div>
-                <span className="text-xs font-medium text-amber-100 block">
-                  C. Cống Hiến Cho Chi Đội
+                <span className="text-[11px] font-medium text-amber-100 block">
+                  C. Cống hiến cho chi đội
                 </span>
-                <span className="text-2xl sm:text-3xl font-extrabold font-display text-emerald-200 mt-0.5 block">
+                <span className="text-xl sm:text-2xl font-black font-display text-emerald-200 mt-0.5 block">
                   {profile?.unit_contribution_points ?? 0} <span className="text-xs font-normal">điểm</span>
                 </span>
-                <span className="text-[10px] text-amber-200/80 block mt-1">
+                <span className="text-[10px] text-amber-200/80 block mt-0.5">
                   Đóng góp cho phong trào tập thể lớp
                 </span>
               </div>
-              <div className="p-3 bg-emerald-400/20 rounded-xl text-emerald-300">
-                <Users className="w-6 h-6" />
+              <div className="p-2.5 bg-emerald-400/20 rounded-lg text-emerald-300 shrink-0">
+                <Users className="w-5 h-5" />
               </div>
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl flex items-center gap-2 text-sm">
-            <AlertCircle className="w-5 h-5 shrink-0" />
+          <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Navigation Tabs Bar */}
-        <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1 scrollbar-none">
+        {/* Navigation Tabs Bar - Compact Height */}
+        <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 overflow-x-auto pb-1.5 scrollbar-none flex-nowrap">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2.5 rounded-2xl font-bold text-xs transition-all whitespace-nowrap flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
               activeTab === 'overview'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                ? 'bg-amber-600 text-white shadow-xs shadow-amber-600/20'
                 : 'text-slate-600 hover:bg-slate-100 bg-white border border-slate-200'
             }`}
           >
-            <Award className="w-4 h-4" />
-            <span>Tổng Quan Hồ Sơ</span>
+            <Award className="w-3.5 h-3.5" />
+            <span>Tổng quan hồ sơ</span>
           </button>
 
           <button
             onClick={() => setActiveTab('ledger')}
-            className={`px-4 py-2.5 rounded-2xl font-bold text-xs transition-all whitespace-nowrap flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
               activeTab === 'ledger'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                ? 'bg-amber-600 text-white shadow-xs shadow-amber-600/20'
                 : 'text-slate-600 hover:bg-slate-100 bg-white border border-slate-200'
             }`}
           >
-            <FileText className="w-4 h-4" />
-            <span>Sổ Điểm & Nhật Ký</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>Sổ điểm & nhật ký</span>
           </button>
 
           <button
             onClick={() => setActiveTab('shop')}
-            className={`px-4 py-2.5 rounded-2xl font-bold text-xs transition-all whitespace-nowrap flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
               activeTab === 'shop'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                ? 'bg-amber-600 text-white shadow-xs shadow-amber-600/20'
                 : 'text-slate-600 hover:bg-slate-100 bg-white border border-slate-200'
             }`}
           >
-            <ShoppingBag className="w-4 h-4" />
-            <span>Cửa Hàng Phần Thưởng</span>
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>Cửa hàng phần thưởng</span>
           </button>
 
           <button
             onClick={() => setActiveTab('redemptions')}
-            className={`px-4 py-2.5 rounded-2xl font-bold text-xs transition-all whitespace-nowrap flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
               activeTab === 'redemptions'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                ? 'bg-amber-600 text-white shadow-xs shadow-amber-600/20'
                 : 'text-slate-600 hover:bg-slate-100 bg-white border border-slate-200'
             }`}
           >
-            <Package className="w-4 h-4" />
-            <span>Lịch Sử Đổi Quà ({myRedemptions.length})</span>
+            <Package className="w-3.5 h-3.5" />
+            <span>Lịch sử đổi quà ({myRedemptions.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('reviews')}
-            className={`px-4 py-2.5 rounded-2xl font-bold text-xs transition-all whitespace-nowrap flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
               activeTab === 'reviews'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                ? 'bg-amber-600 text-white shadow-xs shadow-amber-600/20'
                 : 'text-slate-600 hover:bg-slate-100 bg-white border border-slate-200'
             }`}
           >
-            <HelpCircle className="w-4 h-4" />
-            <span>Yêu Cầu Xem Lại ({myReviews.length})</span>
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span>Đề nghị xem lại ({myReviews.length})</span>
           </button>
         </div>
 
@@ -475,9 +475,9 @@ export default function StudentCompetitionPage() {
                   className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:border-amber-500"
                 >
                   <option value="ALL">Tất cả sổ điểm</option>
-                  <option value="STUDENT_MERIT">A. Điểm Thi đua (`STUDENT_MERIT`)</option>
-                  <option value="STUDENT_REWARD">B. Điểm Thưởng (`STUDENT_REWARD`)</option>
-                  <option value="UNIT_COMPETITION">C. Cống hiến Chi đội (`UNIT_COMPETITION`)</option>
+                  <option value="STUDENT_MERIT">A. Điểm Thi đua</option>
+                  <option value="STUDENT_REWARD">B. Điểm Thưởng</option>
+                  <option value="UNIT_COMPETITION">C. Cống hiến Chi đội</option>
                 </select>
               </div>
             </div>
@@ -553,7 +553,7 @@ export default function StudentCompetitionPage() {
                   Cửa Hàng Phần Thưởng Đội Viên
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Đội viên dùng Điểm thưởng khả dụng (`STUDENT_REWARD`) để đổi quà tặng học tập & huy hiệu.
+                  Đội viên dùng Điểm thưởng để đổi quà tặng học tập & huy hiệu.
                 </p>
               </div>
 
@@ -789,7 +789,7 @@ export default function StudentCompetitionPage() {
 
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
                 <div>
-                  Tổng điểm thưởng trừ (`STUDENT_REWARD`):{' '}
+                  Tổng điểm thưởng trừ:{' '}
                   <span className="font-extrabold text-amber-800">
                     {selectedReward.points_required * redeemQty} điểm
                   </span>

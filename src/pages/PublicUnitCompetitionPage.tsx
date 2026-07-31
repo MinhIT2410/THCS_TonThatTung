@@ -72,7 +72,7 @@ export default function PublicUnitCompetitionPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-8 font-sans pb-20">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-5 sm:space-y-6 font-sans pb-16">
       {/* Navigation Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
         <Link to={ROUTES.COMPETITION} className="hover:text-red-600 transition-colors flex items-center gap-1">
@@ -80,46 +80,46 @@ export default function PublicUnitCompetitionPage() {
           <span>Tổng quan Thi đua</span>
         </Link>
         <span>/</span>
-        <span className="font-bold text-slate-800 dark:text-white">Thi Đua Chi Đội theo Tuần</span>
+        <span className="font-bold text-slate-800 dark:text-white">Thi đua chi đội theo tuần</span>
       </div>
 
-      {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 dark:from-red-950 dark:via-rose-900 dark:to-amber-950 p-8 sm:p-10 text-white shadow-xl">
-        <div className="absolute -right-8 -bottom-8 opacity-15 pointer-events-none">
-          <Trophy className="w-72 h-72" />
+      {/* Header Banner - Compact Height */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 dark:from-red-950 dark:via-rose-900 dark:to-amber-950 p-5 sm:p-6 text-white shadow-lg">
+        <div className="absolute -right-5 -bottom-5 opacity-15 pointer-events-none">
+          <Trophy className="w-44 h-44" />
         </div>
-        <div className="relative z-10 max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider text-amber-100">
-            <Sparkles className="w-3.5 h-3.5" />
-            Bảng Cờ Thi Đua Chi Đội
+        <div className="relative z-10 max-w-2xl space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-amber-100">
+            <Sparkles className="w-3 h-3" />
+            Bảng cờ thi đua chi đội
           </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight font-display leading-tight">
-            Kết Quả Thi Đua Chi Đội Hàng Tuần
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight font-display leading-tight">
+            Kết quả thi đua chi đội hàng tuần
           </h1>
-          <p className="text-xs sm:text-sm text-red-50 dark:text-red-200 leading-relaxed">
+          <p className="text-xs text-red-50 dark:text-red-200 leading-relaxed line-clamp-2">
             Công bố công khai tổng điểm thi đua và thứ hạng các chi đội THCS Tôn Thất Tùng. Bảng điểm được tổng hợp minh bạch từ sổ ghi nhận và quy tắc thi đua chính thức của Liên đội.
           </p>
         </div>
       </div>
 
-      {/* Filter / Selector Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-red-600" />
-            Chọn Tuần Thi Đua
+      {/* Filter / Selector Bar - Compact Padding */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-red-600" />
+            Chọn tuần thi đua
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Chỉ hiển thị các tuần thi đua đã chính thức chốt và công bố kết quả
           </p>
         </div>
 
-        <div className="min-w-[260px]">
+        <div className="min-w-[240px]">
           <select
             value={selectedWeekId}
             onChange={handleWeekChange}
             disabled={publishedWeeks.length === 0}
-            className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-white shadow-sm disabled:opacity-50"
+            className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-white shadow-xs disabled:opacity-50"
           >
             {publishedWeeks.length === 0 ? (
               <option value="">Chưa có kết quả công bố</option>
@@ -136,17 +136,17 @@ export default function PublicUnitCompetitionPage() {
 
       {/* Main Leaderboard Section */}
       {loading ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-12 text-center text-xs text-slate-400 animate-pulse">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center text-xs text-slate-400 animate-pulse">
           Đang tải bảng xếp hạng cờ thi đua...
         </div>
       ) : publishedWeeks.length === 0 || !currentWeekInfo ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-12 text-center space-y-4">
-          <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 mx-auto flex items-center justify-center">
-            <Clock className="w-8 h-8" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 mx-auto flex items-center justify-center">
+            <Clock className="w-6 h-6" />
           </div>
           <div className="space-y-1 max-w-md mx-auto">
-            <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Chưa Có Kết Quả Tuần Thi Đua Được Công Bố
+            <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+              Chưa có kết quả tuần thi đua được công bố
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               Ban Chỉ huy Liên đội đang tổng hợp điểm và xử lý các sự việc thi đua trong tuần. Kết quả chính thức sẽ được cập nhật công khai ngay sau khi Tổng phụ trách chốt tuần.
@@ -154,35 +154,35 @@ export default function PublicUnitCompetitionPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Week Info Banner */}
-          <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <div className="text-xs font-mono font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
+              <div className="text-[11px] font-mono font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
                 {currentWeekInfo.program_name || 'Chương trình thi đua năm học'}
               </div>
-              <h2 className="text-2xl font-black font-display text-slate-900 dark:text-white mt-0.5">
+              <h2 className="text-xl sm:text-2xl font-black font-display text-slate-900 dark:text-white mt-0.5">
                 {currentWeekInfo.name}
               </h2>
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1 sm:text-right">
+            <div className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5 sm:text-right">
               <div>Thời gian: <strong className="text-slate-800 dark:text-slate-200">{currentWeekInfo.starts_on}</strong> đến <strong className="text-slate-800 dark:text-slate-200">{currentWeekInfo.ends_on}</strong></div>
               <div>Ngày công bố: <strong className="text-slate-800 dark:text-slate-200">{new Date(currentWeekInfo.published_at).toLocaleDateString('vi-VN')}</strong></div>
             </div>
           </div>
 
           {/* Desktop Leaderboard Table (Hidden on mobile) */}
-          <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+          <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="py-4 px-6 w-20 text-center">Hạng</th>
-                  <th className="py-4 px-6">Chi đội</th>
-                  <th className="py-4 px-6 text-center">Khởi điểm</th>
-                  <th className="py-4 px-6 text-center text-emerald-600 dark:text-emerald-400">Điểm cộng</th>
-                  <th className="py-4 px-6 text-center text-rose-600 dark:text-rose-400">Điểm trừ</th>
-                  <th className="py-4 px-6 text-center font-black">Điểm tổng kết</th>
-                  <th className="py-4 px-6">Nhận xét thi đua</th>
+                  <th className="py-3 px-4 w-16 text-center">Hạng</th>
+                  <th className="py-3 px-4">Chi đội</th>
+                  <th className="py-3 px-4 text-center">Khởi điểm</th>
+                  <th className="py-3 px-4 text-center text-emerald-600 dark:text-emerald-400">Điểm cộng</th>
+                  <th className="py-3 px-4 text-center text-rose-600 dark:text-rose-400">Điểm trừ</th>
+                  <th className="py-3 px-4 text-center font-black">Điểm tổng kết</th>
+                  <th className="py-3 px-4">Nhận xét thi đua</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -195,11 +195,11 @@ export default function PublicUnitCompetitionPage() {
                         rank === 1 ? 'bg-amber-500/5 dark:bg-amber-500/10' : ''
                       }`}
                     >
-                      <td className="py-4 px-6 text-center">
+                      <td className="py-3 px-4 text-center">
                         <span
-                          className={`inline-flex items-center justify-center w-8 h-8 rounded-2xl text-xs font-black shadow-sm ${
+                          className={`inline-flex items-center justify-center w-7 h-7 rounded-xl text-xs font-black shadow-xs ${
                             rank === 1
-                              ? 'bg-amber-400 text-amber-950 ring-4 ring-amber-400/20'
+                              ? 'bg-amber-400 text-amber-950 ring-2 ring-amber-400/30'
                               : rank === 2
                               ? 'bg-slate-300 text-slate-900'
                               : rank === 3
@@ -210,8 +210,8 @@ export default function PublicUnitCompetitionPage() {
                           {rank}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
-                        <div className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                      <td className="py-3 px-4">
+                        <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2">
                           {item.unit_name}
                           {rank === 1 && (
                             <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
@@ -220,21 +220,21 @@ export default function PublicUnitCompetitionPage() {
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-center font-mono text-slate-500">
+                      <td className="py-3 px-4 text-center font-mono text-slate-500">
                         {item.starting_points}
                       </td>
-                      <td className="py-4 px-6 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      <td className="py-3 px-4 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
                         +{item.manual_bonus_points || 0}
                       </td>
-                      <td className="py-4 px-6 text-center font-mono font-bold text-rose-600 dark:text-rose-400">
+                      <td className="py-3 px-4 text-center font-mono font-bold text-rose-600 dark:text-rose-400">
                         -{item.manual_penalty_points || 0}
                       </td>
-                      <td className="py-4 px-6 text-center">
-                        <span className="font-mono font-black text-base px-3 py-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200/60 dark:border-slate-700 shadow-inner">
+                      <td className="py-3 px-4 text-center">
+                        <span className="font-mono font-black text-sm px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200/60 dark:border-slate-700">
                           {item.final_points}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-slate-600 dark:text-slate-300">
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
                         {item.comment || <span className="italic text-slate-400">Tuyên dương nề nếp thi đua</span>}
                       </td>
                     </tr>
