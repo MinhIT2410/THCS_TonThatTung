@@ -54,6 +54,10 @@ export function formatCode(str: string): string {
 export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProgramChange }: ProgramsAndRulesTabProps) {
   const [subTab, setSubTab] = useState<'programs' | 'rules'>(initialSubTab);
   const [canManage, setCanManage] = useState<boolean>(false);
+
+  useEffect(() => {
+    setSubTab(initialSubTab);
+  }, [initialSubTab]);
   const [checkingPermission, setCheckingPermission] = useState<boolean>(true);
 
   // Data states
@@ -449,34 +453,8 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
         </div>
       )}
 
-      {/* Navigation Sub-Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setSubTab('programs')}
-            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
-              subTab === 'programs'
-                ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Chương trình thi đua</span>
-          </button>
-
-          <button
-            onClick={() => setSubTab('rules')}
-            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
-              subTab === 'rules'
-                ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            <FileCheck className="w-4 h-4" />
-            <span>Quy tắc tính điểm</span>
-          </button>
-        </div>
-
+      {/* Top Action Bar */}
+      <div className="flex items-center justify-end pb-1">
         <button
           onClick={fetchData}
           disabled={loading}

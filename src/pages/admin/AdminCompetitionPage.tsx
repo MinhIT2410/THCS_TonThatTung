@@ -61,15 +61,27 @@ export default function AdminCompetitionPage() {
       <div className="relative">
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto flex-nowrap pb-2 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <button
-            onClick={() => setActiveTab('programs_rules')}
+            onClick={() => setActiveTab('programs')}
             className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-2 ${
-              activeTab === 'programs_rules'
+              activeTab === 'programs' || activeTab === 'programs_rules'
                 ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
                 : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-transparent'
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Chương trình và quy tắc</span>
+            <span>Chương trình</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('rules')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-2 ${
+              activeTab === 'rules'
+                ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
+                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-transparent'
+            }`}
+          >
+            <FileCheck className="w-4 h-4" />
+            <span>Quy tắc</span>
           </button>
 
           <button
@@ -81,7 +93,7 @@ export default function AdminCompetitionPage() {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Thi đua chi đội</span>
+            <span>Tập thể</span>
           </button>
 
           <button
@@ -93,7 +105,7 @@ export default function AdminCompetitionPage() {
             }`}
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Ghi nhận sự việc</span>
+            <span>Ghi nhận</span>
           </button>
 
           <button
@@ -117,7 +129,7 @@ export default function AdminCompetitionPage() {
             }`}
           >
             <History className="w-4 h-4" />
-            <span>Nhật ký và đảo điểm</span>
+            <span>Nhật ký</span>
           </button>
 
           <button
