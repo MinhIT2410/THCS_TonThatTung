@@ -199,8 +199,8 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
                 errors.push('Số thứ tự (sequence_no) không được bỏ trống.');
               } else {
                 const parsedSeq = Number(rawSeqInput);
-                if (isNaN(parsedSeq) || !Number.isInteger(parsedSeq) || parsedSeq < 1 || parsedSeq > 999) {
-                  errors.push(`Số thứ tự (sequence_no) "${rawSeqInput}" phải là số nguyên từ 1 đến 999.`);
+                if (isNaN(parsedSeq) || !Number.isInteger(parsedSeq) || parsedSeq < 1 || parsedSeq > 9999) {
+                  errors.push(`Số thứ tự (sequence_no) "${rawSeqInput}" phải là số nguyên từ 1 đến 9999.`);
                 } else {
                   sequenceNo = parsedSeq;
                 }
@@ -562,6 +562,19 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
       ];
       wsStudent['!views'] = [{ state: 'frozen', ySplit: 1 }];
       wsStudent['!autofilter'] = { ref: 'A1:F1001' };
+      (wsStudent as any)['!dataValidation'] = [
+        {
+          sqref: 'D2:D9999',
+          type: 'whole',
+          operator: 'between',
+          formula1: 1,
+          formula2: 9999,
+          allowBlank: true,
+          showErrorMessage: true,
+          errorTitle: 'Lỗi nhập liệu',
+          error: 'Số thứ tự (sequence_no) phải là số nguyên từ 1 đến 9999.'
+        }
+      ];
 
       // Guide sheet
       const huongDanRows = [
@@ -570,13 +583,13 @@ export default function SchoolExcelImportModal({ isOpen, onClose, onImportSucces
         ['HƯỚNG DẪN NHẬP LIỆU:'],
         ['1. Chỉ nhập dữ liệu vào các cột: full_name, academic_year_code, class_code, sequence_no, is_active, temporary_password.'],
         ['2. HỆ THỐNG TỰ ĐỘNG SINH username và student_code từ họ tên, năm học, mã lớp và số thứ tự khi upload:'],
-        ['   - username = họ tên viết liền không dấu + số thứ tự 3 chữ số (ví dụ: nguyenvana001)'],
-        ['   - student_code = YYYY-CLASSCODE-NNN (ví dụ: 2026-LH61-001)'],
+        ['   - username = họ tên viết liền không dấu + số thứ tự (ví dụ: nguyenvana001 hoặc nguyenvana1000)'],
+        ['   - student_code = YYYY-CLASSCODE-NNN (ví dụ: 2026-LH61-001 hoặc 2026-LH61-1000)'],
         ['   - email nội bộ = username@domain (ví dụ: nguyenvana001@school.edu.vn)'],
         ['3. full_name: Nhập họ và tên đầy đủ của học sinh (ví dụ: Nguyễn Văn A).'],
         ['4. academic_year_code: Nhập mã năm học hợp lệ đã có trong hệ thống (ví dụ: 2026-2027).'],
         ['5. class_code: Nhập mã lớp (class_code) thực tế trong hệ thống (ví dụ: LH61). Không dùng tên lớp (ví dụ 6/1).'],
-        ['6. sequence_no: Nhập số thứ tự học sinh trong lớp (từ 1 đến 999). Không trùng lặp trong cùng một lớp và năm học.'],
+        ['6. sequence_no: Nhập số thứ tự học sinh trong lớp (từ 1 đến 9999). Không trùng lặp trong cùng một lớp và năm học.'],
         ['7. is_active: Nhập TRUE (đang học) hoặc FALSE (ngừng học).'],
         ['8. temporary_password: Mật khẩu khởi tạo ban đầu cho tài khoản học sinh.'],
       ];
