@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Award,
   Gift,
@@ -35,10 +36,20 @@ import {
   REVIEW_REQUEST_STATUS_LABELS,
   LedgerType,
 } from '../types/competition';
+import { useAuth } from '../features/auth/AuthContext';
+import { ROUTES } from '../config/routes';
 
 type StudentTab = 'overview' | 'ledger' | 'shop' | 'redemptions' | 'reviews';
 
 export default function StudentCompetitionPage() {
+  const { user, isAuthenticated, loading: authLoading, profileLoading, hasRole, role, roles } = useAuth();
+
+  const isUserAuthenticated = Boolean(user && isAuthenticated);
+  const isStudentRole = Boolean(
+    isUserAuthenticated &&
+    (hasRole('STUDENT') || role === 'STUDENT' || (Array.isArray(roles) && roles.includes('STUDENT')))
+  );
+
   const [activeTab, setActiveTab] = useState<StudentTab>('overview');
   const [profile, setProfile] = useState<StudentCompetitionProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,6 +81,7 @@ export default function StudentCompetitionPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = async () => {
+    if (!isUserAuthenticated || !isStudentRole) return;
     try {
       setLoading(true);
       setError(null);
@@ -94,15 +106,21 @@ export default function StudentCompetitionPage() {
       setMyReviews(reviewsData);
     } catch (err: any) {
       console.error('Lỗi tải dữ liệu thi đua đội viên:', err);
-      setError(err.message || 'Không thể tải thông tin thi đua cá nhân. Vui lòng thử lại sau.');
+      setError('Không thể tải dữ liệu lúc này. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!authLoading && !profileLoading) {
+      if (isUserAuthenticated && isStudentRole) {
+        loadData();
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [authLoading, profileLoading, isUserAuthenticated, isStudentRole]);
 
   const handleOpenRedeemModal = (item: RewardItem) => {
     setSelectedReward(item);
@@ -122,7 +140,8 @@ export default function StudentCompetitionPage() {
       setSelectedReward(null);
       await loadData();
     } catch (err: any) {
-      alert('Lỗi đổi quà: ' + (err.message || 'Không xác định'));
+      console.error('Lỗi đổi quà:', err);
+      alert('Không thể thực hiện đổi quà lúc này. Vui lòng thử lại sau.');
     } finally {
       setSubmitting(false);
     }
@@ -135,7 +154,8 @@ export default function StudentCompetitionPage() {
       await competitionService.cancelRewardRedemption(id, 'Học sinh tự hủy yêu cầu');
       await loadData();
     } catch (err: any) {
-      alert('Lỗi hủy yêu cầu: ' + (err.message || 'Không xác định'));
+      console.error('Lỗi hủy yêu cầu:', err);
+      alert('Không thể hủy yêu cầu lúc này. Vui lòng thử lại sau.');
     } finally {
       setSubmitting(false);
     }
@@ -169,7 +189,8 @@ export default function StudentCompetitionPage() {
       setShowReviewModal(false);
       await loadData();
     } catch (err: any) {
-      alert('Lỗi gửi đề nghị xem lại: ' + (err.message || 'Không xác định'));
+      console.error('Lỗi gửi đề nghị xem lại:', err);
+      alert('Không thể gửi đề nghị xem lại lúc này. Vui lòng thử lại sau.');
     } finally {
       setSubmitting(false);
     }
@@ -183,119 +204,175 @@ export default function StudentCompetitionPage() {
   return (
     <div className="min-h-screen bg-slate-50/60 pb-12 pt-4 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-5">
-        {/* Top Header Card - Compact Height */}
-        <div className="bg-gradient-to-r from-red-600 via-amber-600 to-amber-700 rounded-2xl text-white p-4 sm:p-5 sm:px-6 shadow-lg relative overflow-hidden">
-          <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center shrink-0 shadow-md overflow-hidden">
-                {profile?.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    alt={profile.full_name}
-                    className="w-full h-full rounded-xl object-cover"
-                  />
-                ) : (
-                  <Award className="w-7 h-7 text-amber-200" />
-                )}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="bg-amber-300 text-red-950 font-extrabold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    Hồ sơ đội viên
-                  </span>
-                  {profile?.unit_info?.has_unit && (
-                    <span className="bg-white/20 text-white font-semibold text-[11px] px-2 py-0.5 rounded-full backdrop-blur-xs">
-                      {profile.unit_info.class_name}
-                    </span>
-                  )}
-                </div>
-
-                <h1 className="text-xl sm:text-2xl font-extrabold font-display mt-0.5">
-                  {profile?.full_name || 'Đội viên'}
-                </h1>
-
-                <p className="text-xs text-amber-100/90 mt-0.5 flex items-center gap-2">
-                  <span>Mã ĐV: {profile?.student_code || 'Chưa cập nhật'}</span>
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={loadData}
-              className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-xl transition backdrop-blur-md border border-white/30 flex items-center gap-1.5 self-start md:self-auto"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Cập nhật dữ liệu
-            </button>
-          </div>
-
-          {/* 3 Mandated Separated Values Bar - Compact 1-line view on desktop */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/20">
-            {/* Value A: STUDENT_MERIT */}
-            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/20 flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-medium text-amber-100 block">
-                  A. Điểm thi đua tích lũy
-                </span>
-                <span className="text-xl sm:text-2xl font-black font-display mt-0.5 block">
-                  {profile?.accumulated_merit_points ?? 0} <span className="text-xs font-normal">điểm</span>
-                </span>
-                <span className="text-[10px] text-amber-200/80 block mt-0.5">
-                  Đánh giá rèn luyện & xếp loại thi đua
-                </span>
-              </div>
-              <div className="p-2.5 bg-amber-400/20 rounded-lg text-amber-300 shrink-0">
-                <Star className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Value B: STUDENT_REWARD */}
-            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/20 flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-medium text-amber-100 block">
-                  B. Điểm thưởng
-                </span>
-                <span className="text-xl sm:text-2xl font-black font-display text-amber-200 mt-0.5 block">
-                  {profile?.available_reward_points ?? 0} <span className="text-xs font-normal">điểm</span>
-                </span>
-                <span className="text-[10px] text-amber-200/80 block mt-0.5">
-                  Điểm thưởng các hoạt động
-                </span>
-              </div>
-              <div className="p-2.5 bg-amber-400/20 rounded-lg text-amber-300 shrink-0">
-                <Gift className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Value C: UNIT_COMPETITION Contribution */}
-            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/20 flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-medium text-amber-100 block">
-                  C. Cống hiến cho chi đội
-                </span>
-                <span className="text-xl sm:text-2xl font-black font-display text-emerald-200 mt-0.5 block">
-                  {profile?.unit_contribution_points ?? 0} <span className="text-xs font-normal">điểm</span>
-                </span>
-                <span className="text-[10px] text-amber-200/80 block mt-0.5">
-                  Đóng góp cho phong trào tập thể lớp
-                </span>
-              </div>
-              <div className="p-2.5 bg-emerald-400/20 rounded-lg text-emerald-300 shrink-0">
-                <Users className="w-5 h-5" />
-              </div>
-            </div>
-          </div>
+        {/* Navigation Breadcrumb */}
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <Link to={ROUTES.COMPETITION} className="hover:text-red-600 transition-colors flex items-center gap-1">
+            <span>← Tổng quan Thi đua</span>
+          </Link>
+          <span>/</span>
+          <span className="font-bold text-slate-800 dark:text-white">Thi đua đội viên</span>
         </div>
 
-        {error && (
-          <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+        {/* Auth Loading State */}
+        {(authLoading || profileLoading) ? (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center text-xs text-slate-400 animate-pulse">
+            Đang kiểm tra thông tin tài khoản...
           </div>
-        )}
+        ) : !isUserAuthenticated ? (
+          /* Unauthenticated State */
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center space-y-4 max-w-lg mx-auto shadow-xs my-6">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 mx-auto flex items-center justify-center">
+              <Award className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                Đăng nhập để xem hồ sơ thi đua
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Hồ sơ thi đua, điểm thưởng và lịch sử hoạt động chỉ dành cho đội viên đã đăng nhập.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Link
+                to={ROUTES.LOGIN}
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-colors"
+              >
+                Đăng nhập
+              </Link>
+            </div>
+          </div>
+        ) : !isStudentRole ? (
+          /* Authenticated Non-Student State */
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center space-y-3 max-w-lg mx-auto shadow-xs my-6">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 mx-auto flex items-center justify-center">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                Tài khoản này không có hồ sơ đội viên.
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Hồ sơ thi đua cá nhân chỉ dành cho tài khoản Học sinh / Đội viên.
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* Authenticated Student Dashboard */
+          <>
+            {/* Top Header Card - Compact Height */}
+            <div className="bg-gradient-to-r from-red-600 via-amber-600 to-amber-700 rounded-2xl text-white p-4 sm:p-5 sm:px-6 shadow-lg relative overflow-hidden">
+              <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center shrink-0 shadow-md overflow-hidden">
+                    {profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt={profile.full_name}
+                        className="w-full h-full rounded-xl object-cover"
+                      />
+                    ) : (
+                      <Award className="w-7 h-7 text-amber-200" />
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-amber-300 text-red-950 font-extrabold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        Hồ sơ đội viên
+                      </span>
+                      {profile?.unit_info?.has_unit && (
+                        <span className="bg-white/20 text-white font-semibold text-[11px] px-2 py-0.5 rounded-full backdrop-blur-xs">
+                          {profile.unit_info.class_name}
+                        </span>
+                      )}
+                    </div>
+
+                    <h1 className="text-xl sm:text-2xl font-extrabold font-display mt-0.5">
+                      {profile?.full_name || 'Đội viên'}
+                    </h1>
+
+                    <p className="text-xs text-amber-100/90 mt-0.5 flex items-center gap-2">
+                      <span>Mã ĐV: {profile?.student_code || 'Chưa cập nhật'}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={loadData}
+                  className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-xl transition backdrop-blur-md border border-white/30 flex items-center gap-1.5 self-start md:self-auto"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  Cập nhật dữ liệu
+                </button>
+              </div>
+
+              {/* 3 Mandated Separated Values Bar - Compact 1-line view on desktop */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/20">
+                {/* Value A: STUDENT_MERIT */}
+                <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/20 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-medium text-amber-100 block">
+                      A. Điểm thi đua tích lũy
+                    </span>
+                    <span className="text-xl sm:text-2xl font-black font-display mt-0.5 block">
+                      {profile?.accumulated_merit_points ?? 0} <span className="text-xs font-normal">điểm</span>
+                    </span>
+                    <span className="text-[10px] text-amber-200/80 block mt-0.5">
+                      Đánh giá rèn luyện & xếp loại thi đua
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-amber-400/20 rounded-lg text-amber-300 shrink-0">
+                    <Star className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Value B: STUDENT_REWARD */}
+                <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/20 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-medium text-amber-100 block">
+                      B. Điểm thưởng
+                    </span>
+                    <span className="text-xl sm:text-2xl font-black font-display text-amber-200 mt-0.5 block">
+                      {profile?.available_reward_points ?? 0} <span className="text-xs font-normal">điểm</span>
+                    </span>
+                    <span className="text-[10px] text-amber-200/80 block mt-0.5">
+                      Điểm thưởng các hoạt động
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-amber-400/20 rounded-lg text-amber-300 shrink-0">
+                    <Gift className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Value C: UNIT_COMPETITION Contribution */}
+                <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/20 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-medium text-amber-100 block">
+                      C. Cống hiến cho chi đội
+                    </span>
+                    <span className="text-xl sm:text-2xl font-black font-display text-emerald-200 mt-0.5 block">
+                      {profile?.unit_contribution_points ?? 0} <span className="text-xs font-normal">điểm</span>
+                    </span>
+                    <span className="text-[10px] text-amber-200/80 block mt-0.5">
+                      Đóng góp cho phong trào tập thể lớp
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-emerald-400/20 rounded-lg text-emerald-300 shrink-0">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 text-xs">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
 
         {/* Navigation Tabs Bar - Compact Height */}
         <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 overflow-x-auto pb-1.5 scrollbar-none flex-nowrap">
@@ -745,7 +822,6 @@ export default function StudentCompetitionPage() {
             )}
           </div>
         )}
-      </div>
 
       {/* Modal Confirm Redeem */}
       {showRedeemModal && selectedReward && (
@@ -892,6 +968,9 @@ export default function StudentCompetitionPage() {
           </div>
         </div>
       )}
+        </>
+      )}
     </div>
-  );
+  </div>
+);
 }
