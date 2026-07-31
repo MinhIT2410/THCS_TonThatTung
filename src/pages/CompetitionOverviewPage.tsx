@@ -71,10 +71,10 @@ export default function CompetitionOverviewPage() {
         {/* Card 1: Thi đua chi đội */}
         <Link 
           to={ROUTES.COMPETITION_UNITS}
-          className="group relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs hover:shadow-md hover:border-red-500/40 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+          className="group relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs hover:shadow-md hover:border-red-500/40 transition-all duration-300 flex flex-col justify-between items-center text-center overflow-hidden"
         >
-          <div className="space-y-5">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shadow-inner">
+          <div className="space-y-5 flex flex-col items-center w-full">
+            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shadow-inner mx-auto">
               <Users className="w-6 h-6" />
             </div>
 
@@ -82,28 +82,28 @@ export default function CompetitionOverviewPage() {
               <h3 className="text-xl font-bold font-display text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                 Thi đua chi đội
               </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm mx-auto">
                 Theo dõi điểm thi đua, kết quả và xếp hạng của các chi đội theo từng tuần.
               </p>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5 text-xs text-slate-500 dark:text-slate-400">
-              <div className="flex items-center gap-2">
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5 text-xs text-slate-500 dark:text-slate-400 flex flex-col items-start text-left w-full">
+              <div className="flex items-center justify-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Kết quả thi đua hàng tuần</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Bảng xếp hạng các chi đội</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Nhận xét và kết quả đã công bố</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-red-600 dark:text-red-400">
+          <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center gap-2 w-full text-xs font-bold text-red-600 dark:text-red-400">
             <span>Xem bảng xếp hạng</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </div>
@@ -112,10 +112,10 @@ export default function CompetitionOverviewPage() {
         {/* Card 2: Thi đua đội viên */}
         <Link 
           to={ROUTES.COMPETITION_STUDENT}
-          className="group relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs hover:shadow-md hover:border-amber-500/40 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+          className="group relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs hover:shadow-md hover:border-amber-500/40 transition-all duration-300 flex flex-col justify-between items-center text-center overflow-hidden"
         >
-          <div className="space-y-5">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
+          <div className="space-y-5 flex flex-col items-center w-full">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner mx-auto">
               <User className="w-6 h-6" />
             </div>
 
@@ -123,28 +123,28 @@ export default function CompetitionOverviewPage() {
               <h3 className="text-xl font-bold font-display text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                 Thi đua đội viên
               </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm mx-auto">
                 Theo dõi việc tốt, thành tích, vi phạm và điểm thưởng của từng đội viên.
               </p>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5 text-xs text-slate-500 dark:text-slate-400">
-              <div className="flex items-center gap-2">
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5 text-xs text-slate-500 dark:text-slate-400 flex flex-col items-start text-left w-full">
+              <div className="flex items-center justify-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Điểm thi đua cá nhân</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Lịch sử việc tốt và thành tích</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Điểm thưởng và phần thưởng</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+          <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center gap-2 w-full text-xs font-bold text-amber-600 dark:text-amber-400">
             <span>Xem hồ sơ thi đua</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </div>
