@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, 
   Edit3, 
@@ -410,13 +410,28 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
     }
   };
 
+  // Filter states for rules list
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [scopeFilter, setScopeFilter] = useState<string>('ALL');
+
   // Filtered lists
   const displayedPrograms = canManage ? programs : programs.filter(p => p.is_active);
-  const filteredRules = rules.filter(r => {
-    if (!canManage && !r.is_active) return false;
-    if (selectedProgramFilter === 'ALL') return true;
-    return r.program_id === selectedProgramFilter;
-  });
+
+  const programRules = useMemo(() => {
+    return rules.filter(r => {
+      if (!canManage && !r.is_active) return false;
+      if (selectedProgramFilter === 'ALL' || selectedProgramFilter === '') return true;
+      return r.program_id === selectedProgramFilter;
+    });
+  }, [rules, canManage, selectedProgramFilter]);
+
+  const filteredRules = useMemo(() => {
+    return programRules.filter(r => {
+      if (categoryFilter !== 'ALL' && r.category !== categoryFilter) return false;
+      if (scopeFilter !== 'ALL' && r.effect_scope !== scopeFilter) return false;
+      return true;
+    });
+  }, [programRules, categoryFilter, scopeFilter]);
 
   return (
     <div className="space-y-6 font-sans">
@@ -658,7 +673,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                 onChange={e => setSelectedProgramFilter(e.target.value)}
                 className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
               >
-                <option value="">-- Chọn chương trình thi đua --</option>
+                <option value="">Thi đua năm học 2025-2026</option>
                 {programs.map(p => (
                   <option key={p.id} value={p.id}>
                     [{p.code}] {p.name} {!p.is_active ? '(Ngừng sử dụng)' : ''}
@@ -698,22 +713,70 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <FileCheck className="w-5 h-5 text-red-600" />
-                    Danh sách quy tắc tính điểm
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <FileCheck className="w-5 h-5 text-red-600" />
+                      <span>Danh sách quy tắc tính điểm</span>
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold text-xs border border-slate-200/80 dark:border-slate-700">
+                      Hiển thị {filteredRules.length} / {programRules.length} quy tắc
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Cấu hình thang điểm rèn luyện, điểm thưởng và điểm Chi đội cho các hành vi thi đua.
                   </p>
                 </div>
+
+                {/* Filters for Nhóm hành vi & Phạm vi ảnh hưởng */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="rule-category-filter" className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                      Nhóm hành vi:
+                    </label>
+                    <select
+                      id="rule-category-filter"
+                      value={categoryFilter}
+                      onChange={e => setCategoryFilter(e.target.value)}
+                      className="w-full sm:w-[220px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
+                    >
+                      <option value="ALL">Tất cả nhóm hành vi</option>
+                      <option value="GOOD_DEED">Người tốt - Việc tốt</option>
+                      <option value="ACHIEVEMENT">Thành tích học tập & phong trào</option>
+                      <option value="PARTICIPATION">Tham gia hoạt động</option>
+                      <option value="DISCIPLINE">Kỷ luật & nề nếp</option>
+                      <option value="ATTENDANCE">Chuyên cần</option>
+                      <option value="UNIFORM">Đồng phục & Khăn quàng</option>
+                      <option value="HYGIENE">Vệ sinh & Bảo vệ môi trường</option>
+                      <option value="OTHER">Hành vi khác</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="rule-scope-filter" className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                      Phạm vi:
+                    </label>
+                    <select
+                      id="rule-scope-filter"
+                      value={scopeFilter}
+                      onChange={e => setScopeFilter(e.target.value)}
+                      className="w-full sm:w-[200px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
+                    >
+                      <option value="ALL">Tất cả phạm vi</option>
+                      <option value="BOTH">Đội viên & Chi đội</option>
+                      <option value="STUDENT_ONLY">Chỉ áp dụng Đội viên</option>
+                      <option value="UNIT_ONLY">Chỉ áp dụng Chi đội</option>
+                      <option value="RECORD_ONLY">Chỉ ghi nhận sự việc</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              {filteredRules.length === 0 ? (
+              {programRules.length === 0 ? (
                 <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
-                  <p className="text-xs text-slate-500 font-medium">
-                    Chưa có quy tắc thi đua nào thuộc chương trình được chọn. Bấm "Thêm quy tắc" để tạo mới.
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Chương trình này chưa có quy tắc tính điểm.
                   </p>
                   {canManage && (
                     <button
@@ -724,6 +787,22 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                       <span>Thêm quy tắc</span>
                     </button>
                   )}
+                </div>
+              ) : filteredRules.length === 0 ? (
+                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Không có quy tắc phù hợp với bộ lọc hiện tại.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setCategoryFilter('ALL');
+                      setScopeFilter('ALL');
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Xóa bộ lọc</span>
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
