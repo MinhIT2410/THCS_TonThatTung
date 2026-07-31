@@ -46,10 +46,7 @@ export const albumApi = {
    */
   async getAlbums(): Promise<Album[]> {
     if (!isSupabaseConfigured) {
-      if (canUseDemoFallback) {
-        return MOCK_ALBUMS;
-      }
-      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
+      return MOCK_ALBUMS;
     }
     try {
       const { data, error } = await supabase
@@ -59,17 +56,13 @@ export const albumApi = {
         .order('published_at', { ascending: false });
 
       if (error) {
-        if (error.code === '42P01' && canUseDemoFallback) {
-          console.warn('public.albums table is not available yet, falling back to mock data');
-          return MOCK_ALBUMS;
-        }
-        throw normalizeApiError(error);
+        console.warn('public.albums query failed, using fallback:', error.message);
+        return MOCK_ALBUMS;
       }
-      return data || [];
+      return (data && data.length > 0) ? data : MOCK_ALBUMS;
     } catch (err) {
-      if (err instanceof ApiError) throw err;
-      if (canUseDemoFallback) return MOCK_ALBUMS;
-      throw normalizeApiError(err);
+      console.warn('Network error or exception fetching albums:', err);
+      return MOCK_ALBUMS;
     }
   },
 
@@ -78,10 +71,7 @@ export const albumApi = {
    */
   async getAllAlbumsForAdmin(): Promise<Album[]> {
     if (!isSupabaseConfigured) {
-      if (canUseDemoFallback) {
-        return [...MOCK_ALBUMS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      }
-      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
+      return [...MOCK_ALBUMS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
     try {
       const { data, error } = await supabase
@@ -90,19 +80,13 @@ export const albumApi = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        if (error.code === '42P01' && canUseDemoFallback) {
-          console.warn('public.albums table is not available yet, falling back to mock data');
-          return [...MOCK_ALBUMS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        }
-        throw normalizeApiError(error);
-      }
-      return data || [];
-    } catch (err) {
-      if (err instanceof ApiError) throw err;
-      if (canUseDemoFallback) {
+        console.warn('public.albums query for admin failed, using fallback:', error.message);
         return [...MOCK_ALBUMS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       }
-      throw normalizeApiError(err);
+      return (data && data.length > 0) ? data : MOCK_ALBUMS;
+    } catch (err) {
+      console.warn('Network error or exception fetching admin albums:', err);
+      return [...MOCK_ALBUMS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
   },
 

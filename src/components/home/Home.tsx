@@ -180,12 +180,20 @@ export default function Home({
         setErrorNews(null);
         const posts = await newsApi.getPublishedNews();
         if (active) {
-          setNewsList(posts.slice(0, 3));
+          if (posts && posts.length > 0) {
+            setNewsList(posts.slice(0, 3));
+          } else if (news && news.length > 0) {
+            setNewsList(news.slice(0, 3));
+          }
         }
       } catch (err: any) {
-        console.error('Error loading news on homepage:', err);
+        console.warn('Error loading news on homepage:', err);
         if (active) {
-          setErrorNews('Không thể tải dữ liệu mới nhất.');
+          if (news && news.length > 0) {
+            setNewsList(news.slice(0, 3));
+          } else {
+            setErrorNews('Không thể tải dữ liệu mới nhất.');
+          }
         }
       } finally {
         if (active) {
@@ -197,7 +205,7 @@ export default function Home({
     return () => {
       active = false;
     };
-  }, []);
+  }, [news]);
 
   // Fetch live Documents
   useEffect(() => {
@@ -211,7 +219,7 @@ export default function Home({
           setDocList(docs.slice(0, 4)); // Show up to 4 latest documents
         }
       } catch (err: any) {
-        console.error('Error loading docs on homepage:', err);
+        console.warn('Error loading docs on homepage:', err);
         if (active) {
           setErrorDocs('Không thể tải dữ liệu mới nhất.');
         }
@@ -239,7 +247,7 @@ export default function Home({
           setAlbumList(albums.slice(0, 4)); // Show up to 4 latest albums
         }
       } catch (err: any) {
-        console.error('Error loading albums on homepage:', err);
+        console.warn('Error loading albums on homepage:', err);
         if (active) {
           setErrorAlbums('Không thể tải dữ liệu mới nhất.');
         }

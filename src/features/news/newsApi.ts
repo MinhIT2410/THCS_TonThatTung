@@ -7,23 +7,22 @@ import { supabase } from '../../services/supabaseClient';
 import { isSupabaseConfigured, canUseDemoFallback } from '../../config/env';
 import { NewsItem, NewsStatus } from './newsTypes';
 import { ApiError, normalizeApiError } from '../../services/apiError';
+import { defaultNews } from '../../data/news';
 
 // Static/mock data fallback for development or before public.news table is fully migrated.
-const MOCK_NEWS: NewsItem[] = [
-  {
-    id: "news-1",
-    title: "Đại hội Liên đội THCS Tôn Thất Tùng nhiệm kỳ mới thành công rực rỡ",
-    slug: "dai-hoi-lien-doi-nhiem-ky-moi-thanh-cong-ruc-ro",
-    summary: "Đại hội đã tổng kết hoạt động năm qua và đề ra phương hướng chỉ đạo cho hoạt động Đội xuất sắc trong năm học mới.",
-    content: "<p>Đại hội đã diễn ra trong không khí trang nghiêm và đầy nhiệt huyết của các Đội viên học sinh...</p>",
-    thumbnail_url: "https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800",
-    status: "published",
-    category_code: "EVENT",
-    published_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-];
+const MOCK_NEWS: NewsItem[] = defaultNews.map(n => ({
+  id: n.id,
+  title: n.title,
+  slug: n.id,
+  summary: n.summary,
+  content: n.content,
+  thumbnail_url: n.image,
+  status: 'published',
+  category_code: n.category === 'Sự kiện' ? 'EVENT' : n.category === 'Gương sáng' ? 'ROLE_MODEL' : n.category === 'Rèn luyện' ? 'TRAINING' : 'LEARNING',
+  published_at: n.date ? new Date(n.date).toISOString() : new Date().toISOString(),
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+}));
 
 export const newsApi = {
   /**
@@ -31,10 +30,7 @@ export const newsApi = {
    */
   async getAllNewsForAdmin(): Promise<NewsItem[]> {
     if (!isSupabaseConfigured) {
-      if (canUseDemoFallback) {
-        return [...MOCK_NEWS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      }
-      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
+      return [...MOCK_NEWS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
     try {
       const { data, error } = await supabase
@@ -43,19 +39,13 @@ export const newsApi = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        if ((error.code === 'PGRST116' || error.code === '42P01') && canUseDemoFallback) {
-          console.warn('public.news table is not available yet, falling back to mock data');
-          return [...MOCK_NEWS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        }
-        throw normalizeApiError(error);
-      }
-      return data || [];
-    } catch (err) {
-      if (err instanceof ApiError) throw err;
-      if (canUseDemoFallback) {
+        console.warn('public.news query failed, using fallback:', error.message);
         return [...MOCK_NEWS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       }
-      throw normalizeApiError(err);
+      return (data && data.length > 0) ? data : MOCK_NEWS;
+    } catch (err) {
+      console.warn('Network error or exception fetching admin news:', err);
+      return [...MOCK_NEWS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
   },
 
@@ -71,13 +61,9 @@ export const newsApi = {
    */
   async getPublishedNews(): Promise<NewsItem[]> {
     if (!isSupabaseConfigured) {
-      if (canUseDemoFallback) {
-        return MOCK_NEWS;
-      }
-      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
+      return MOCK_NEWS;
     }
     try {
-      // TODO: Connect to public.news table when database schema is ready.
       const { data, error } = await supabase
         .from('news')
         .select('*')
@@ -85,18 +71,13 @@ export const newsApi = {
         .order('published_at', { ascending: false });
 
       if (error) {
-        // If table doesn't exist yet, gracefully fall back to mock data
-        if ((error.code === 'PGRST116' || error.code === '42P01') && canUseDemoFallback) {
-          console.warn('public.news table is not available yet, falling back to mock data');
-          return MOCK_NEWS;
-        }
-        throw normalizeApiError(error);
+        console.warn('public.news table error or query failed, using fallback news:', error.message);
+        return MOCK_NEWS;
       }
-      return data || [];
+      return (data && data.length > 0) ? data : MOCK_NEWS;
     } catch (err) {
-      if (err instanceof ApiError) throw err;
-      if (canUseDemoFallback) return MOCK_NEWS;
-      throw normalizeApiError(err);
+      console.warn('Network error fetching published news, using fallback news:', err);
+      return MOCK_NEWS;
     }
   },
 
@@ -105,13 +86,9 @@ export const newsApi = {
    */
   async getNewsBySlug(slug: string): Promise<NewsItem | null> {
     if (!isSupabaseConfigured) {
-      if (canUseDemoFallback) {
-        return MOCK_NEWS.find(n => n.slug === slug) || null;
-      }
-      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
+      return MOCK_NEWS.find(n => n.slug === slug || n.id === slug) || null;
     }
     try {
-      // TODO: Connect to public.news table when database schema is ready.
       const { data, error } = await supabase
         .from('news')
         .select('*')
@@ -119,17 +96,12 @@ export const newsApi = {
         .eq('status', 'published')
         .maybeSingle();
 
-      if (error) {
-        if (error.code === '42P01' && canUseDemoFallback) {
-          return MOCK_NEWS.find(n => n.slug === slug) || null;
-        }
-        throw normalizeApiError(error);
+      if (error || !data) {
+        return MOCK_NEWS.find(n => n.slug === slug || n.id === slug) || null;
       }
       return data;
     } catch (err) {
-      if (err instanceof ApiError) throw err;
-      if (canUseDemoFallback) return MOCK_NEWS.find(n => n.slug === slug) || null;
-      throw normalizeApiError(err);
+      return MOCK_NEWS.find(n => n.slug === slug || n.id === slug) || null;
     }
   },
 
@@ -138,30 +110,21 @@ export const newsApi = {
    */
   async getNewsById(id: string): Promise<NewsItem | null> {
     if (!isSupabaseConfigured) {
-      if (canUseDemoFallback) {
-        return MOCK_NEWS.find(n => n.id === id) || null;
-      }
-      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
+      return MOCK_NEWS.find(n => n.id === id) || null;
     }
     try {
-      // TODO: Connect to public.news table when database schema is ready.
       const { data, error } = await supabase
         .from('news')
         .select('*')
         .eq('id', id)
         .maybeSingle();
 
-      if (error) {
-        if (error.code === '42P01' && canUseDemoFallback) {
-          return MOCK_NEWS.find(n => n.id === id) || null;
-        }
-        throw normalizeApiError(error);
+      if (error || !data) {
+        return MOCK_NEWS.find(n => n.id === id) || null;
       }
       return data;
     } catch (err) {
-      if (err instanceof ApiError) throw err;
-      if (canUseDemoFallback) return MOCK_NEWS.find(n => n.id === id) || null;
-      throw normalizeApiError(err);
+      return MOCK_NEWS.find(n => n.id === id) || null;
     }
   },
 

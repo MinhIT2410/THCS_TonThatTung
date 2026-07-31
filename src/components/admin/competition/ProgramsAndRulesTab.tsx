@@ -673,10 +673,10 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                 onChange={e => setSelectedProgramFilter(e.target.value)}
                 className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
               >
-                <option value="">Thi đua năm học 2025-2026</option>
+                <option value="">Chọn chương trình thi đua</option>
                 {programs.map(p => (
                   <option key={p.id} value={p.id}>
-                    [{p.code}] {p.name} {!p.is_active ? '(Ngừng sử dụng)' : ''}
+                    {p.name} {!p.is_active ? '(Ngừng sử dụng)' : ''}
                   </option>
                 ))}
               </select>
@@ -713,7 +713,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -730,8 +730,8 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                 </div>
 
                 {/* Filters for Nhóm hành vi & Phạm vi ảnh hưởng */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 flex-wrap">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     <label htmlFor="rule-category-filter" className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
                       Nhóm hành vi:
                     </label>
@@ -739,7 +739,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                       id="rule-category-filter"
                       value={categoryFilter}
                       onChange={e => setCategoryFilter(e.target.value)}
-                      className="w-full sm:w-[220px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
+                      className="w-full sm:w-[280px] sm:min-w-[280px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
                     >
                       <option value="ALL">Tất cả nhóm hành vi</option>
                       <option value="GOOD_DEED">Người tốt - Việc tốt</option>
@@ -753,7 +753,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                     </select>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     <label htmlFor="rule-scope-filter" className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
                       Phạm vi:
                     </label>
@@ -761,7 +761,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                       id="rule-scope-filter"
                       value={scopeFilter}
                       onChange={e => setScopeFilter(e.target.value)}
-                      className="w-full sm:w-[200px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
+                      className="w-full sm:w-[190px] sm:min-w-[190px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
                     >
                       <option value="ALL">Tất cả phạm vi</option>
                       <option value="BOTH">Đội viên & Chi đội</option>
@@ -1125,7 +1125,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                   <option value="">-- Chọn chương trình --</option>
                   {programs.map(p => (
                     <option key={p.id} value={p.id}>
-                      [{p.code}] {p.name} {!p.is_active ? '(Đã khóa)' : ''}
+                      {p.name} {!p.is_active ? '(Đã khóa)' : ''}
                     </option>
                   ))}
                 </select>
