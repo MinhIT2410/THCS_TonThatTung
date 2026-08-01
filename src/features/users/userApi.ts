@@ -10,110 +10,15 @@ import { ApiError, normalizeApiError } from '../../services/apiError';
 
 export const userApi = {
   /**
-   * Fetch auth emails map via admin-list-users Edge Function
-   */
-  async getUserEmailsMap(): Promise<Record<string, string>> {
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-list-users');
-      if (error || !data || !data.success) {
-        console.warn('Could not fetch user emails from edge function:', error || data?.message);
-        return {};
-      }
-      const emailMap: Record<string, string> = {};
-      if (Array.isArray(data.data)) {
-        data.data.forEach((item: { id: string; email: string }) => {
-          if (item.id) {
-            emailMap[item.id] = item.email;
-          }
-        });
-      }
-      return emailMap;
-    } catch (err) {
-      console.warn('Error calling admin-list-users:', err);
-      return {};
-    }
-  },
-
-  /**
-   * Get all user profiles with their roles from user_roles and emails from Edge Function
+   * Get all user profiles with their roles from user_roles and emails via RPC get_admin_users_paginated
    */
   async getUsers(): Promise<UserProfile[]> {
     if (!isSupabaseConfigured) {
       throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
     }
     try {
-      // Fetch profiles in chunks to avoid default 1000-row limit truncation
-      let allProfiles: any[] = [];
-      let page = 0;
-      const pageSize = 1000;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data: chunk, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .range(page * pageSize, (page + 1) * pageSize - 1);
-
-        if (profilesError) {
-          throw normalizeApiError(profilesError);
-        }
-
-        if (chunk && chunk.length > 0) {
-          allProfiles = allProfiles.concat(chunk);
-          if (chunk.length < pageSize) {
-            hasMore = false;
-          } else {
-            page++;
-          }
-        } else {
-          hasMore = false;
-        }
-      }
-
-      // Fetch user_roles in chunks
-      let allUserRoles: any[] = [];
-      let rolePage = 0;
-      let hasMoreRoles = true;
-
-      while (hasMoreRoles) {
-        const { data: roleChunk, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id, role_code')
-          .range(rolePage * pageSize, (rolePage + 1) * pageSize - 1);
-
-        if (rolesError) {
-          throw normalizeApiError(rolesError);
-        }
-
-        if (roleChunk && roleChunk.length > 0) {
-          allUserRoles = allUserRoles.concat(roleChunk);
-          if (roleChunk.length < pageSize) {
-            hasMoreRoles = false;
-          } else {
-            rolePage++;
-          }
-        } else {
-          hasMoreRoles = false;
-        }
-      }
-
-      const rolesMap: Record<string, string[]> = {};
-      allUserRoles.forEach((row: any) => {
-        if (!rolesMap[row.user_id]) {
-          rolesMap[row.user_id] = [];
-        }
-        rolesMap[row.user_id].push(row.role_code);
-      });
-
-      // Fetch emails map via Edge Function
-      const emailMap = await this.getUserEmailsMap();
-
-      return allProfiles.map((p: any) => ({
-        ...p,
-        roles: rolesMap[p.id] || [],
-        email: emailMap[p.id] || null
-      }));
+      const result = await this.getUsersPaginated({ page: 1, pageSize: 1000 });
+      return result.users;
     } catch (err) {
       throw normalizeApiError(err);
     }
