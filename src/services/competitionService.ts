@@ -814,14 +814,17 @@ export const competitionService = {
 
     const { data: unitsData, error: unitsErr } = await supabase
       .from('competition_week_units')
-      .select('starting_points, manual_bonus_points, manual_penalty_points, final_points_snapshot, rank_snapshot, comment, class:classes!competition_week_units_unit_id_fkey(name)')
+      .select('starting_points, manual_bonus_points, manual_penalty_points, final_points_snapshot, rank_snapshot, comment, unit_id, class:classes!competition_week_units_unit_id_fkey(id, name, grade_level_id, grade_levels(name))')
       .eq('week_id', weekId)
       .order('rank_snapshot', { ascending: true });
 
     if (unitsErr) throw unitsErr;
 
     const publicLeaderboard = (unitsData || []).map((u: any) => ({
+      unit_id: u.unit_id,
       unit_name: u.class?.name || 'Chi đội',
+      grade_level_id: u.class?.grade_level_id,
+      grade_name: u.class?.grade_levels?.name,
       starting_points: u.starting_points,
       manual_bonus_points: u.manual_bonus_points,
       manual_penalty_points: u.manual_penalty_points,
@@ -1222,6 +1225,25 @@ export const competitionService = {
     });
     if (error) throw error;
     return data;
+  },
+
+  async getTopStudentRewards(limit = 5): Promise<{
+    id: string;
+    full_name: string;
+    unit_name: string;
+    available_reward_points: number;
+  }[]> {
+    const { data, error } = await supabase.rpc('get_top_student_rewards', { p_limit: limit });
+    if (error) {
+      console.error('Error calling get_top_student_rewards RPC:', error);
+      throw error;
+    }
+    return (data || []) as {
+      id: string;
+      full_name: string;
+      unit_name: string;
+      available_reward_points: number;
+    }[];
   },
 };
 

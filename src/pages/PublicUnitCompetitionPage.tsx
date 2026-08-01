@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Users, 
   Award, 
@@ -14,13 +14,17 @@ import {
   Sparkles, 
   ChevronLeft,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Filter
 } from 'lucide-react';
 import { competitionService } from '../services/competitionService';
 import { CompetitionWeek } from '../types/competition';
 import { ROUTES } from '../config/routes';
 
 export default function PublicUnitCompetitionPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedGrade = searchParams.get('grade') || 'ALL';
+
   const [publishedWeeks, setPublishedWeeks] = useState<CompetitionWeek[]>([]);
   const [selectedWeekId, setSelectedWeekId] = useState<string>('');
   const [currentWeekInfo, setCurrentWeekInfo] = useState<any>(null);
@@ -71,6 +75,25 @@ export default function PublicUnitCompetitionPage() {
     }
   };
 
+  const handleGradeChange = (grade: string) => {
+    if (grade === 'ALL') {
+      searchParams.delete('grade');
+    } else {
+      searchParams.set('grade', grade);
+    }
+    setSearchParams(searchParams);
+  };
+
+  const filteredLeaderboard = leaderboard.filter(item => {
+    if (selectedGrade === 'ALL') return true;
+    if (item.grade_name && item.grade_name.includes(selectedGrade)) return true;
+    const cleanUnitName = String(item.unit_name || '').trim();
+    if (cleanUnitName.startsWith(selectedGrade) || cleanUnitName.startsWith(`Khối ${selectedGrade}`)) {
+      return true;
+    }
+    return false;
+  });
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-5 sm:space-y-6 font-sans pb-16">
       {/* Navigation Breadcrumb */}
@@ -103,23 +126,45 @@ export default function PublicUnitCompetitionPage() {
       </div>
 
       {/* Filter / Selector Bar - Compact Padding */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="space-y-0.5">
-          <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-red-600" />
-            Chọn tuần thi đua
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Chỉ hiển thị các tuần thi đua đã chính thức chốt và công bố kết quả
-          </p>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-red-600" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lọc theo khối</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              { id: 'ALL', label: 'Tất cả khối' },
+              { id: '6', label: 'Khối 6' },
+              { id: '7', label: 'Khối 7' },
+              { id: '8', label: 'Khối 8' },
+              { id: '9', label: 'Khối 9' },
+            ].map(g => (
+              <button
+                key={g.id}
+                onClick={() => handleGradeChange(g.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  selectedGrade === g.id
+                    ? 'bg-red-600 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="min-w-[240px]">
+        <div className="space-y-1 md:text-right">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center md:justify-end gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-red-600" />
+            Chọn tuần thi đua
+          </label>
           <select
             value={selectedWeekId}
             onChange={handleWeekChange}
             disabled={publishedWeeks.length === 0}
-            className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-white shadow-xs disabled:opacity-50"
+            className="w-full md:w-auto min-w-[240px] px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-white shadow-xs disabled:opacity-50"
           >
             {publishedWeeks.length === 0 ? (
               <option value="">Chưa có kết quả công bố</option>
@@ -186,20 +231,96 @@ export default function PublicUnitCompetitionPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                {leaderboard.map((item, index) => {
-                  const rank = item.rank || index + 1;
-                  return (
-                    <tr 
-                      key={item.unit_name}
-                      className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
-                        rank === 1 ? 'bg-amber-500/5 dark:bg-amber-500/10' : ''
-                      }`}
-                    >
-                      <td className="py-3 px-4 text-center">
+                {filteredLeaderboard.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                      Không tìm thấy chi đội nào thuộc {selectedGrade === 'ALL' ? 'danh sách' : `Khối ${selectedGrade}`} trong tuần này.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLeaderboard.map((item, index) => {
+                    const rank = item.rank || index + 1;
+                    return (
+                      <tr 
+                        key={item.unit_name}
+                        className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
+                          rank === 1 ? 'bg-amber-500/5 dark:bg-amber-500/10' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={`inline-flex items-center justify-center w-7 h-7 rounded-xl text-xs font-black shadow-xs ${
+                              rank === 1
+                                ? 'bg-amber-400 text-amber-950 ring-2 ring-amber-400/30'
+                                : rank === 2
+                                ? 'bg-slate-300 text-slate-900'
+                                : rank === 3
+                                ? 'bg-amber-700 text-amber-50'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            {rank}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                            {item.unit_name}
+                            {rank === 1 && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
+                                Dẫn đầu khối
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono text-slate-500">
+                          {item.starting_points}
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          +{item.manual_bonus_points || 0}
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-rose-600 dark:text-rose-400">
+                          -{item.manual_penalty_points || 0}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="font-mono font-black text-sm px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200/60 dark:border-slate-700">
+                            {item.final_points}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                          {item.comment || <span className="italic text-slate-400">Tuyên dương nề nếp thi đua</span>}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards View (Visible on < md) */}
+          <div className="block md:hidden space-y-3">
+            {filteredLeaderboard.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-400">
+                Không tìm thấy chi đội nào thuộc {selectedGrade === 'ALL' ? 'danh sách' : `Khối ${selectedGrade}`} trong tuần này.
+              </div>
+            ) : (
+              filteredLeaderboard.map((item, index) => {
+                const rank = item.rank || index + 1;
+                return (
+                  <div
+                    key={item.unit_name}
+                    className={`bg-white dark:bg-slate-900 border rounded-3xl p-5 shadow-sm space-y-3 ${
+                      rank === 1
+                        ? 'border-amber-300 dark:border-amber-800 bg-amber-500/5'
+                        : 'border-slate-200/80 dark:border-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
                         <span
-                          className={`inline-flex items-center justify-center w-7 h-7 rounded-xl text-xs font-black shadow-xs ${
+                          className={`inline-flex items-center justify-center w-8 h-8 rounded-2xl text-xs font-black shadow-sm ${
                             rank === 1
-                              ? 'bg-amber-400 text-amber-950 ring-2 ring-amber-400/30'
+                              ? 'bg-amber-400 text-amber-950 ring-4 ring-amber-400/20'
                               : rank === 2
                               ? 'bg-slate-300 text-slate-900'
                               : rank === 3
@@ -209,102 +330,40 @@ export default function PublicUnitCompetitionPage() {
                         >
                           {rank}
                         </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                        <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
                           {item.unit_name}
-                          {rank === 1 && (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
-                              Dẫn đầu khối
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-center font-mono text-slate-500">
-                        {item.starting_points}
-                      </td>
-                      <td className="py-3 px-4 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        +{item.manual_bonus_points || 0}
-                      </td>
-                      <td className="py-3 px-4 text-center font-mono font-bold text-rose-600 dark:text-rose-400">
-                        -{item.manual_penalty_points || 0}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="font-mono font-black text-sm px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200/60 dark:border-slate-700">
-                          {item.final_points}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
-                        {item.comment || <span className="italic text-slate-400">Tuyên dương nề nếp thi đua</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </h3>
+                      </div>
 
-          {/* Mobile Cards View (Visible on < md) */}
-          <div className="block md:hidden space-y-3">
-            {leaderboard.map((item, index) => {
-              const rank = item.rank || index + 1;
-              return (
-                <div
-                  key={item.unit_name}
-                  className={`bg-white dark:bg-slate-900 border rounded-3xl p-5 shadow-sm space-y-3 ${
-                    rank === 1
-                      ? 'border-amber-300 dark:border-amber-800 bg-amber-500/5'
-                      : 'border-slate-200/80 dark:border-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`inline-flex items-center justify-center w-8 h-8 rounded-2xl text-xs font-black shadow-sm ${
-                          rank === 1
-                            ? 'bg-amber-400 text-amber-950 ring-4 ring-amber-400/20'
-                            : rank === 2
-                            ? 'bg-slate-300 text-slate-900'
-                            : rank === 3
-                            ? 'bg-amber-700 text-amber-50'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}
-                      >
-                        {rank}
+                      <span className="font-mono font-black text-base px-3 py-1 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200/60 dark:border-slate-700">
+                        {item.final_points} điểm
                       </span>
-                      <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-                        {item.unit_name}
-                      </h3>
                     </div>
 
-                    <span className="font-mono font-black text-base px-3 py-1 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200/60 dark:border-slate-700">
-                      {item.final_points} điểm
-                    </span>
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-center text-xs">
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl">
+                        <div className="text-[10px] text-slate-400 font-bold">Khởi điểm</div>
+                        <div className="font-mono font-bold text-slate-700 dark:text-slate-200">{item.starting_points}</div>
+                      </div>
+                      <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2 rounded-xl">
+                        <div className="text-[10px] text-emerald-600 font-bold">Điểm cộng</div>
+                        <div className="font-mono font-bold text-emerald-700 dark:text-emerald-300">+{item.manual_bonus_points || 0}</div>
+                      </div>
+                      <div className="bg-rose-50 dark:bg-rose-950/40 p-2 rounded-xl">
+                        <div className="text-[10px] text-rose-600 font-bold">Điểm trừ</div>
+                        <div className="font-mono font-bold text-rose-700 dark:text-rose-300">-{item.manual_penalty_points || 0}</div>
+                      </div>
+                    </div>
+
+                    {item.comment && (
+                      <div className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl italic">
+                        "{item.comment}"
+                      </div>
+                    )}
                   </div>
-
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-center text-xs">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl">
-                      <div className="text-[10px] text-slate-400 font-bold">Khởi điểm</div>
-                      <div className="font-mono font-bold text-slate-700 dark:text-slate-200">{item.starting_points}</div>
-                    </div>
-                    <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2 rounded-xl">
-                      <div className="text-[10px] text-emerald-600 font-bold">Điểm cộng</div>
-                      <div className="font-mono font-bold text-emerald-700 dark:text-emerald-300">+{item.manual_bonus_points || 0}</div>
-                    </div>
-                    <div className="bg-rose-50 dark:bg-rose-950/40 p-2 rounded-xl">
-                      <div className="text-[10px] text-rose-600 font-bold">Điểm trừ</div>
-                      <div className="font-mono font-bold text-rose-700 dark:text-rose-300">-{item.manual_penalty_points || 0}</div>
-                    </div>
-                  </div>
-
-                  {item.comment && (
-                    <div className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl italic">
-                      "{item.comment}"
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       )}
