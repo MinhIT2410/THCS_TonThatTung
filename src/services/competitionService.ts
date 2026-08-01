@@ -1245,6 +1245,133 @@ export const competitionService = {
       available_reward_points: number;
     }[];
   },
+
+  async getActorAssignments(academicYearId?: string) {
+    let query = supabase
+      .from('competition_actor_assignments')
+      .select(`
+        *,
+        user:profiles!competition_actor_assignments_user_id_fkey(id, full_name, student_code),
+        class:classes(id, name),
+        grade_level:grade_levels(id, name)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (academicYearId) {
+      query = query.eq('academic_year_id', academicYearId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createActorAssignment(payload: {
+    user_id: string;
+    assignment_type: 'SUPERVISOR' | 'LIEN_DOI_COMMAND' | 'RED_STAR';
+    academic_year_id: string;
+    assigned_class_id?: string | null;
+    assigned_grade_level_id?: string | null;
+    start_date?: string;
+    end_date?: string | null;
+  }) {
+    const { data: userData } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from('competition_actor_assignments')
+      .insert({
+        user_id: payload.user_id,
+        assignment_type: payload.assignment_type,
+        academic_year_id: payload.academic_year_id,
+        assigned_class_id: payload.assigned_class_id || null,
+        assigned_grade_level_id: payload.assigned_grade_level_id || null,
+        start_date: payload.start_date || new Date().toISOString().split('T')[0],
+        end_date: payload.end_date || null,
+        created_by: userData.user?.id || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateActorAssignment(
+    id: string,
+    updates: {
+      assigned_class_id?: string | null;
+      assigned_grade_level_id?: string | null;
+      start_date?: string;
+      end_date?: string | null;
+      is_active?: boolean;
+    }
+  ) {
+    const { data, error } = await supabase
+      .from('competition_actor_assignments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteActorAssignment(id: string) {
+    const { error } = await supabase
+      .from('competition_actor_assignments')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  },
+
+  async getMyActorAssignments() {
+    const { data, error } = await supabase.rpc('get_my_competition_actor_assignments');
+    if (error) {
+      console.error('Error fetching my actor assignments:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async getHomeroomIncidents(programId?: string, limit = 50, offset = 0) {
+    const { data, error } = await supabase.rpc('get_homeroom_competition_incidents', {
+      p_program_id: programId || null,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async searchAssignmentCandidates(params: {
+    assignment_type: 'SUPERVISOR' | 'LIEN_DOI_COMMAND' | 'RED_STAR';
+    search?: string;
+    academic_year_id?: string;
+    class_id?: string;
+    page?: number;
+    page_size?: number;
+  }) {
+    const { data, error } = await supabase.rpc('search_competition_assignment_candidates', {
+      p_assignment_type: params.assignment_type,
+      p_search: params.search || null,
+      p_academic_year_id: params.academic_year_id || null,
+      p_class_id: params.class_id || null,
+      p_page: params.page || 1,
+      p_page_size: params.page_size || 30,
+    });
+    if (error) throw error;
+    return (data || []) as Array<{
+      id: string;
+      full_name: string;
+      student_code: string | null;
+      current_class_id: string | null;
+      current_class_name: string | null;
+      total_count: number;
+    }>;
+  },
 };
 
 

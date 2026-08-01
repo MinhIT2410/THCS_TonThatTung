@@ -24,6 +24,7 @@ import IncidentsHistoryTab from '../../components/admin/competition/IncidentsHis
 import { RedemptionsTab } from '../../components/admin/competition/RedemptionsTab';
 import { RewardsTab } from '../../components/admin/competition/RewardsTab';
 import { ReviewRequestsTab } from '../../components/admin/competition/ReviewRequestsTab';
+import ActorAssignmentsTab from '../../components/admin/competition/ActorAssignmentsTab';
 
 type AdminCompetitionSubTab =
   | 'programs_rules'
@@ -35,7 +36,8 @@ type AdminCompetitionSubTab =
   | 'redemptions'
   | 'reviews'
   | 'rules'
-  | 'programs';
+  | 'programs'
+  | 'assignments';
 
 export default function AdminCompetitionPage() {
   const [activeTab, setActiveTab] = useState<AdminCompetitionSubTab>('programs_rules');
@@ -167,6 +169,18 @@ export default function AdminCompetitionPage() {
             <HelpCircle className="w-4 h-4" />
             <span>Đề nghị xem lại</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('assignments')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-2 ${
+              activeTab === 'assignments'
+                ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
+                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-transparent'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Phân công nhiệm vụ</span>
+          </button>
         </div>
         <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-white dark:from-slate-950 to-transparent" />
       </div>
@@ -181,6 +195,7 @@ export default function AdminCompetitionPage() {
         {activeTab === 'redemptions' && <RedemptionsTab />}
         {activeTab === 'rewards' && <RewardsTab />}
         {activeTab === 'reviews' && <ReviewRequestsTab />}
+        {activeTab === 'assignments' && <ActorAssignmentsTab />}
         {activeTab === 'rules' && <ProgramsAndRulesTab initialSubTab="rules" />}
         {activeTab === 'programs' && <ProgramsAndRulesTab initialSubTab="programs" />}
       </div>

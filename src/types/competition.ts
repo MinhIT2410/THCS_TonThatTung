@@ -3,6 +3,42 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export type CompetitionAssignmentType = 'SUPERVISOR' | 'LIEN_DOI_COMMAND' | 'RED_STAR';
+
+export const COMPETITION_ASSIGNMENT_TYPE_LABELS: Record<CompetitionAssignmentType, string> = {
+  SUPERVISOR: 'Giám thị',
+  LIEN_DOI_COMMAND: 'Ban Chỉ huy Liên đội',
+  RED_STAR: 'Sao đỏ',
+};
+
+export interface CompetitionActorAssignment {
+  id: string;
+  user_id: string;
+  assignment_type: CompetitionAssignmentType;
+  academic_year_id: string;
+  assigned_class_id?: string | null;
+  assigned_grade_level_id?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  is_active: boolean;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    id: string;
+    full_name: string;
+    student_code?: string;
+  };
+  class?: {
+    id: string;
+    name: string;
+  };
+  grade_level?: {
+    id: string;
+    name: string;
+  };
+}
+
 export type CompetitionCategory =
   | 'GOOD_DEED'
   | 'ACHIEVEMENT'
