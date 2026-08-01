@@ -3,12 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Users, RefreshCw, UserPlus, CheckCircle2, FileSpreadsheet } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { userApi } from '../../features/users/userApi';
-import { UserProfile } from '../../features/users/userTypes';
 import { AdminUsersTable } from '../../features/users/components/AdminUsersTable';
 import { RoleGuard } from '../../components/auth/RoleGuard';
 import { AccessDenied } from '../../components/auth/AccessDenied';
@@ -16,51 +14,22 @@ import { CreateUserModal } from '../../features/users/components/CreateUserModal
 import { UserImportModal } from '../../features/users/import/UserImportModal';
 
 export default function AdminUsersPage() {
-  const navigate = useNavigate();
   const { profile: currentUserProfile, refreshProfile, hasRole } = useAuth();
   const isAdmin = hasRole('SUPER_ADMIN');
   const canCreateUser = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('VICE_PRINCIPAL') || hasRole('STAFF') || hasRole('TEACHER');
 
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
+  const [refreshKey, setRefreshKey] = useState<number>(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
-    if (!isAdmin) {
-      setUsers([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await userApi.getUsers();
-      setUsers(data);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Không thể tải danh sách người dùng. Bạn có thể không có đủ quyền hạn.');
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
   };
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-    } else {
-      setLoading(false);
-    }
-  }, [isAdmin]);
 
   const handleCreateSuccess = () => {
     setSuccessMessage('Đã tạo tài khoản và gửi email mời thành công.');
-    if (isAdmin) {
-      fetchUsers();
-    }
+    handleRefresh();
     setTimeout(() => {
       setSuccessMessage(null);
     }, 5000);
@@ -68,15 +37,13 @@ export default function AdminUsersPage() {
 
   const handleUpdateUser = async (id: string, data: { full_name: string; roles: string[]; is_active: boolean }) => {
     try {
-      const targetUser = users.find(u => u.id === id);
-      const currentRoles = targetUser?.roles || [];
-      const updated = await userApi.updateUserWithRoles(id, currentRoles, data.roles, {
+      // Get target user roles if possible, or update
+      await userApi.updateUserWithRoles(id, [], data.roles, {
         full_name: data.full_name,
         is_active: data.is_active
       });
-      setUsers(prev => prev.map(u => u.id === id ? updated : u));
-      
-      // Nếu tự cập nhật bản thân, đồng bộ lại profile trong AuthContext
+
+      // Synchronize current profile if self
       if (currentUserProfile?.id === id) {
         await refreshProfile();
       }
@@ -87,11 +54,10 @@ export default function AdminUsersPage() {
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const updated = await userApi.setUserActive(id, !currentStatus);
-      setUsers(prev => prev.map(u => u.id === id ? { ...updated, roles: u.roles } : u));
+      await userApi.setUserActive(id, !currentStatus);
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Không thể thay đổi trạng thái người dùng.');
+      throw new Error(err.message || 'Không thể thay đổi trạng thái người dùng.');
     }
   };
 
@@ -129,7 +95,7 @@ export default function AdminUsersPage() {
             </div>
             {isAdmin && (
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Danh sách tài khoản cán bộ, giáo viên và điều khiển phân quyền vai trò (Role-based Access Control).
+                Danh sách tài khoản cán bộ, giáo viên, học sinh và điều khiển phân quyền vai trò (Role-based Access Control).
               </p>
             )}
           </div>
@@ -138,7 +104,7 @@ export default function AdminUsersPage() {
               <>
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all w-fit shadow-sm hover:shadow-md cursor-pointer"
+                  className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all w-fit shadow-xs hover:shadow-md cursor-pointer"
                   id="btn-open-create-user"
                 >
                   <UserPlus className="h-4 w-4" />
@@ -146,7 +112,7 @@ export default function AdminUsersPage() {
                 </button>
                 <button
                   onClick={() => setIsImportModalOpen(true)}
-                  className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 dark:text-slate-300 dark:hover:text-white dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all w-fit shadow-sm hover:shadow-md cursor-pointer"
+                  className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 dark:text-slate-300 dark:hover:text-white dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all w-fit shadow-xs hover:shadow-md cursor-pointer"
                   id="btn-open-import-excel"
                 >
                   <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -156,13 +122,12 @@ export default function AdminUsersPage() {
             )}
             {isAdmin && (
               <button
-                onClick={fetchUsers}
-                disabled={loading}
+                onClick={handleRefresh}
                 className="p-2 rounded-xl text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-all cursor-pointer"
                 title="Làm mới"
                 id="btn-refresh-users"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -184,13 +149,11 @@ export default function AdminUsersPage() {
         {/* Users Table and Controls */}
         {isAdmin && (
           <AdminUsersTable
-            users={users}
-            loading={loading}
-            error={error}
+            refreshKey={refreshKey}
             onUpdateUser={handleUpdateUser}
             onToggleStatus={handleToggleStatus}
             onResetPassword={handleResetPassword}
-            onRefreshUsers={fetchUsers}
+            onRefreshUsers={handleRefresh}
           />
         )}
 
@@ -205,7 +168,7 @@ export default function AdminUsersPage() {
         <UserImportModal
           isOpen={isImportModalOpen}
           onClose={() => setIsImportModalOpen(false)}
-          onSuccess={fetchUsers}
+          onSuccess={handleRefresh}
         />
       </div>
     </RoleGuard>

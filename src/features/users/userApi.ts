@@ -152,6 +152,62 @@ export const userApi = {
   },
 
   /**
+   * Get paginated user profiles with their roles and emails via get_admin_users_paginated RPC
+   */
+  async getUsersPaginated(params: import('./userTypes').GetAdminUsersParams): Promise<import('./userTypes').GetAdminUsersResult> {
+    if (!isSupabaseConfigured) {
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
+    }
+    try {
+      const {
+        search = null,
+        roleCode = null,
+        isActive = null,
+        unassignedOnly = false,
+        page = 1,
+        pageSize = 50
+      } = params;
+
+      const { data, error } = await supabase.rpc('get_admin_users_paginated', {
+        p_search: search?.trim() || null,
+        p_role_code: roleCode || null,
+        p_is_active: isActive ?? null,
+        p_unassigned_only: unassignedOnly,
+        p_page: page,
+        p_page_size: pageSize
+      });
+
+      if (error) {
+        console.error('Error fetching admin users via RPC:', error);
+        throw normalizeApiError(error);
+      }
+
+      const users: UserProfile[] = (data || []).map((row: any) => ({
+        id: row.user_id,
+        full_name: row.full_name || 'Chưa cập nhật tên',
+        email: row.email || null,
+        roles: Array.isArray(row.roles) ? row.roles : [],
+        is_active: row.is_active ?? true,
+        created_at: row.created_at || new Date().toISOString(),
+        updated_at: row.updated_at || new Date().toISOString(),
+      }));
+
+      const totalCount = data && data.length > 0 ? Number(data[0].total_count) : 0;
+      const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+      return {
+        users,
+        totalCount,
+        totalPages,
+        page,
+        pageSize
+      };
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
+  },
+
+  /**
    * Bulk assign role via administrative RPC
    */
   async bulkAssignRole(input: BulkAssignRoleInput): Promise<BulkAssignRoleResult> {
@@ -163,11 +219,12 @@ export const userApi = {
         p_role_code: input.roleCode,
         p_selection_mode: input.selectionMode,
         p_user_ids: input.userIds && input.userIds.length > 0 ? input.userIds : null,
+        p_search: input.search?.trim() || null,
+        p_filter_role_code: input.filterRoleCode || input.roleFilter || null,
+        p_filter_is_active: input.filterIsActive !== undefined ? input.filterIsActive : (input.isActive !== undefined ? input.isActive : null),
+        p_unassigned_only: input.unassignedOnly ?? false,
         p_only_without_roles: input.onlyWithoutRoles ?? false,
-        p_require_student_identity: input.requireStudentIdentity ?? false,
-        p_search: input.search || null,
-        p_is_active: input.isActive !== undefined ? input.isActive : null,
-        p_role_filter: input.roleFilter || null
+        p_require_student_identity: input.requireStudentIdentity ?? false
       });
 
       if (error) {

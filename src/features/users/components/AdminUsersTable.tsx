@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserProfile, BulkAssignRoleInput, BulkAssignRoleResult } from '../userTypes';
 import { UserRoleBadge } from './UserRoleBadge';
 import { UserStatusBadge } from './UserStatusBadge';
@@ -20,28 +20,26 @@ import {
   User, 
   Calendar, 
   AlertCircle,
-  HelpCircle,
   Users,
   CheckSquare,
   Square,
   UserPlus,
-  CheckCircle2
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 
 interface AdminUsersTableProps {
-  users: UserProfile[];
-  loading: boolean;
-  error: string | null;
+  refreshKey?: number;
   onUpdateUser: (id: string, data: { full_name: string; roles: string[]; is_active: boolean }) => Promise<void>;
   onToggleStatus: (id: string, currentStatus: boolean) => Promise<void>;
   onResetPassword?: (userId: string, newPassword: string) => Promise<void>;
-  onRefreshUsers?: () => Promise<void>;
+  onRefreshUsers?: () => void;
 }
 
 export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
-  users,
-  loading,
-  error,
+  refreshKey = 0,
   onUpdateUser,
   onToggleStatus,
   onResetPassword,
@@ -49,13 +47,26 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
 }) => {
   const { profile: currentUserProfile } = useAuth();
   
+  // Search and Filter States
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  
+
+  // Pagination States
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(50);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
+  // Loading and Error States
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Edit & Lock Modal States
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [resetPassUser, setResetPassUser] = useState<UserProfile | null>(null);
   const [isTogglingMap, setIsTogglingMap] = useState<Record<string, boolean>>({});
 
   // Bulk Selection States
@@ -64,43 +75,57 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkAlertMessage, setBulkAlertMessage] = useState<string | null>(null);
 
-  // Unassigned role count calculation
-  const unassignedCount = useMemo(() => {
-    return users.filter(u => !u.roles || u.roles.length === 0).length;
-  }, [users]);
+  // Search Debounce (400ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  // Filter & Search Logic
-  const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      const nameMatch = (user.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        user.id.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      let roleMatch = true;
-      if (roleFilter === 'unassigned') {
-        roleMatch = !user.roles || user.roles.length === 0;
-      } else if (roleFilter !== 'all') {
-        roleMatch = (user.roles || []).includes(roleFilter);
-      }
-      
-      let statusMatch = true;
-      if (statusFilter === 'active') {
-        statusMatch = user.is_active === true;
-      } else if (statusFilter === 'locked') {
-        statusMatch = user.is_active === false;
-      }
-      
-      return nameMatch && roleMatch && statusMatch;
-    });
-  }, [users, searchTerm, roleFilter, statusFilter]);
+  // Reset page and selection when filters change
+  useEffect(() => {
+    setPage(1);
+    setSelectedUserIds([]);
+    setSelectionMode('PAGE_SELECTION');
+  }, [debouncedSearch, roleFilter, statusFilter, pageSize]);
+
+  // Fetch paginated user list from server
+  const fetchPaginatedUsers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await userApi.getUsersPaginated({
+        search: debouncedSearch,
+        roleCode: roleFilter !== 'all' ? roleFilter : null,
+        isActive: statusFilter === 'active' ? true : statusFilter === 'locked' ? false : null,
+        unassignedOnly: roleFilter === 'unassigned',
+        page,
+        pageSize,
+      });
+
+      setUsers(result.users);
+      setTotalCount(result.totalCount);
+      setTotalPages(result.totalPages);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Không thể tải danh sách người dùng. Bạn có thể không có đủ quyền hạn.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPaginatedUsers();
+  }, [page, pageSize, debouncedSearch, roleFilter, statusFilter, refreshKey]);
 
   // Selection Helper Calculations
-  const visibleUserIds = useMemo(() => filteredUsers.map(u => u.id), [filteredUsers]);
+  const visibleUserIds = useMemo(() => users.map(u => u.id), [users]);
   const isAllVisibleSelected = visibleUserIds.length > 0 && visibleUserIds.every(id => selectedUserIds.includes(id));
   const isSomeVisibleSelected = visibleUserIds.some(id => selectedUserIds.includes(id)) && !isAllVisibleSelected;
 
   const effectiveSelectedCount = selectionMode === 'FILTERED_ALL'
-    ? filteredUsers.length
+    ? totalCount
     : selectedUserIds.length;
 
   const handleToggleSelectAllVisible = () => {
@@ -128,7 +153,13 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
   };
 
   const handleBulkAssignConfirm = async (input: BulkAssignRoleInput): Promise<BulkAssignRoleResult> => {
-    const result = await userApi.bulkAssignRole(input);
+    const result = await userApi.bulkAssignRole({
+      ...input,
+      search: debouncedSearch,
+      filterRoleCode: roleFilter !== 'all' ? roleFilter : null,
+      filterIsActive: statusFilter === 'active' ? true : statusFilter === 'locked' ? false : null,
+      unassignedOnly: roleFilter === 'unassigned',
+    });
     
     const roleLabels: Record<string, string> = {
       STUDENT: 'Học sinh',
@@ -143,9 +174,10 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
     );
 
     handleClearSelection();
+    await fetchPaginatedUsers();
 
     if (onRefreshUsers) {
-      await onRefreshUsers();
+      onRefreshUsers();
     }
 
     setTimeout(() => {
@@ -179,6 +211,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
     setIsTogglingMap(prev => ({ ...prev, [user.id]: true }));
     try {
       await onToggleStatus(user.id, user.is_active);
+      await fetchPaginatedUsers();
     } catch (err) {
       console.error(err);
     } finally {
@@ -201,27 +234,6 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-3 font-sans">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs text-slate-500 font-semibold">Đang tải danh sách thành viên...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 px-4 border border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/10 rounded-3xl text-center space-y-3 max-w-lg mx-auto font-sans">
-        <AlertCircle className="h-10 w-10 text-red-600 dark:text-red-400" />
-        <h3 className="text-sm font-bold text-red-800 dark:text-red-300">Không thể tải danh sách</h3>
-        <p className="text-xs text-red-700 dark:text-red-400 leading-relaxed font-medium">
-          {error}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 font-sans">
       {/* Bulk Action Alert Banner */}
@@ -238,7 +250,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Tìm kiếm theo tên hoặc ID..."
+            placeholder="Tìm kiếm theo tên hoặc email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-white"
@@ -259,7 +271,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
               id="select-role-filter"
             >
               <option value="all">Tất cả vai trò</option>
-              <option value="unassigned">Chưa phân quyền ({unassignedCount})</option>
+              <option value="unassigned">Chưa phân quyền</option>
               <option value="SUPER_ADMIN">Quản trị hệ thống</option>
               <option value="PRINCIPAL">Hiệu trưởng</option>
               <option value="VICE_PRINCIPAL">Hiệu phó</option>
@@ -290,16 +302,6 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
         </div>
       </div>
 
-      {/* Users Count Info Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-          Tìm thấy {filteredUsers.length.toLocaleString('vi-VN')} trên tổng số {users.length.toLocaleString('vi-VN')} thành viên
-        </span>
-        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-          Trong đó: <strong className="text-amber-600 dark:text-amber-400 font-bold">{unassignedCount.toLocaleString('vi-VN')}</strong> tài khoản chưa phân quyền
-        </span>
-      </div>
-
       {/* Selection Notification Banner */}
       {(selectedUserIds.length > 0 || selectionMode === 'FILTERED_ALL') && (
         <div className="p-3 bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-medium text-blue-900 dark:text-blue-300 animate-fade-in" id="selection-notification-banner">
@@ -308,7 +310,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
             <span>
               {selectionMode === 'FILTERED_ALL' ? (
                 <>
-                  Đã chọn toàn bộ <strong>{filteredUsers.length.toLocaleString('vi-VN')}</strong> tài khoản phù hợp bộ lọc.
+                  Đã chọn toàn bộ <strong>{totalCount.toLocaleString('vi-VN')}</strong> tài khoản phù hợp bộ lọc.
                 </>
               ) : (
                 <>
@@ -319,13 +321,13 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {selectionMode === 'PAGE_SELECTION' && filteredUsers.length > selectedUserIds.length && (
+            {selectionMode === 'PAGE_SELECTION' && totalCount > selectedUserIds.length && (
               <button
                 onClick={() => setSelectionMode('FILTERED_ALL')}
                 className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all cursor-pointer text-[11px] shadow-xs"
                 id="btn-select-all-filtered"
               >
-                Chọn toàn bộ {filteredUsers.length.toLocaleString('vi-VN')} tài khoản phù hợp bộ lọc
+                Chọn toàn bộ {totalCount.toLocaleString('vi-VN')} tài khoản phù hợp bộ lọc
               </button>
             )}
 
@@ -368,8 +370,28 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
         </div>
       )}
 
+      {/* Error Display */}
+      {error && (
+        <div className="flex flex-col items-center justify-center py-8 px-4 border border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/10 rounded-3xl text-center space-y-3 max-w-lg mx-auto font-sans">
+          <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+          <h3 className="text-xs font-bold text-red-800 dark:text-red-300">Không thể tải danh sách</h3>
+          <p className="text-xs text-red-700 dark:text-red-400 leading-relaxed font-medium">
+            {error}
+          </p>
+        </div>
+      )}
+
       {/* Table Container */}
-      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/60 dark:bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-10">
+            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              <span>Đang tải dữ liệu...</span>
+            </div>
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -418,7 +440,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-150 dark:divide-slate-850">
-              {filteredUsers.length === 0 ? (
+              {users.length === 0 && !loading ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center space-y-2">
@@ -428,7 +450,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => {
+                users.map((user) => {
                   const isSelf = currentUserProfile?.id === user.id;
                   const isToggling = isTogglingMap[user.id] || false;
                   const isSelected = selectionMode === 'FILTERED_ALL' || selectedUserIds.includes(user.id);
@@ -492,7 +514,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                           </span>
                         ) : (
                           <span className="text-slate-400 dark:text-slate-500 font-sans italic text-[11px]">
-                            Không thể tải email
+                            Chưa cập nhật email
                           </span>
                         )}
                       </td>
@@ -577,6 +599,54 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls Footer */}
+        <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500" id="users-pagination-controls">
+          <div className="flex items-center gap-3">
+            <span>
+              Trang <strong className="text-slate-900 dark:text-white font-bold">{page}</strong> / <strong className="text-slate-900 dark:text-white font-bold">{totalPages || 1}</strong> (Tổng số <strong className="text-slate-900 dark:text-white font-bold">{totalCount.toLocaleString('vi-VN')}</strong> thành viên)
+            </span>
+            <div className="flex items-center gap-1.5 ml-2">
+              <span className="text-slate-400 font-medium">Hiển thị:</span>
+              <select
+                value={pageSize}
+                onChange={e => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer"
+                id="select-page-size"
+              >
+                <option value={25}>25 / trang</option>
+                <option value={50}>50 / trang</option>
+                <option value={100}>100 / trang</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+              id="btn-prev-page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Trang trước</span>
+            </button>
+            <button
+              type="button"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+              id="btn-next-page"
+            >
+              <span>Trang sau</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Edit User Modal */}
@@ -588,7 +658,10 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
             setIsEditModalOpen(false);
             setSelectedUser(null);
           }}
-          onSave={onUpdateUser}
+          onSave={async (id, data) => {
+            await onUpdateUser(id, data);
+            await fetchPaginatedUsers();
+          }}
           onResetPassword={onResetPassword}
         />
       )}
@@ -602,7 +675,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
         selectedUserIds={selectedUserIds}
         currentRoleFilter={roleFilter}
         currentStatusFilter={statusFilter}
-        currentSearchTerm={searchTerm}
+        currentSearchTerm={debouncedSearch}
         onConfirm={handleBulkAssignConfirm}
       />
     </div>

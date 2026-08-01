@@ -13,13 +13,33 @@ export interface UpdateUserProfileInput {
   is_active?: boolean;
 }
 
+export interface GetAdminUsersParams {
+  search?: string | null;
+  roleCode?: string | null;
+  isActive?: boolean | null;
+  unassignedOnly?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface GetAdminUsersResult {
+  users: UserProfile[];
+  totalCount: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface BulkAssignRoleInput {
   roleCode: string;
-  selectionMode: 'PAGE_SELECTION' | 'FILTERED_ALL';
-  userIds?: string[];
+  selectionMode: 'PAGE_SELECTION' | 'FILTERED_ALL' | 'PAGE';
+  userIds?: string[] | null;
+  search?: string | null;
+  filterRoleCode?: string | null;
+  filterIsActive?: boolean | null;
+  unassignedOnly?: boolean;
   onlyWithoutRoles?: boolean;
   requireStudentIdentity?: boolean;
-  search?: string;
   isActive?: boolean | null;
   roleFilter?: string | null;
 }
