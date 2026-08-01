@@ -157,6 +157,90 @@ export const userApi = {
   },
 
   /**
+   * Fetch paginated student list for password reset handover
+   */
+  async getStudentsForPasswordReset(
+    params: import('./userTypes').GetStudentsForPasswordResetParams
+  ): Promise<import('./userTypes').GetStudentsForPasswordResetResult> {
+    if (!isSupabaseConfigured) {
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
+    }
+    try {
+      const page = params.page && params.page > 0 ? params.page : 1;
+      const pageSize = params.pageSize && params.pageSize > 0 ? Math.min(params.pageSize, 100) : 50;
+
+      const { data, error } = await supabase.rpc('get_students_for_password_reset', {
+        p_academic_year_id: params.academicYearId,
+        p_grade_level_id: params.gradeLevelId || null,
+        p_class_id: params.classId || null,
+        p_search: params.search?.trim() || null,
+        p_page: page,
+        p_page_size: pageSize,
+      });
+
+      if (error) {
+        throw normalizeApiError(error);
+      }
+
+      const rows = (data || []) as import('./userTypes').StudentForPasswordReset[];
+      const totalCount = rows.length > 0 ? Number(rows[0].total_count) : 0;
+      const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+      return {
+        students: rows,
+        totalCount,
+        totalPages,
+        page,
+        pageSize,
+      };
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
+  },
+
+  /**
+   * Bulk reset student passwords via admin-bulk-reset-passwords Edge Function
+   */
+  async bulkResetPasswords(
+    payload: import('./userTypes').BulkResetPasswordPayload
+  ): Promise<import('./userTypes').BulkResetPasswordResponse> {
+    if (!isSupabaseConfigured) {
+      throw new ApiError('SUPABASE_NOT_CONFIGURED', 'Supabase chưa được cấu hình.');
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-bulk-reset-passwords', {
+        body: payload,
+      });
+
+      if (error) {
+        let errorMsg = error.message;
+        if ('context' in error && error.context) {
+          try {
+            const res = error.context as Response;
+            if (res && typeof res.json === 'function') {
+              const body = await res.clone().json();
+              if (body && body.message) {
+                errorMsg = body.message;
+              }
+            }
+          } catch (_) {
+            // Ignore parse error
+          }
+        }
+        throw new ApiError('VALIDATION_ERROR', errorMsg || 'Lỗi khi gọi Edge Function đặt lại mật khẩu hàng loạt.');
+      }
+
+      if (!data || !data.success) {
+        throw new ApiError('VALIDATION_ERROR', data?.message || 'Thao tác không thành công.');
+      }
+
+      return data as import('./userTypes').BulkResetPasswordResponse;
+    } catch (err) {
+      throw normalizeApiError(err);
+    }
+  },
+
+  /**
    * Get a single user profile by ID
    */
   async getUserById(id: string): Promise<UserProfile | null> {

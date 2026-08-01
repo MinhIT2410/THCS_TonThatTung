@@ -50,3 +50,53 @@ export interface BulkAssignRoleResult {
   skipped_count: number;
   role_code: string;
 }
+
+export interface StudentForPasswordReset {
+  user_id: string;
+  full_name: string;
+  student_code: string | null;
+  email: string | null;
+  class_id: string;
+  class_name: string;
+  grade_level_id: string | null;
+  total_count: number;
+}
+
+export interface GetStudentsForPasswordResetParams {
+  academicYearId: string;
+  gradeLevelId?: string | null;
+  classId?: string | null;
+  search?: string | null;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface GetStudentsForPasswordResetResult {
+  students: StudentForPasswordReset[];
+  totalCount: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface BulkResetPasswordItem {
+  user_id: string;
+  new_password: string;
+}
+
+export interface BulkResetPasswordPayload {
+  academic_year_id: string;
+  students: BulkResetPasswordItem[];
+}
+
+export interface BulkResetPasswordResultItem {
+  user_id: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface BulkResetPasswordResponse {
+  success: boolean;
+  message: string;
+  results: BulkResetPasswordResultItem[];
+}

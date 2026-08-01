@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Users, RefreshCw, UserPlus, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { Users, RefreshCw, UserPlus, CheckCircle2, FileSpreadsheet, KeyRound } from 'lucide-react';
 import { useAuth } from '../../features/auth/useAuth';
 import { userApi } from '../../features/users/userApi';
 import { AdminUsersTable } from '../../features/users/components/AdminUsersTable';
@@ -12,15 +12,18 @@ import { RoleGuard } from '../../components/auth/RoleGuard';
 import { AccessDenied } from '../../components/auth/AccessDenied';
 import { CreateUserModal } from '../../features/users/components/CreateUserModal';
 import { UserImportModal } from '../../features/users/import/UserImportModal';
+import { StudentAccountHandoverModal } from '../../features/users/components/StudentAccountHandoverModal';
 
 export default function AdminUsersPage() {
   const { profile: currentUserProfile, refreshProfile, hasRole } = useAuth();
   const isAdmin = hasRole('SUPER_ADMIN');
   const canCreateUser = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('VICE_PRINCIPAL') || hasRole('STAFF') || hasRole('TEACHER');
+  const canHandoverAccounts = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('TEACHER');
 
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleRefresh = () => {
@@ -120,6 +123,16 @@ export default function AdminUsersPage() {
                 </button>
               </>
             )}
+            {canHandoverAccounts && (
+              <button
+                onClick={() => setIsHandoverModalOpen(true)}
+                className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-white dark:bg-blue-950/60 dark:hover:bg-blue-900/80 border border-blue-200 dark:border-blue-900/60 rounded-xl transition-all w-fit shadow-xs hover:shadow-md cursor-pointer"
+                id="btn-open-student-handover"
+              >
+                <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span>Bàn giao tài khoản học sinh</span>
+              </button>
+            )}
             {isAdmin && (
               <button
                 onClick={handleRefresh}
@@ -170,6 +183,15 @@ export default function AdminUsersPage() {
           onClose={() => setIsImportModalOpen(false)}
           onSuccess={handleRefresh}
         />
+
+        {/* Student Account Handover Modal */}
+        {isHandoverModalOpen && (
+          <StudentAccountHandoverModal
+            isOpen={isHandoverModalOpen}
+            onClose={() => setIsHandoverModalOpen(false)}
+            onSuccessRefresh={handleRefresh}
+          />
+        )}
       </div>
     </RoleGuard>
   );
