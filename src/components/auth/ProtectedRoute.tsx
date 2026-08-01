@@ -31,8 +31,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     hasAnyRole,
   } = useAuth();
 
-  // Show a beautifully simple loading spinner while authentication and profile loading are in progress
-  if (loading || (isAuthenticated && profileLoading)) {
+  // Show a beautifully simple loading spinner while authentication or initial profile loading are in progress.
+  // CRITICAL: If profile is ALREADY loaded in memory, background token refreshes or profile re-fetches
+  // must NEVER replace children with a spinner or unmount children!
+  if (loading || (isAuthenticated && !profile && profileLoading)) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center font-sans text-xs">
         <div className="flex flex-col items-center space-y-2">

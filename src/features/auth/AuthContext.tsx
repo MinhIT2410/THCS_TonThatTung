@@ -43,9 +43,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   // Helper to fetch the profile from profiles table and roles from user_roles
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, silent = false) => {
     try {
-      setProfileLoading(true);
+      if (!silent) {
+        setProfileLoading(true);
+      }
       setError(null);
       const [profileData, rolesData] = await Promise.all([
         authApi.getCurrentProfile(userId),
@@ -60,7 +62,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       setRolesList([]);
     } finally {
-      setProfileLoading(false);
+      if (!silent) {
+        setProfileLoading(false);
+      }
     }
   };
 
@@ -78,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const currentUser = activeSession?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
-          await fetchProfile(currentUser.id);
+          await fetchProfile(currentUser.id, false);
         } else {
           setProfile(null);
           setRolesList([]);
@@ -97,14 +101,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkActiveSession();
 
     // 2. Auth state subscription
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setSession(currentSession);
       const currentUser = currentSession?.user ?? null;
       setUser(currentUser);
       setLoading(false);
 
+      if (event === 'SIGNED_OUT') {
+        setProfile(null);
+        setRolesList([]);
+        setProfileLoading(false);
+        return;
+      }
+
       if (currentUser) {
-        await fetchProfile(currentUser.id);
+        // TOKEN_REFRESHED, USER_UPDATED, or background event for existing profile:
+        // Run fetchProfile silently without toggling profileLoading so the UI is never unmounted/reset!
+        const isSilent = event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || (!!profile && profile.id === currentUser.id);
+        await fetchProfile(currentUser.id, isSilent);
       } else {
         setProfile(null);
         setRolesList([]);

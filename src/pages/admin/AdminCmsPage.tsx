@@ -51,10 +51,11 @@ export default function AdminCmsPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isFormInitializedRef = React.useRef(false);
 
-  // Sync local states with loaded site settings
+  // Sync local states with loaded site settings once on initial load
   useEffect(() => {
-    if (siteSettings) {
+    if (siteSettings && !isFormInitializedRef.current) {
       setContactIntro(siteSettings.contact_intro || '');
       setAddress(siteSettings.address || '');
       setPhone(siteSettings.phone || '');
@@ -62,6 +63,7 @@ export default function AdminCmsPage() {
       setMapUrl(siteSettings.map_url || '');
       setReceptionHours(siteSettings.reception_hours || '');
       setFaqs(siteSettings.faqs || []);
+      isFormInitializedRef.current = true;
     }
   }, [siteSettings]);
 

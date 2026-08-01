@@ -214,7 +214,7 @@ export default function StudentCompetitionPage() {
         </div>
 
         {/* Auth Loading State */}
-        {(authLoading || profileLoading) ? (
+        {(authLoading || (!isUserAuthenticated && profileLoading)) ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center text-xs text-slate-400 animate-pulse">
             Đang kiểm tra thông tin tài khoản...
           </div>

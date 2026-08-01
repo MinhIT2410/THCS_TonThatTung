@@ -39,8 +39,8 @@ export const AccountMenu: React.FC = () => {
     };
   }, [isOpen]);
 
-  // Wait for auth loading or, if user is logged in, wait for profile loading
-  const isCurrentlyLoading = loading || (isAuthenticated && profileLoading);
+  // Wait for auth loading or, if user is logged in and profile is not loaded yet, wait for profile loading
+  const isCurrentlyLoading = loading || (isAuthenticated && !profile && profileLoading);
 
   if (isCurrentlyLoading) {
     // Elegant skeleton / disabled state to prevent layout shift and flicker
