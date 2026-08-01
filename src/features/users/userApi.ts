@@ -135,7 +135,21 @@ export const userApi = {
       });
 
       if (error) {
-        throw new ApiError('VALIDATION_ERROR', error.message || 'Lỗi khi gọi Edge Function đặt lại mật khẩu.');
+        let errorMsg = error.message;
+        if ('context' in error && error.context) {
+          try {
+            const res = error.context as Response;
+            if (res && typeof res.json === 'function') {
+              const body = await res.clone().json();
+              if (body && body.message) {
+                errorMsg = body.message;
+              }
+            }
+          } catch (_) {
+            // Ignore JSON parse error
+          }
+        }
+        throw new ApiError('VALIDATION_ERROR', errorMsg || 'Lỗi khi gọi Edge Function đặt lại mật khẩu.');
       }
 
       if (!data || !data.success) {

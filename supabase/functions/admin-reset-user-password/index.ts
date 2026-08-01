@@ -9,23 +9,25 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
 
+  // 1. Handle CORS Preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: getCorsHeaders(origin) });
+    return new Response("ok", { status: 200, headers: getCorsHeaders(origin) });
   }
 
   const corsHeaders = getCorsHeaders(origin);
 
   try {
-    // 1. Authenticate caller Bearer token
+    // 2. Authenticate caller Bearer token
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({
           success: false,
-          error_code: "UNAUTHORIZED",
           message: "Yêu cầu phải có Authorization Bearer Token hợp lệ.",
         }),
         { status: 401, headers: corsHeaders }
@@ -41,24 +43,22 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error_code: "INTERNAL_SERVER_ERROR",
           message: "Cấu hình hệ thống chưa hoàn chỉnh (Thiếu Supabase Keys).",
         }),
         { status: 500, headers: corsHeaders }
       );
     }
 
-    // A. User Client (caller context)
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+    // 3. Verify caller JWT
+    const supabaseCaller = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
 
-    const { data: { user: callerUser }, error: authError } = await supabaseUser.auth.getUser(token);
+    const { data: { user: callerUser }, error: authError } = await supabaseCaller.auth.getUser(token);
     if (authError || !callerUser) {
       return new Response(
         JSON.stringify({
           success: false,
-          error_code: "UNAUTHORIZED",
           message: "Token xác thực không hợp lệ hoặc đã hết hạn.",
         }),
         { status: 401, headers: corsHeaders }
@@ -67,34 +67,45 @@ Deno.serve(async (req) => {
 
     const callerId = callerUser.id;
 
-    // B. Parse Request Body
-    const body = await req.json();
-    const { user_id, target_user_id, new_password } = body;
-    const targetUserId = target_user_id || user_id;
-
-    if (!targetUserId || typeof targetUserId !== "string") {
+    // 4. Parse & Validate request body
+    let body: any;
+    try {
+      body = await req.json();
+    } catch (_) {
       return new Response(
         JSON.stringify({
           success: false,
-          error_code: "VALIDATION_ERROR",
+          message: "Dữ liệu yêu cầu không đúng định dạng JSON.",
+        }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    const { user_id, new_password } = body || {};
+
+    if (!user_id || typeof user_id !== "string" || !UUID_REGEX.test(user_id.trim())) {
+      return new Response(
+        JSON.stringify({
+          success: false,
           message: "Mã người dùng (user_id) không hợp lệ.",
         }),
         { status: 400, headers: corsHeaders }
       );
     }
 
+    const targetUserId = user_id.trim();
+
     if (!new_password || typeof new_password !== "string" || new_password.trim().length < 8) {
       return new Response(
         JSON.stringify({
           success: false,
-          error_code: "VALIDATION_ERROR",
           message: "Mật khẩu mới phải có ít nhất 8 ký tự.",
         }),
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // C. Admin Client
+    // 5. Initialize Supabase Admin client
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: {
         autoRefreshToken: false,
@@ -102,30 +113,27 @@ Deno.serve(async (req) => {
       },
     });
 
-    // D. Check Caller Roles
+    // 6. Check caller permissions from public.user_roles (SUPER_ADMIN or PRINCIPAL)
     const { data: callerRolesData } = await supabaseAdmin
       .from("user_roles")
       .select("role_code")
       .eq("user_id", callerId);
 
     const callerRoles = (callerRolesData || []).map((r: any) => r.role_code);
-    const allowedRoles = ["SUPER_ADMIN", "PRINCIPAL", "VICE_PRINCIPAL", "STAFF"];
-    const isCallerAdmin = callerRoles.some((r: string) => allowedRoles.includes(r));
+    const isSuperAdmin = callerRoles.includes("SUPER_ADMIN");
+    const isPrincipal = callerRoles.includes("PRINCIPAL");
 
-    if (!isCallerAdmin) {
+    if (!isSuperAdmin && !isPrincipal) {
       return new Response(
         JSON.stringify({
           success: false,
-          error_code: "FORBIDDEN",
-          message: "Bạn không có quyền thực hiện đặt lại mật khẩu cho tài khoản khác.",
+          message: "Bạn không có quyền đặt lại mật khẩu tài khoản này.",
         }),
         { status: 403, headers: corsHeaders }
       );
     }
 
-    const isCallerSuperAdmin = callerRoles.includes("SUPER_ADMIN");
-
-    // E. Check Target User Roles (Protect SUPER_ADMIN)
+    // 7. Protect SUPER_ADMIN target accounts from PRINCIPAL reset
     const { data: targetRolesData } = await supabaseAdmin
       .from("user_roles")
       .select("role_code")
@@ -134,46 +142,36 @@ Deno.serve(async (req) => {
     const targetRoles = (targetRolesData || []).map((r: any) => r.role_code);
     const isTargetSuperAdmin = targetRoles.includes("SUPER_ADMIN");
 
-    if (isTargetSuperAdmin && !isCallerSuperAdmin) {
+    if (isTargetSuperAdmin && !isSuperAdmin) {
       return new Response(
         JSON.stringify({
           success: false,
-          error_code: "FORBIDDEN",
-          message: "Bạn không có quyền thay đổi mật khẩu của Quản trị viên cao cấp (SUPER_ADMIN).",
+          message: "Bạn không có quyền đặt lại mật khẩu tài khoản này.",
         }),
         { status: 403, headers: corsHeaders }
       );
     }
 
-    // F. Execute Reset Password via Admin API
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
-      password: new_password.trim(),
-    });
+    // 8. Execute password reset using admin client
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      targetUserId,
+      {
+        password: new_password.trim(),
+      }
+    );
 
     if (updateError) {
-      console.error(`auth.admin.updateUserById error for user ${targetUserId}:`, updateError);
+      console.error(`auth.admin.updateUserById error for user ${targetUserId}:`, updateError.message);
       return new Response(
         JSON.stringify({
           success: false,
-          error_code: "RESET_PASSWORD_FAILED",
-          message: updateError.message || "Đặt lại mật khẩu không thành công.",
+          message: updateError.message || "Không thể đặt lại mật khẩu cho tài khoản.",
         }),
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // G. Audit Log (Safely recorded if table exists, NEVER log the password string)
-    try {
-      await supabaseAdmin.from("user_audit_logs").insert({
-        actor_id: callerId,
-        target_user_id: targetUserId,
-        action: "RESET_PASSWORD",
-        details: { success: true },
-      });
-    } catch {
-      // Ignore if user_audit_logs table does not exist
-    }
-
+    // 9. Return success response (never include password in output or logs)
     return new Response(
       JSON.stringify({
         success: true,
@@ -186,7 +184,6 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error_code: "INTERNAL_SERVER_ERROR",
         message: "Có lỗi máy chủ xảy ra.",
       }),
       { status: 500, headers: corsHeaders }
