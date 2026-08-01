@@ -157,6 +157,7 @@ Deno.serve(async (req) => {
       targetUserId,
       {
         password: new_password.trim(),
+        email_confirm: true,
       }
     );
 
@@ -175,7 +176,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Đã đặt lại mật khẩu cho tài khoản.",
+        message: "Đã đặt lại mật khẩu và kích hoạt đăng nhập cho tài khoản.",
       }),
       { status: 200, headers: corsHeaders }
     );

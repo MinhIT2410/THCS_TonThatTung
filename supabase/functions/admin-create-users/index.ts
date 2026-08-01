@@ -266,100 +266,56 @@ async function processSingleUser(
   }
 
   let authUserId = "";
-  let temporaryPassword = "";
-  let targetEmail = rawEmail;
+  const temporaryPassword = generateTemporaryPassword();
+  const targetEmail = rawEmail ? rawEmail : `${studentCode.toLowerCase()}@${studentDomain}`;
 
-  if (!rawEmail && studentCode) {
-    // STUDENT without email: Use internal email & createUser with password
-    const internalEmail = `${studentCode.toLowerCase()}@${studentDomain}`;
-    targetEmail = internalEmail;
-    temporaryPassword = generateTemporaryPassword();
+  try {
+    const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: targetEmail,
+      password: temporaryPassword,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        student_code: studentCode || undefined,
+      },
+    });
 
-    try {
-      const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email: internalEmail,
-        password: temporaryPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: fullName,
-          student_code: studentCode,
-        },
-      });
-
-      if (createError) {
-        console.error("auth.admin.createUser error for student without email:", createError);
-        return {
-          row_number: rowNum,
-          student_code: studentCode,
-          success: false,
-          error_code: createError.status === 422 ? "STUDENT_CODE_EXISTS" : "TEMPORARY_ACCOUNT_CREATION_FAILED",
-          error: createError.status === 422 
-            ? `Tài khoản học sinh '${studentCode}' đã tồn tại.` 
-            : "Tạo tài khoản học sinh tạm thời không thành công.",
-        };
-      }
-
-      if (!createData?.user) {
-        return {
-          row_number: rowNum,
-          student_code: studentCode,
-          success: false,
-          error_code: "TEMPORARY_ACCOUNT_CREATION_FAILED",
-          error: "Tạo tài khoản học sinh tạm thời không thành công.",
-        };
-      }
-
-      authUserId = createData.user.id;
-    } catch (err: any) {
-      console.error("Unexpected error creating user without email:", err);
+    if (createError) {
+      console.error("auth.admin.createUser error:", createError);
       return {
         row_number: rowNum,
-        student_code: studentCode,
-        success: false,
-        error_code: "TEMPORARY_ACCOUNT_CREATION_FAILED",
-        error: "Lỗi kết nối khi tạo tài khoản học sinh tạm thời.",
-      };
-    }
-  } else {
-    // Normal Flow: Invite user by email
-    try {
-      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(rawEmail, {
-        data: { full_name: fullName },
-      });
-
-      if (inviteError) {
-        return {
-          row_number: rowNum,
-          email: rawEmail,
-          student_code: studentCode || undefined,
-          success: false,
-          error_code: inviteError.status === 422 ? "EMAIL_EXISTS" : "INVITE_FAILED",
-          error: inviteError.status === 422 ? "Email này đã tồn tại trong hệ thống." : "Lời mời người dùng không thành công.",
-        };
-      }
-
-      if (!inviteData?.user) {
-        return {
-          row_number: rowNum,
-          email: rawEmail,
-          student_code: studentCode || undefined,
-          success: false,
-          error_code: "INVITE_FAILED",
-          error: "Lời mời người dùng không thành công.",
-        };
-      }
-
-      authUserId = inviteData.user.id;
-    } catch (err: any) {
-      return {
-        row_number: rowNum,
-        email: rawEmail,
+        email: rawEmail || undefined,
         student_code: studentCode || undefined,
         success: false,
-        error_code: "INVITE_FAILED",
-        error: "Lỗi kết nối khi gửi lời mời.",
+        error_code: createError.status === 422 ? "EMAIL_EXISTS" : "ACCOUNT_CREATION_FAILED",
+        error: createError.status === 422 
+          ? (rawEmail ? "Email này đã tồn tại trong hệ thống." : `Tài khoản học sinh '${studentCode}' đã tồn tại.`)
+          : "Tạo tài khoản không thành công.",
       };
     }
+
+    if (!createData?.user) {
+      return {
+        row_number: rowNum,
+        email: rawEmail || undefined,
+        student_code: studentCode || undefined,
+        success: false,
+        error_code: "ACCOUNT_CREATION_FAILED",
+        error: "Tạo tài khoản không thành công.",
+      };
+    }
+
+    authUserId = createData.user.id;
+  } catch (err: any) {
+    console.error("Unexpected error creating user:", err);
+    return {
+      row_number: rowNum,
+      email: rawEmail || undefined,
+      student_code: studentCode || undefined,
+      success: false,
+      error_code: "ACCOUNT_CREATION_FAILED",
+      error: "Lỗi kết nối khi tạo tài khoản.",
+    };
   }
 
   // 3. Finalize User Setup using RPC
