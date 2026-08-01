@@ -95,6 +95,15 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleResetPassword = async (userId: string, newPassword: string) => {
+    try {
+      await userApi.resetUserPassword(userId, newPassword);
+    } catch (err: any) {
+      console.error(err);
+      throw new Error(err.message || 'Không thể đặt lại mật khẩu.');
+    }
+  };
+
   return (
     <RoleGuard 
       allowedRoles={['SUPER_ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'STAFF', 'TEACHER']} 
@@ -180,6 +189,8 @@ export default function AdminUsersPage() {
             error={error}
             onUpdateUser={handleUpdateUser}
             onToggleStatus={handleToggleStatus}
+            onResetPassword={handleResetPassword}
+            onRefreshUsers={fetchUsers}
           />
         )}
 

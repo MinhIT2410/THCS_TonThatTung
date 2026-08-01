@@ -17,6 +17,8 @@ export interface UserProfile {
   full_name?: string | null;
   avatar_url?: string | null;
   role?: string | null;
+  roles?: string[];
+  email?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

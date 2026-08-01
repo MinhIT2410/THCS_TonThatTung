@@ -12,3 +12,21 @@ export interface UpdateUserProfileInput {
   avatar_url?: string | null;
   is_active?: boolean;
 }
+
+export interface BulkAssignRoleInput {
+  roleCode: string;
+  selectionMode: 'PAGE_SELECTION' | 'FILTERED_ALL';
+  userIds?: string[];
+  onlyWithoutRoles?: boolean;
+  requireStudentIdentity?: boolean;
+  search?: string;
+  isActive?: boolean | null;
+  roleFilter?: string | null;
+}
+
+export interface BulkAssignRoleResult {
+  matched_count: number;
+  inserted_count: number;
+  skipped_count: number;
+  role_code: string;
+}
