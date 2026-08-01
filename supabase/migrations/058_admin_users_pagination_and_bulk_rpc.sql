@@ -208,8 +208,8 @@ BEGIN
   END IF;
 
   -- 3. Validate p_role_code: Currently only supports STUDENT
-  v_sanitized_role := trim(p_role_code);
-  IF v_sanitized_role <> 'STUDENT' THEN
+  v_sanitized_role := upper(nullif(trim(p_role_code), ''));
+  IF v_sanitized_role IS DISTINCT FROM 'STUDENT' THEN
     RAISE EXCEPTION 'Chức năng hàng loạt hiện chỉ hỗ trợ gán vai trò Học sinh.' USING errcode = 'P0001';
   END IF;
 
@@ -221,7 +221,7 @@ BEGIN
   v_sanitized_search := nullif(trim(p_search), '');
   v_sanitized_filter_role := nullif(trim(p_filter_role_code), '');
 
-  -- 5. Gather target user IDs matching selection and mandatory DB constraints
+  -- 5. Gather target user IDs matching selection and mandatory DB constraints (applied unconditionally)
   CREATE TEMP TABLE tmp_bulk_target_users ON COMMIT DROP AS
   SELECT p.id
   FROM public.profiles p
@@ -231,7 +231,7 @@ BEGIN
       -- Selection by page UUID array
       (p_selection_mode IN ('PAGE_SELECTION', 'PAGE') AND p_user_ids IS NOT NULL AND p.id = ANY(p_user_ids))
       OR
-      -- Selection by FILTERED_ALL with mandatory database restrictions
+      -- Selection by FILTERED_ALL
       (
         p_selection_mode = 'FILTERED_ALL' AND
         (v_sanitized_search IS NULL OR p.full_name ILIKE '%' || v_sanitized_search || '%' OR au.email ILIKE '%' || v_sanitized_search || '%' OR p.id::text ILIKE '%' || v_sanitized_search || '%') AND
@@ -240,31 +240,22 @@ BEGIN
           p_unassigned_only = true OR v_sanitized_filter_role = 'unassigned' OR
           (v_sanitized_filter_role IS NULL OR v_sanitized_filter_role = 'all' OR
           EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = p.id AND ur.role_code = v_sanitized_filter_role))
-        ) AND
-        -- Mandatory constraint 1: Target account MUST NOT have any existing roles in user_roles
-        NOT EXISTS (
-          SELECT 1
-          FROM public.user_roles ur
-          WHERE ur.user_id = p.id
-        ) AND
-        -- Mandatory constraint 2: Target account MUST have student_code or exist in student_enrollments
-        (
-          nullif(trim(p.student_code), '') IS NOT NULL
-          OR EXISTS (
-            SELECT 1
-            FROM public.student_enrollments se
-            WHERE se.student_id = p.id
-          )
         )
       )
     )
-    AND (
-      NOT p_only_without_roles OR NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = p.id)
+    -- Mandatory Constraint 1: Target account MUST NOT have any existing roles in user_roles
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.user_roles ur
+      WHERE ur.user_id = p.id
     )
+    -- Mandatory Constraint 2: Target account MUST have student_code or exist in student_enrollments
     AND (
-      NOT p_require_student_identity OR (
-        nullif(trim(p.student_code), '') IS NOT NULL OR
-        EXISTS (SELECT 1 FROM public.student_enrollments se WHERE se.student_id = p.id)
+      nullif(trim(p.student_code), '') IS NOT NULL
+      OR EXISTS (
+        SELECT 1
+        FROM public.student_enrollments se
+        WHERE se.student_id = p.id
       )
     );
 
