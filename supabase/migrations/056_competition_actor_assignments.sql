@@ -1,5 +1,18 @@
 BEGIN;
 
+-- Ensure update_updated_at_column helper function exists
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
 -- Migration 056: Competition Actor Assignments (Giám thị, BCH Liên đội, Sao đỏ) & Homeroom Teacher Integration
 
 -- 1. Table: public.competition_actor_assignments
