@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users,
   Search,
@@ -27,6 +27,7 @@ import {
   StudentEnrollmentItem,
 } from '../../../services/studentEnrollmentService';
 import { CreateUserModal } from '../../users/components/CreateUserModal';
+import { sortClassesNaturally } from '../../../utils/classSortUtils';
 
 export default function StudentsTab() {
   const [students, setStudents] = useState<StudentEnrollmentItem[]>([]);
@@ -267,6 +268,38 @@ export default function StudentsTab() {
     }
   };
 
+  // Filtered and sorted class options for main Lớp học filter dropdown
+  const filteredClassesForScope = useMemo(() => {
+    if (selectedScope === 'all' || selectedScope === 'unassigned') return [];
+    return classes.filter(c => {
+      const currentGradeObj = gradeLevels.find(g => g.id === selectedScope);
+      const gradeNum = currentGradeObj?.level_number || (currentGradeObj?.name?.match(/\d+/)?.[0]);
+      if (c.grade_level_id) return c.grade_level_id === selectedScope;
+      if (gradeNum && c.name) return c.name.startsWith(String(gradeNum));
+      return false;
+    });
+  }, [classes, gradeLevels, selectedScope]);
+
+  const sortedClassOptions = useMemo(() => {
+    const sorted = sortClassesNaturally<any>(filteredClassesForScope, c => c.name);
+    if (process.env.NODE_ENV !== 'production') {
+      console.table(sorted.map(item => item.name));
+    }
+    return sorted;
+  }, [filteredClassesForScope]);
+
+  // Sorted classes for assign modal dropdown
+  const sortedAssignClasses = useMemo(() => {
+    return sortClassesNaturally<any>(classes, c => c.name);
+  }, [classes]);
+
+  // Sorted classes for transfer modal dropdown
+  const sortedTransferClasses = useMemo(() => {
+    if (!transferStudent) return [];
+    const filtered = classes.filter(c => c.id !== transferStudent.enrollment?.class_id);
+    return sortClassesNaturally<any>(filtered, c => c.name);
+  }, [classes, transferStudent]);
+
   // Helper to determine empty state message
   const getEmptyStateMessage = () => {
     if (selectedScope === 'unassigned') {
@@ -453,19 +486,11 @@ export default function StudentsTab() {
                 <option value="all">
                   Tất cả lớp {gradeLevels.find(g => g.id === selectedScope)?.name || ''}
                 </option>
-                {classes
-                  .filter(c => {
-                    const currentGradeObj = gradeLevels.find(g => g.id === selectedScope);
-                    const gradeNum = currentGradeObj?.level_number || (currentGradeObj?.name?.match(/\d+/)?.[0]);
-                    if (c.grade_level_id) return c.grade_level_id === selectedScope;
-                    if (gradeNum && c.name) return c.name.startsWith(String(gradeNum));
-                    return false;
-                  })
-                  .map(c => (
-                    <option key={c.id} value={c.id}>
-                      Lớp {c.name}
-                    </option>
-                  ))}
+                {sortedClassOptions.map(c => (
+                  <option key={c.id} value={c.id}>
+                    Lớp {c.name}
+                  </option>
+                ))}
               </>
             )}
           </select>
@@ -743,7 +768,7 @@ export default function StudentsTab() {
                   required
                 >
                   <option value="">-- Chọn lớp học --</option>
-                  {classes.map(c => (
+                  {sortedAssignClasses.map(c => (
                     <option key={c.id} value={c.id}>
                       Lớp {c.name}
                     </option>
@@ -861,13 +886,11 @@ export default function StudentsTab() {
                     required
                   >
                     <option value="">-- Chọn lớp mới --</option>
-                    {classes
-                      .filter(c => c.id !== transferStudent.enrollment?.class_id)
-                      .map(c => (
-                        <option key={c.id} value={c.id}>
-                          Lớp {c.name}
-                        </option>
-                      ))}
+                    {sortedTransferClasses.map(c => (
+                      <option key={c.id} value={c.id}>
+                        Lớp {c.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../auth/useAuth';
 import { userCreationApi } from '../userCreationApi';
+import { sortClassesNaturally } from '../../../utils/classSortUtils';
 import { X, AlertTriangle, Shield, User, Mail, Loader2, Check, GraduationCap, Calendar, BookOpen } from 'lucide-react';
 
 interface CreateUserModalProps {
@@ -64,6 +65,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   // Config & Loading states
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const sortedClasses = useMemo(() => sortClassesNaturally<any>(classes, c => c.name), [classes]);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -596,7 +598,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
                         className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-white font-medium"
                       >
                         <option value="" disabled>-- Chọn lớp học --</option>
-                        {classes.map((c) => (
+                        {sortedClasses.map((c) => (
                           <option key={c.id} value={c.id}>
                             Lớp {c.name} (Khối {c.grade_level})
                           </option>
