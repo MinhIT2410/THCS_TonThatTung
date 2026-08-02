@@ -34,6 +34,101 @@ interface GradeTopClasses {
   }[];
 }
 
+interface GradeTheme {
+  topBarClass: string;
+  cardBorderClass: string;
+  cardBgClass: string;
+  cardShadowClass: string;
+  badgeBgClass: string;
+  badgeTextClass: string;
+  badgeBorderClass: string;
+  headerTextClass: string;
+  footerTextClass: string;
+  footerHoverTextClass: string;
+  watermarkColorClass: string;
+  top1RowClass: string;
+  top1BadgeClass: string;
+}
+
+const GRADE_THEMES: Record<string, GradeTheme> = {
+  '6': {
+    // Khối 6: Xanh dương (Blue)
+    topBarClass: 'bg-blue-500 dark:bg-blue-400',
+    cardBorderClass: 'border-blue-200 dark:border-blue-800/80 hover:border-blue-400 dark:hover:border-blue-500',
+    cardBgClass: 'bg-gradient-to-b from-blue-50/70 via-white to-white dark:from-blue-950/20 dark:via-slate-900 dark:to-slate-900',
+    cardShadowClass: 'shadow-xs hover:shadow-xl hover:shadow-blue-500/10',
+    badgeBgClass: 'bg-blue-500 dark:bg-blue-600',
+    badgeTextClass: 'text-white',
+    badgeBorderClass: 'ring-1 ring-blue-500/20 dark:ring-blue-400/20',
+    headerTextClass: 'text-blue-700 dark:text-blue-300',
+    footerTextClass: 'text-blue-600 dark:text-blue-400',
+    footerHoverTextClass: 'group-hover:text-blue-700 dark:group-hover:text-blue-300',
+    watermarkColorClass: 'text-blue-500/10 dark:text-blue-400/10',
+    top1RowClass: 'bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/40',
+    top1BadgeClass: 'bg-blue-500 text-white',
+  },
+  '7': {
+    // Khối 7: Tím (Purple)
+    topBarClass: 'bg-purple-500 dark:bg-purple-400',
+    cardBorderClass: 'border-purple-200 dark:border-purple-800/80 hover:border-purple-400 dark:hover:border-purple-500',
+    cardBgClass: 'bg-gradient-to-b from-purple-50/70 via-white to-white dark:from-purple-950/20 dark:via-slate-900 dark:to-slate-900',
+    cardShadowClass: 'shadow-xs hover:shadow-xl hover:shadow-purple-500/10',
+    badgeBgClass: 'bg-purple-500 dark:bg-purple-600',
+    badgeTextClass: 'text-white',
+    badgeBorderClass: 'ring-1 ring-purple-500/20 dark:ring-purple-400/20',
+    headerTextClass: 'text-purple-700 dark:text-purple-300',
+    footerTextClass: 'text-purple-600 dark:text-purple-400',
+    footerHoverTextClass: 'group-hover:text-purple-700 dark:group-hover:text-purple-300',
+    watermarkColorClass: 'text-purple-500/10 dark:text-purple-400/10',
+    top1RowClass: 'bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200/60 dark:border-purple-800/40',
+    top1BadgeClass: 'bg-purple-500 text-white',
+  },
+  '8': {
+    // Khối 8: Xanh ngọc (Teal)
+    topBarClass: 'bg-teal-500 dark:bg-teal-400',
+    cardBorderClass: 'border-teal-200 dark:border-teal-800/80 hover:border-teal-400 dark:hover:border-teal-500',
+    cardBgClass: 'bg-gradient-to-b from-teal-50/70 via-white to-white dark:from-teal-950/20 dark:via-slate-900 dark:to-slate-900',
+    cardShadowClass: 'shadow-xs hover:shadow-xl hover:shadow-teal-500/10',
+    badgeBgClass: 'bg-teal-500 dark:bg-teal-600',
+    badgeTextClass: 'text-white',
+    badgeBorderClass: 'ring-1 ring-teal-500/20 dark:ring-teal-400/20',
+    headerTextClass: 'text-teal-700 dark:text-teal-300',
+    footerTextClass: 'text-teal-600 dark:text-teal-400',
+    footerHoverTextClass: 'group-hover:text-teal-700 dark:group-hover:text-teal-300',
+    watermarkColorClass: 'text-teal-500/10 dark:text-teal-400/10',
+    top1RowClass: 'bg-teal-50/80 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/40',
+    top1BadgeClass: 'bg-teal-500 text-white',
+  },
+  '9': {
+    // Khối 9: Đỏ san hô (Rose / Coral)
+    topBarClass: 'bg-rose-500 dark:bg-rose-400',
+    cardBorderClass: 'border-rose-200 dark:border-rose-800/80 hover:border-rose-400 dark:hover:border-rose-500',
+    cardBgClass: 'bg-gradient-to-b from-rose-50/70 via-white to-white dark:from-rose-950/20 dark:via-slate-900 dark:to-slate-900',
+    cardShadowClass: 'shadow-xs hover:shadow-xl hover:shadow-rose-500/10',
+    badgeBgClass: 'bg-rose-500 dark:bg-rose-600',
+    badgeTextClass: 'text-white',
+    badgeBorderClass: 'ring-1 ring-rose-500/20 dark:ring-rose-400/20',
+    headerTextClass: 'text-rose-700 dark:text-rose-300',
+    footerTextClass: 'text-rose-600 dark:text-rose-400',
+    footerHoverTextClass: 'group-hover:text-rose-700 dark:group-hover:text-rose-300',
+    watermarkColorClass: 'text-rose-500/10 dark:text-rose-400/10',
+    top1RowClass: 'bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/60 dark:border-rose-800/40',
+    top1BadgeClass: 'bg-rose-500 text-white',
+  },
+};
+
+const LaurelWreathWatermark = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 100 100"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
+    <path d="M50,85 C38,82 28,75 22,65 C18,58 16,50 16,40 C16,35 18,28 22,22 C20,26 19,32 19,38 C19,48 22,56 28,62 C34,68 42,72 50,75 C58,72 66,68 72,62 C78,56 81,48 81,38 C81,32 80,26 78,22 C82,28 84,35 84,40 C84,50 82,58 78,65 C72,75 62,82 50,85 Z" />
+    <path d="M30,30 C25,25 20,28 15,22 C18,30 25,32 30,30 Z M25,45 C18,42 15,46 10,42 C15,48 20,49 25,45 Z M26,60 C20,60 17,66 12,65 C18,70 23,68 26,60 Z M70,30 C75,25 80,28 85,22 C82,30 75,32 70,30 Z M75,45 C82,42 85,46 90,42 C85,48 80,49 75,45 Z M74,60 C80,60 83,66 88,65 C82,70 77,68 74,60 Z" />
+  </svg>
+);
+
 interface TopStudent {
   id: string;
   full_name: string;
@@ -219,80 +314,94 @@ export default function CompetitionOverviewPage() {
         {loadingUnits ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-56 bg-slate-100 dark:bg-slate-900 rounded-3xl animate-pulse" />
+              <div key={i} className="h-64 bg-slate-100 dark:bg-slate-900 rounded-3xl animate-pulse" />
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 items-stretch">
-            {gradeData.map(g => (
-              <div
-                key={g.grade}
-                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md hover:border-red-500/40 transition-all group"
-              >
-                <div className="space-y-4">
-                  {/* Card Header */}
-                  <div className="flex items-center justify-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <div className="w-10 h-10 rounded-2xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-black font-display text-lg flex items-center justify-center shadow-xs">
-                      {g.grade}
-                    </div>
+            {gradeData.map(g => {
+              const theme = GRADE_THEMES[g.grade] || GRADE_THEMES['6'];
+
+              return (
+                <div
+                  key={g.grade}
+                  className={`relative overflow-hidden bg-white dark:bg-slate-900 border ${theme.cardBorderClass} ${theme.cardBgClass} rounded-3xl ${theme.cardShadowClass} flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 ease-out group z-0`}
+                >
+                  {/* Top Accent Bar */}
+                  <div className={`h-1.5 w-full ${theme.topBarClass}`} />
+
+                  {/* Laurel Wreath Background Watermark */}
+                  <div className={`absolute -right-2 bottom-12 w-28 h-28 pointer-events-none select-none z-0 ${theme.watermarkColorClass}`}>
+                    <LaurelWreathWatermark className="w-full h-full" />
                   </div>
 
-                  {/* Top 3 Class List */}
-                  {g.classes.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-slate-400 space-y-1">
-                      <Clock className="w-5 h-5 mx-auto text-slate-300 dark:text-slate-700" />
-                      <p>Chưa có kết quả thi đua của {g.gradeLabel}.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {g.classes.map((cls) => {
-                        const rankBadgeClass = 
-                          cls.rank === 1
-                            ? 'bg-amber-400 text-amber-950 ring-2 ring-amber-400/30'
-                            : cls.rank === 2
-                            ? 'bg-slate-300 text-slate-900'
-                            : 'bg-amber-700 text-amber-50';
+                  <div className="p-5 pt-4 space-y-4 flex-1 flex flex-col justify-between relative z-10">
+                    <div className="space-y-4">
+                      {/* Card Header */}
+                      <div className="flex items-center justify-center border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                        <div className={`w-8 h-8 rounded-xl ${theme.badgeBgClass} ${theme.badgeTextClass} ${theme.badgeBorderClass} font-black font-display text-sm flex items-center justify-center shadow-xs`}>
+                          {g.grade}
+                        </div>
+                      </div>
 
-                        return (
-                          <div
-                            key={cls.unit_name}
-                            className={`flex items-center justify-between p-2.5 rounded-2xl transition-colors ${
+                      {/* Top 3 Class List */}
+                      {g.classes.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-slate-400 space-y-1">
+                          <Clock className="w-5 h-5 mx-auto text-slate-300 dark:text-slate-700" />
+                          <p>Chưa có kết quả thi đua của {g.gradeLabel}.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {g.classes.map((cls) => {
+                            const rankBadgeClass = 
                               cls.rank === 1
-                                ? 'bg-amber-50/60 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-800/40'
-                                : 'bg-slate-50 dark:bg-slate-800/50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs font-black shrink-0 ${rankBadgeClass}`}>
-                                {cls.rank}
-                              </span>
-                              <span className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
-                                {cls.unit_name}
-                              </span>
-                            </div>
+                                ? `${theme.top1BadgeClass} ring-2 ring-white/40 shadow-xs`
+                                : cls.rank === 2
+                                ? 'bg-slate-300 text-slate-900 dark:bg-slate-700 dark:text-slate-200'
+                                : 'bg-amber-700 text-amber-50 dark:bg-amber-800 dark:text-amber-100';
 
-                            <span className="font-mono font-black text-xs px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700 text-slate-900 dark:text-white shrink-0 ml-2">
-                              {cls.final_points} đ
-                            </span>
-                          </div>
-                        );
-                      })}
+                            return (
+                              <div
+                                key={cls.unit_name}
+                                className={`flex items-center justify-between p-2.5 rounded-2xl transition-colors ${
+                                  cls.rank === 1
+                                    ? theme.top1RowClass
+                                    : 'bg-slate-50/80 dark:bg-slate-800/40 border border-transparent'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs font-black shrink-0 ${rankBadgeClass}`}>
+                                    {cls.rank}
+                                  </span>
+                                  <span className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
+                                    {cls.unit_name}
+                                  </span>
+                                </div>
+
+                                <span className="font-mono font-black text-xs px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700 text-slate-900 dark:text-white shrink-0 ml-2">
+                                  {cls.final_points} đ
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                {/* Card Footer Link */}
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
-                  <Link
-                    to={`${ROUTES.COMPETITION_UNITS}?grade=${g.grade}`}
-                    className="flex items-center justify-between text-xs font-bold text-red-600 dark:text-red-400 group-hover:text-red-700 dark:group-hover:text-red-300"
-                  >
-                    <span>Bảng xếp hạng {g.gradeLabel}</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
+                    {/* Card Footer Link */}
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 mt-4">
+                      <Link
+                        to={`${ROUTES.COMPETITION_UNITS}?grade=${g.grade}`}
+                        className={`flex items-center justify-between text-xs font-bold ${theme.footerTextClass} ${theme.footerHoverTextClass}`}
+                      >
+                        <span>Bảng xếp hạng {g.gradeLabel}</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

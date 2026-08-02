@@ -790,70 +790,83 @@ export const competitionService = {
 
   // --- PUBLIC WEEK SUMMARY ---
   async getPublicPublishedWeeks(): Promise<CompetitionWeek[]> {
-    const { data, error } = await supabase
-      .from('competition_weeks')
-      .select('*, competition_programs(name), academic_years(name)')
-      .eq('status', 'PUBLISHED')
-      .order('week_number', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('competition_weeks')
+        .select('*, competition_programs(name), academic_years(name)')
+        .eq('status', 'PUBLISHED')
+        .order('week_number', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching public published weeks:', error);
-      throw error;
+      if (error) {
+        console.error('Error fetching public published weeks:', error);
+        return [];
+      }
+
+      return (data || []).map((w: any) => ({
+        ...w,
+        program_name: w.competition_programs?.name,
+        academic_year_name: w.academic_years?.name,
+      })) as CompetitionWeek[];
+    } catch (err) {
+      console.error('Exception fetching public published weeks:', err);
+      return [];
     }
-
-    return (data || []).map((w: any) => ({
-      ...w,
-      program_name: w.competition_programs?.name,
-      academic_year_name: w.academic_years?.name,
-    })) as CompetitionWeek[];
   },
 
   async getPublicWeekLeaderboard(weekId: string) {
-    const { data: weekData, error: weekErr } = await supabase
-      .from('competition_weeks')
-      .select('*, competition_programs(name), academic_years(name)')
-      .eq('id', weekId)
-      .eq('status', 'PUBLISHED')
-      .single();
+    try {
+      const { data: weekData, error: weekErr } = await supabase
+        .from('competition_weeks')
+        .select('*, competition_programs(name), academic_years(name)')
+        .eq('id', weekId)
+        .eq('status', 'PUBLISHED')
+        .single();
 
-    if (weekErr || !weekData) {
+      if (weekErr || !weekData) {
+        return null;
+      }
+
+      const { data: unitsData, error: unitsErr } = await supabase
+        .from('competition_week_units')
+        .select('starting_points, manual_bonus_points, manual_penalty_points, final_points_snapshot, rank_snapshot, comment, unit_id, class:classes!competition_week_units_unit_id_fkey(id, name, grade_level_id, grade_levels(name))')
+        .eq('week_id', weekId)
+        .order('rank_snapshot', { ascending: true });
+
+      if (unitsErr) {
+        console.error('Error fetching unitsData:', unitsErr);
+        return null;
+      }
+
+      const publicLeaderboard = (unitsData || []).map((u: any) => ({
+        unit_id: u.unit_id,
+        unit_name: u.class?.name || 'Chi đội',
+        grade_level_id: u.class?.grade_level_id,
+        grade_name: u.class?.grade_levels?.name,
+        starting_points: u.starting_points,
+        manual_bonus_points: u.manual_bonus_points,
+        manual_penalty_points: u.manual_penalty_points,
+        final_points: u.final_points_snapshot,
+        rank: u.rank_snapshot,
+        comment: u.comment,
+      }));
+
+      return {
+        week: {
+          id: weekData.id,
+          name: weekData.name,
+          week_number: weekData.week_number,
+          starts_on: weekData.starts_on,
+          ends_on: weekData.ends_on,
+          program_name: weekData.competition_programs?.name,
+          academic_year_name: weekData.academic_years?.name,
+          published_at: weekData.published_at,
+        },
+        leaderboard: publicLeaderboard,
+      };
+    } catch (err) {
+      console.error('Exception fetching public week leaderboard:', err);
       return null;
     }
-
-    const { data: unitsData, error: unitsErr } = await supabase
-      .from('competition_week_units')
-      .select('starting_points, manual_bonus_points, manual_penalty_points, final_points_snapshot, rank_snapshot, comment, unit_id, class:classes!competition_week_units_unit_id_fkey(id, name, grade_level_id, grade_levels(name))')
-      .eq('week_id', weekId)
-      .order('rank_snapshot', { ascending: true });
-
-    if (unitsErr) throw unitsErr;
-
-    const publicLeaderboard = (unitsData || []).map((u: any) => ({
-      unit_id: u.unit_id,
-      unit_name: u.class?.name || 'Chi đội',
-      grade_level_id: u.class?.grade_level_id,
-      grade_name: u.class?.grade_levels?.name,
-      starting_points: u.starting_points,
-      manual_bonus_points: u.manual_bonus_points,
-      manual_penalty_points: u.manual_penalty_points,
-      final_points: u.final_points_snapshot,
-      rank: u.rank_snapshot,
-      comment: u.comment,
-    }));
-
-    return {
-      week: {
-        id: weekData.id,
-        name: weekData.name,
-        week_number: weekData.week_number,
-        starts_on: weekData.starts_on,
-        ends_on: weekData.ends_on,
-        program_name: weekData.competition_programs?.name,
-        academic_year_name: weekData.academic_years?.name,
-        published_at: weekData.published_at,
-      },
-      leaderboard: publicLeaderboard,
-    };
   },
 
   // --- UNIT WEEK ADJUSTMENTS ---
@@ -1241,17 +1254,22 @@ export const competitionService = {
     unit_name: string;
     available_reward_points: number;
   }[]> {
-    const { data, error } = await supabase.rpc('get_top_student_rewards', { p_limit: limit });
-    if (error) {
-      console.error('Error calling get_top_student_rewards RPC:', error);
-      throw error;
+    try {
+      const { data, error } = await supabase.rpc('get_top_student_rewards', { p_limit: limit });
+      if (error) {
+        console.error('Error calling get_top_student_rewards RPC:', error);
+        return [];
+      }
+      return (data || []) as {
+        id: string;
+        full_name: string;
+        unit_name: string;
+        available_reward_points: number;
+      }[];
+    } catch (err) {
+      console.error('Exception calling get_top_student_rewards:', err);
+      return [];
     }
-    return (data || []) as {
-      id: string;
-      full_name: string;
-      unit_name: string;
-      available_reward_points: number;
-    }[];
   },
 
   async getActorAssignments(academicYearId?: string) {
