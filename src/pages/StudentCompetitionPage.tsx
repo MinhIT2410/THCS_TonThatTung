@@ -210,7 +210,7 @@ export default function StudentCompetitionPage() {
     <div className="min-h-screen bg-slate-50/60 pb-12 pt-4 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-5">
         {/* Navigation Breadcrumb */}
-        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400 text-center">
           <Link to={ROUTES.COMPETITION} className="hover:text-red-600 transition-colors flex items-center gap-1">
             <span>← Tổng quan Thi đua</span>
           </Link>

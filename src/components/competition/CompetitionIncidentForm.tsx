@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
   UserCheck, 
@@ -16,12 +17,25 @@ import {
   CheckCircle2, 
   Sparkles,
   Info,
-  ShieldCheck
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  User,
+  Users,
+  Building2,
+  Plus,
+  ArrowRight,
+  Check,
+  Calendar
 } from 'lucide-react';
+import { useAuth } from '../../features/auth/AuthContext';
 import { competitionService } from '../../services/competitionService';
+import { supabase } from '../../lib/supabase/client';
+import { ROUTES } from '../../config/routes';
 import { 
   CompetitionProgram, 
   CompetitionRule, 
+  CompetitionWeek,
   COMPETITION_CATEGORY_LABELS, 
   COMPETITION_SCOPE_LABELS 
 } from '../../types/competition';
@@ -30,21 +44,89 @@ interface CompetitionIncidentFormProps {
   onNavigateToPrograms?: () => void;
 }
 
+interface StudentOption {
+  id: string;
+  full_name: string;
+  student_code?: string | null;
+  avatar_url?: string | null;
+  unit?: {
+    class_id: string;
+    class_name: string;
+    academic_year_name?: string;
+  } | null;
+}
+
+interface ClassOption {
+  id: string;
+  name: string;
+  grade_level_id?: string;
+  academic_year_id?: string;
+}
+
+interface SelectedStudent {
+  id: string;
+  full_name: string;
+  student_code?: string | null;
+  class_id?: string | null;
+  class_name?: string | null;
+}
+
 export default function CompetitionIncidentForm({ onNavigateToPrograms }: CompetitionIncidentFormProps) {
-  const [programs, setPrograms] = useState<CompetitionProgram[]>([]);
-  const [rules, setRules] = useState<CompetitionRule[]>([]);
-  const [selectedProgramId, setSelectedProgramId] = useState<string>('');
+  const navigate = useNavigate();
+  const { user, hasAnyRole } = useAuth();
+
+  // Target Mode state: 'STUDENT' (Cá nhân) vs 'UNIT' (Chi đội / Tập thể)
+  const [targetMode, setTargetMode] = useState<'STUDENT' | 'UNIT'>('STUDENT');
+
+  // System auto-detected state
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [activeProgram, setActiveProgram] = useState<CompetitionProgram | null>(null);
+  const [openWeek, setOpenWeek] = useState<CompetitionWeek | null>(null);
+  const [noProgramOrWeekError, setNoProgramOrWeekError] = useState<string | null>(null);
+
+  // User permission scope state
+  const [userScope, setUserScope] = useState<{
+    isAdminOrStaff: boolean;
+    isSupervisor: boolean;
+    isRedStar: boolean;
+    isLienDoiCommand: boolean;
+    isHomeroomTeacher: boolean;
+    assignedClassIds: string[];
+    assignedGradeLevelIds: string[];
+  }>({
+    isAdminOrStaff: false,
+    isSupervisor: false,
+    isRedStar: false,
+    isLienDoiCommand: false,
+    isHomeroomTeacher: false,
+    assignedClassIds: [],
+    assignedGradeLevelIds: [],
+  });
+
+  // Master Data: Rules & Classes
+  const [allRules, setAllRules] = useState<CompetitionRule[]>([]);
+  const [allClasses, setAllClasses] = useState<ClassOption[]>([]);
+  const [gradeLevels, setGradeLevels] = useState<{ id: string; name: string }[]>([]);
+
+  // Selection State - Individual Mode
+  const [selectedStudents, setSelectedStudents] = useState<SelectedStudent[]>([]);
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  const [studentSearchResults, setStudentSearchResults] = useState<StudentOption[]>([]);
+  const [isSearchingStudents, setIsSearchingStudents] = useState(false);
+  const studentSearchInputRef = useRef<HTMLInputElement>(null);
+
+  // Selection State - Collective (Unit) Mode
+  const [selectedGradeId, setSelectedGradeId] = useState<string>('ALL');
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+
+  // Behavior / Rule Selection
   const [selectedRuleId, setSelectedRuleId] = useState<string>('');
   const [selectedRule, setSelectedRule] = useState<CompetitionRule | null>(null);
+  const [showAllBehaviors, setShowAllBehaviors] = useState(false);
+  const [behaviorSearchTerm, setBehaviorSearchTerm] = useState('');
 
-  // Student search state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-  const [unitInfo, setUnitInfo] = useState<{ has_unit: boolean; class_id?: string; class_name?: string; message?: string } | null>(null);
-
-  // Form fields
+  // Additional Information Collapsible
+  const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
   const [occurredAt, setOccurredAt] = useState<string>(() => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -54,114 +136,339 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
   const [description, setDescription] = useState('');
   const [evidenceNote, setEvidenceNote] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
+  const [evidenceFiles, setEvidenceFiles] = useState<{ file: File; previewUrl: string }[]>([]);
 
-  // Image uploads
-  const [evidenceFiles, setEvidenceFiles] = useState<{ file: File; previewUrl: string; uploadedUrl?: string }[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-
-  // Form submission state
+  // Submission Progress & Messages
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState<{ current: number; total: number } | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error' | 'warning'; text: string } | null>(null);
+  const [lastSubmittedSuccess, setLastSubmittedSuccess] = useState<boolean>(false);
 
-  // Load programs on mount
+  // ---------------------------------------------------------------------------
+  // 1. INITIAL LOAD & AUTO-DETERMINE PROGRAM, WEEK, PERMISSIONS, AND CLASSES
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    async function loadData() {
+    async function initData() {
       try {
-        const progs = await competitionService.getPrograms();
-        const activeProgs = progs.filter(p => p.is_active);
-        setPrograms(activeProgs);
-        if (activeProgs.length > 0) {
-          setSelectedProgramId(activeProgs[0].id);
+        setLoadingInitial(true);
+
+        // A. Determine User Roles & Scopes
+        const isAdminStaff = hasAnyRole([
+          'SUPER_ADMIN',
+          'ADMIN',
+          'CONTENT_EDITOR',
+          'PRINCIPAL',
+          'VICE_PRINCIPAL',
+          'STAFF',
+          'COMPETITION_RECORD'
+        ]);
+
+        let isSupervisor = false;
+        let isRedStar = false;
+        let isLienDoiCommand = false;
+        let isHomeroom = false;
+        const assignedClassIds: string[] = [];
+        const assignedGradeLevelIds: string[] = [];
+
+        if (user) {
+          // Check Actor Assignments
+          const actorAssignments = await competitionService.getMyActorAssignments();
+          (actorAssignments || []).forEach((a: any) => {
+            if (a.is_active !== false) {
+              if (a.assignment_type === 'SUPERVISOR') isSupervisor = true;
+              if (a.assignment_type === 'LIEN_DOI_COMMAND') isLienDoiCommand = true;
+              if (a.assignment_type === 'RED_STAR') {
+                isRedStar = true;
+                if (a.assigned_class_id) assignedClassIds.push(a.assigned_class_id);
+                if (a.assigned_grade_level_id) assignedGradeLevelIds.push(a.assigned_grade_level_id);
+              }
+            }
+          });
+
+          // Check Homeroom Assignments
+          const { data: homeroomData } = await supabase
+            .from('homeroom_assignments')
+            .select('class_id')
+            .eq('teacher_id', user.id)
+            .eq('is_active', true);
+
+          if (homeroomData && homeroomData.length > 0) {
+            isHomeroom = true;
+            homeroomData.forEach((h: any) => {
+              if (h.class_id && !assignedClassIds.includes(h.class_id)) {
+                assignedClassIds.push(h.class_id);
+              }
+            });
+          }
         }
-      } catch (err) {
-        console.error('Failed to load programs:', err);
-      }
-    }
-    loadData();
-  }, []);
 
-  // Load rules when program changes
-  useEffect(() => {
-    if (!selectedProgramId) {
-      setRules([]);
-      setSelectedRuleId('');
-      setSelectedRule(null);
-      return;
-    }
+        const calculatedScope = {
+          isAdminOrStaff: isAdminStaff,
+          isSupervisor,
+          isRedStar,
+          isLienDoiCommand,
+          isHomeroomTeacher: isHomeroom,
+          assignedClassIds,
+          assignedGradeLevelIds,
+        };
+        setUserScope(calculatedScope);
 
-    async function loadRules() {
-      try {
-        const rList = await competitionService.getRules(selectedProgramId);
-        const activeRules = rList.filter(r => r.is_active);
-        setRules(activeRules);
-        if (activeRules.length > 0) {
-          setSelectedRuleId(activeRules[0].id);
-          setSelectedRule(activeRules[0]);
-          setTitle(activeRules[0].name);
+        // Default Mode selection:
+        // SUPERVISOR defaults to 'UNIT'; others default to 'STUDENT'
+        if (isSupervisor && !isAdminStaff && !isRedStar && !isHomeroom) {
+          setTargetMode('UNIT');
         } else {
-          setSelectedRuleId('');
-          setSelectedRule(null);
-          setTitle('');
+          setTargetMode('STUDENT');
         }
-      } catch (err) {
-        console.error('Failed to load rules:', err);
+
+        // B. Auto-determine Active Program
+        const programs = await competitionService.getPrograms(true);
+        const activeProgs = programs.filter(p => p.is_active);
+
+        if (activeProgs.length === 0) {
+          setActiveProgram(null);
+          setOpenWeek(null);
+          setNoProgramOrWeekError('Hiện tại chưa có chương trình thi đua nào đang hoạt động.');
+          setLoadingInitial(false);
+          return;
+        }
+
+        const prog = activeProgs[0];
+        setActiveProgram(prog);
+
+        // C. Auto-determine Open Week for active program
+        const weeks = await competitionService.getWeeks({ programId: prog.id });
+        const todayStr = new Date().toISOString().split('T')[0];
+        const activeWeek = weeks.find(w => w.status === 'OPEN') ||
+                           weeks.find(w => w.starts_on <= todayStr && w.ends_on >= todayStr);
+
+        if (!activeWeek) {
+          setOpenWeek(null);
+          setNoProgramOrWeekError(`Chương trình "${prog.name}" hiện chưa có tuần thi đua nào đang mở. Vui lòng liên hệ Quản trị viên.`);
+        } else {
+          setOpenWeek(activeWeek);
+          setNoProgramOrWeekError(null);
+        }
+
+        // D. Load active rules for this program
+        const rules = await competitionService.getRules(prog.id, true);
+        const activeRules = rules.filter(r => r.is_active);
+        setAllRules(activeRules);
+
+        // E. Load Classes
+        const fetchedClasses = await competitionService.getClasses();
+        setAllClasses(fetchedClasses);
+
+        // Extract Grade Levels
+        const gradesMap = new Map<string, string>();
+        fetchedClasses.forEach((c: any) => {
+          if (c.grade_levels) {
+            gradesMap.set(c.grade_levels.id || c.grade_level_id, c.grade_levels.name);
+          }
+        });
+        const gList = Array.from(gradesMap.entries()).map(([id, name]) => ({ id, name }));
+        setGradeLevels(gList);
+
+      } catch (err: any) {
+        console.error('Failed to initialize incident form:', err);
+        setNoProgramOrWeekError('Không thể tải dữ liệu khởi tạo thi đua. Vui lòng thử lại sau.');
+      } finally {
+        setLoadingInitial(false);
       }
     }
-    loadRules();
-  }, [selectedProgramId]);
 
-  // Handle rule change
-  const handleRuleChange = (ruleId: string) => {
-    setSelectedRuleId(ruleId);
-    const r = rules.find(item => item.id === ruleId) || null;
-    setSelectedRule(r);
-    if (r) {
-      setTitle(r.name);
+    initData();
+  }, [user, hasAnyRole]);
+
+  // ---------------------------------------------------------------------------
+  // 2. FILTERED CLASSES & STUDENTS ACCORDING TO USER PERMISSIONS
+  // ---------------------------------------------------------------------------
+  const availableClasses = useMemo(() => {
+    // If Admin/Staff/Supervisor/BCH, show all classes
+    if (userScope.isAdminOrStaff || userScope.isSupervisor || userScope.isLienDoiCommand) {
+      if (selectedGradeId === 'ALL') return allClasses;
+      return allClasses.filter(c => c.grade_level_id === selectedGradeId);
     }
-  };
 
-  // Student search effect
+    // Restrict to assignedClassIds or assignedGradeLevelIds
+    let filtered = allClasses;
+    if (userScope.assignedClassIds.length > 0) {
+      filtered = filtered.filter(c => userScope.assignedClassIds.includes(c.id));
+    } else if (userScope.assignedGradeLevelIds.length > 0) {
+      filtered = filtered.filter(c => c.grade_level_id && userScope.assignedGradeLevelIds.includes(c.grade_level_id));
+    }
+
+    if (selectedGradeId !== 'ALL') {
+      filtered = filtered.filter(c => c.grade_level_id === selectedGradeId);
+    }
+
+    return filtered;
+  }, [allClasses, userScope, selectedGradeId]);
+
+  // Set default class if available classes exist and none selected
   useEffect(() => {
-    if (!searchTerm || searchTerm.trim().length < 2) {
-      setSearchResults([]);
+    if (availableClasses.length > 0 && (!selectedClassId || !availableClasses.some(c => c.id === selectedClassId))) {
+      setSelectedClassId(availableClasses[0].id);
+    }
+  }, [availableClasses, selectedClassId]);
+
+  // ---------------------------------------------------------------------------
+  // 3. STUDENT SEARCH WITH DEBOUNCE & SCOPE FILTERING
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!studentSearchTerm || studentSearchTerm.trim().length < 2) {
+      setStudentSearchResults([]);
       return;
     }
 
     const timer = setTimeout(async () => {
-      setIsSearching(true);
+      setIsSearchingStudents(true);
       try {
-        const results = await competitionService.searchStudents(searchTerm);
-        setSearchResults(results);
+        const results = await competitionService.searchStudents(studentSearchTerm);
+
+        // Filter search results according to scope if needed
+        let filtered = results;
+        if (!userScope.isAdminOrStaff && !userScope.isSupervisor && !userScope.isLienDoiCommand) {
+          if (userScope.assignedClassIds.length > 0) {
+            filtered = results.filter(s => s.unit?.class_id && userScope.assignedClassIds.includes(s.unit.class_id));
+          } else if (userScope.assignedGradeLevelIds.length > 0) {
+            // keep if student's class belongs to assigned grade levels
+            const allowedClassIds = allClasses
+              .filter(c => c.grade_level_id && userScope.assignedGradeLevelIds.includes(c.grade_level_id))
+              .map(c => c.id);
+            filtered = results.filter(s => s.unit?.class_id && allowedClassIds.includes(s.unit.class_id));
+          }
+        }
+
+        setStudentSearchResults(filtered);
       } catch (err) {
-        console.error('Search error:', err);
+        console.error('Student search error:', err);
       } finally {
-        setIsSearching(false);
+        setIsSearchingStudents(false);
       }
-    }, 300);
+    }, 350);
 
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [studentSearchTerm, userScope, allClasses]);
 
-  // Select student
-  const handleSelectStudent = async (student: any) => {
-    setSelectedStudent(student);
-    setSearchTerm('');
-    setSearchResults([]);
+  const handleSelectStudent = (s: StudentOption) => {
+    if (selectedStudents.some(item => item.id === s.id)) {
+      setStudentSearchTerm('');
+      setStudentSearchResults([]);
+      return;
+    }
 
-    // Check unit
-    if (student.unit?.class_id) {
-      setUnitInfo({
-        has_unit: true,
-        class_id: student.unit.class_id,
-        class_name: student.unit.class_name,
+    setSelectedStudents(prev => [
+      ...prev,
+      {
+        id: s.id,
+        full_name: s.full_name,
+        student_code: s.student_code,
+        class_id: s.unit?.class_id || null,
+        class_name: s.unit?.class_name || null,
+      },
+    ]);
+    setStudentSearchTerm('');
+    setStudentSearchResults([]);
+  };
+
+  const handleRemoveStudent = (studentId: string) => {
+    setSelectedStudents(prev => prev.filter(s => s.id !== studentId));
+  };
+
+  // ---------------------------------------------------------------------------
+  // 4. DYNAMIC RULES MATCHING & FEATURED BEHAVIORS
+  // ---------------------------------------------------------------------------
+  const { featuredRules, scopeFilteredRules } = useMemo(() => {
+    const scopeFiltered = allRules.filter(r => 
+      targetMode === 'STUDENT'
+        ? (r.effect_scope === 'STUDENT_ONLY' || r.effect_scope === 'BOTH')
+        : (r.effect_scope === 'UNIT_ONLY' || r.effect_scope === 'BOTH')
+    );
+
+    const studentKeywords = [
+      ['trễ', 'muộn', 'late', 'đi học trễ'],
+      ['đồng phục', 'trang phục'],
+      ['khăn quàng', 'khăn'],
+      ['xả rác', 'rác', 'vệ sinh cá nhân'],
+      ['nói chuyện', 'trật tự', 'mất trật tự'],
+      ['người tốt', 'việc tốt', 'khen thưởng', 'tuyên dương'],
+      ['nội quy', 'vi phạm'],
+    ];
+
+    const unitKeywords = [
+      ['vệ sinh chưa sạch', 'vệ sinh', 'sạch'],
+      ['trực nhật'],
+      ['trực lớp', 'trực'],
+      ['mất trật tự tập thể', 'trật tự'],
+      ['nền nếp', 'vi phạm nền nếp'],
+      ['nhiệm vụ', 'không hoàn thành'],
+      ['thực hiện tốt', 'tập thể tốt'],
+    ];
+
+    const targetKeywords = targetMode === 'STUDENT' ? studentKeywords : unitKeywords;
+    const featured: CompetitionRule[] = [];
+    const usedIds = new Set<string>();
+
+    for (const group of targetKeywords) {
+      const match = scopeFiltered.find(r => {
+        if (usedIds.has(r.id)) return false;
+        const combinedText = `${r.name} ${r.code} ${r.description || ''}`.toLowerCase();
+        return group.some(kw => combinedText.includes(kw));
       });
-    } else {
-      const res = await competitionService.getStudentCurrentUnit(student.id);
-      setUnitInfo(res);
+
+      if (match) {
+        featured.push(match);
+        usedIds.add(match.id);
+      }
+    }
+
+    // Backfill up to 6 featured rules if keyword matches are fewer
+    if (featured.length < 6) {
+      for (const r of scopeFiltered) {
+        if (!usedIds.has(r.id) && featured.length < 6) {
+          featured.push(r);
+          usedIds.add(r.id);
+        }
+      }
+    }
+
+    return { featuredRules: featured, scopeFilteredRules: scopeFiltered };
+  }, [allRules, targetMode]);
+
+  // Automatically select first rule if none selected when rules load
+  useEffect(() => {
+    if (featuredRules.length > 0 && !selectedRuleId) {
+      handleSelectRule(featuredRules[0]);
+    } else if (scopeFilteredRules.length > 0 && !selectedRuleId) {
+      handleSelectRule(scopeFilteredRules[0]);
+    }
+  }, [featuredRules, scopeFilteredRules]);
+
+  const handleSelectRule = (rule: CompetitionRule) => {
+    setSelectedRuleId(rule.id);
+    setSelectedRule(rule);
+    setTitle(rule.name);
+
+    // Auto-expand additional info if rule requires evidence
+    if (rule.requires_evidence) {
+      setShowAdditionalInfo(true);
     }
   };
 
-  // Upload file handler
+  // Search filtered rules for "Xem tất cả"
+  const searchedRules = useMemo(() => {
+    if (!behaviorSearchTerm.trim()) return scopeFilteredRules;
+    const term = behaviorSearchTerm.trim().toLowerCase();
+    return scopeFilteredRules.filter(
+      r => r.name.toLowerCase().includes(term) || r.code.toLowerCase().includes(term)
+    );
+  }, [scopeFilteredRules, behaviorSearchTerm]);
+
+  // ---------------------------------------------------------------------------
+  // 5. FILE SELECTION & REMOVAL
+  // ---------------------------------------------------------------------------
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
@@ -176,36 +483,48 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
     setEvidenceFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Submit form
+  // ---------------------------------------------------------------------------
+  // 6. VALIDATION & SUBMISSION HANDLER
+  // ---------------------------------------------------------------------------
+  const isEvidenceRequired = selectedRule?.requires_evidence ?? false;
+  const hasEvidenceProvided = evidenceFiles.length > 0 || externalUrl.trim().length > 0;
+
+  const canSubmit = useMemo(() => {
+    if (loadingInitial || !activeProgram || !openWeek || noProgramOrWeekError) return false;
+    if (!selectedRuleId || !selectedRule) return false;
+    if (isEvidenceRequired && !hasEvidenceProvided) return false;
+
+    if (targetMode === 'STUDENT') {
+      return selectedStudents.length > 0;
+    } else {
+      return !!selectedClassId;
+    }
+  }, [
+    loadingInitial,
+    activeProgram,
+    openWeek,
+    noProgramOrWeekError,
+    selectedRuleId,
+    selectedRule,
+    isEvidenceRequired,
+    hasEvidenceProvided,
+    targetMode,
+    selectedStudents,
+    selectedClassId,
+  ]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setToastMessage(null);
+    setLastSubmittedSuccess(false);
 
-    if (!selectedProgramId) {
-      setToastMessage({ type: 'error', text: 'Vui lòng chọn chương trình thi đua.' });
-      return;
-    }
-    if (!selectedRuleId || !selectedRule) {
-      setToastMessage({ type: 'error', text: 'Vui lòng chọn quy tắc hành vi.' });
-      return;
-    }
+    if (!canSubmit || !activeProgram || !selectedRule) return;
 
-    // Check scope requirements
-    if (
-      (selectedRule.effect_scope === 'STUDENT_ONLY' || selectedRule.effect_scope === 'BOTH') &&
-      !selectedStudent
-    ) {
-      setToastMessage({ type: 'error', text: 'Quy tắc này yêu cầu chọn Đội viên.' });
-      return;
-    }
-
-    if (
-      (selectedRule.effect_scope === 'UNIT_ONLY' || selectedRule.effect_scope === 'BOTH') &&
-      !unitInfo?.class_id
-    ) {
+    if (isEvidenceRequired && !hasEvidenceProvided) {
+      setShowAdditionalInfo(true);
       setToastMessage({
         type: 'error',
-        text: 'Đội viên chưa được phân vào Chi đội. Không thể áp dụng quy tắc ảnh hưởng Chi đội.',
+        text: 'Quy tắc này bắt buộc phải có minh chứng (hình ảnh hoặc liên kết). Vui lòng tải đính kèm.',
       });
       return;
     }
@@ -213,14 +532,12 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
     try {
       setIsSubmitting(true);
 
-      // Upload evidence files if any
+      // Upload evidence files
       const evidenceItems: any[] = [];
-
       if (evidenceFiles.length > 0) {
         setIsUploading(true);
         for (let i = 0; i < evidenceFiles.length; i++) {
-          const item = evidenceFiles[i];
-          const publicUrl = await competitionService.uploadEvidenceImage(item.file);
+          const publicUrl = await competitionService.uploadEvidenceImage(evidenceFiles[i].file);
           evidenceItems.push({
             evidence_type: 'IMAGE',
             file_url: publicUrl,
@@ -238,55 +555,194 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
         });
       }
 
-      const res = await competitionService.createIncident({
-        program_id: selectedProgramId,
-        rule_id: selectedRuleId,
-        student_id: selectedStudent?.id || null,
-        unit_id: unitInfo?.class_id || null,
+      const basePayload = {
+        program_id: activeProgram.id,
+        rule_id: selectedRule.id,
         occurred_at: new Date(occurredAt).toISOString(),
         title: title.trim() || selectedRule.name,
         description: description.trim() || null,
         evidence_note: evidenceNote.trim() || null,
         evidence_items: evidenceItems,
-      });
+      };
 
-      setToastMessage({
-        type: 'success',
-        text: res.message || 'Ghi nhận sự việc thi đua thành công!',
-      });
+      if (targetMode === 'UNIT') {
+        // Submit single unit record
+        await competitionService.createIncident({
+          ...basePayload,
+          unit_id: selectedClassId,
+          student_id: null,
+        });
 
-      // Reset form
-      setSelectedStudent(null);
-      setUnitInfo(null);
-      setDescription('');
-      setEvidenceNote('');
-      setExternalUrl('');
-      setEvidenceFiles([]);
+        const selectedClassName = allClasses.find(c => c.id === selectedClassId)?.name || 'Chi đội';
+        setToastMessage({
+          type: 'success',
+          text: `Đã gửi ghi nhận cho Lớp ${selectedClassName} và chuyển sang Chờ duyệt.`,
+        });
+        setLastSubmittedSuccess(true);
+
+        // Clear unit-specific fields
+        setDescription('');
+        setEvidenceNote('');
+        setExternalUrl('');
+        setEvidenceFiles([]);
+
+      } else {
+        // Individual Mode: loop through selected students sequentially
+        const total = selectedStudents.length;
+        setSubmitProgress({ current: 0, total });
+
+        let successCount = 0;
+        let failCount = 0;
+        const failedStudents: SelectedStudent[] = [];
+
+        for (let i = 0; i < selectedStudents.length; i++) {
+          const student = selectedStudents[i];
+          setSubmitProgress({ current: i + 1, total });
+
+          try {
+            await competitionService.createIncident({
+              ...basePayload,
+              student_id: student.id,
+              unit_id: student.class_id || null,
+            });
+            successCount++;
+          } catch (err) {
+            console.error(`Failed to create incident for student ${student.full_name}:`, err);
+            failCount++;
+            failedStudents.push(student);
+          }
+        }
+
+        setSubmitProgress(null);
+
+        if (failCount === 0) {
+          setToastMessage({
+            type: 'success',
+            text: `Đã gửi ${successCount} ghi nhận và chuyển sang Chờ duyệt.`,
+          });
+          setLastSubmittedSuccess(true);
+          setSelectedStudents([]);
+          setDescription('');
+          setEvidenceNote('');
+          setExternalUrl('');
+          setEvidenceFiles([]);
+        } else if (successCount > 0) {
+          setToastMessage({
+            type: 'warning',
+            text: `Đã gửi thành công ${successCount}/${total} ghi nhận. Có ${failCount} học sinh bị lỗi.`,
+          });
+          setSelectedStudents(failedStudents); // keep failed students for retry
+        } else {
+          setToastMessage({
+            type: 'error',
+            text: 'Không thể tạo ghi nhận cho các học sinh đã chọn. Vui lòng kiểm tra lại.',
+          });
+        }
+      }
     } catch (err: any) {
       console.error('Submit error:', err);
       setToastMessage({
         type: 'error',
-        text: err.message || 'Có lỗi xảy ra khi ghi nhận sự việc.',
+        text: err.message || 'Có lỗi xảy ra khi thực hiện ghi nhận.',
       });
     } finally {
       setIsSubmitting(false);
+      setIsUploading(false);
+      setSubmitProgress(null);
     }
   };
 
+  // Label for submit button
+  const submitButtonLabel = useMemo(() => {
+    if (targetMode === 'STUDENT') {
+      if (selectedStudents.length === 0) return 'Chọn học sinh để ghi nhận';
+      if (selectedStudents.length === 1) return `Ghi nhận cho ${selectedStudents[0].full_name}`;
+      return `Ghi nhận cho ${selectedStudents.length} học sinh`;
+    } else {
+      if (!selectedClassId) return 'Chọn Chi đội để ghi nhận';
+      const cName = allClasses.find(c => c.id === selectedClassId)?.name;
+      return cName ? `Ghi nhận cho Lớp ${cName}` : 'Ghi nhận cho Chi đội';
+    }
+  }, [targetMode, selectedStudents, selectedClassId, allClasses]);
+
+  // Loading state
+  if (loadingInitial) {
+    return (
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
+        <div className="w-8 h-8 border-3 border-red-600 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs text-slate-500 font-medium">Đang tự động xác định chương trình & tuần thi đua...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 font-sans">
+    <div className="max-w-4xl mx-auto w-full space-y-6 font-sans">
+      {/* Active Program & Week Banner or Error Banner */}
+      {noProgramOrWeekError ? (
+        <div className="p-5 rounded-3xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-2xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold">{noProgramOrWeekError}</p>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
+                Ghi nhận thi đua tạm thời bị khóa cho đến khi chương trình hoặc tuần thi đua mới được kích hoạt.
+              </p>
+            </div>
+          </div>
+          {onNavigateToPrograms && (
+            <button
+              type="button"
+              onClick={onNavigateToPrograms}
+              className="px-4 py-2 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm shrink-0 cursor-pointer"
+            >
+              Mở tuần thi đua
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="p-3.5 px-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <span className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
+              <Award className="w-4 h-4 text-red-600" />
+              <span>Chương trình:</span>
+              <span className="text-red-600 dark:text-red-400">{activeProgram?.name}</span>
+            </span>
+            <span className="hidden sm:inline text-slate-300 dark:text-slate-600">•</span>
+            <span className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              <span>Tuần thi đua:</span>
+              <span className="font-bold text-slate-900 dark:text-white">{openWeek?.name || `Tuần ${openWeek?.week_number}`}</span>
+              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold">
+                Đang mở
+              </span>
+            </span>
+          </div>
+          {userScope.isRedStar && (
+            <span className="px-2.5 py-0.5 rounded-lg bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 font-bold text-[11px]">
+              ⭐ Quyền Sao Đỏ
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Toast Alert */}
       {toastMessage && (
         <div
-          className={`p-4 rounded-2xl border flex items-center justify-between text-sm font-medium ${
+          className={`p-4 rounded-2xl border flex items-center justify-between text-xs sm:text-sm font-medium transition-all ${
             toastMessage.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+              : toastMessage.type === 'warning'
+              ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
               : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
           }`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {toastMessage.type === 'success' ? (
               <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            ) : toastMessage.type === 'warning' ? (
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
             ) : (
               <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
             )}
@@ -301,282 +757,446 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Form Controls */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Section 1: Program & Behavior Selection */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-              <Award className="w-5 h-5 text-red-600" />
-              1. Chọn Chương Trình & Quy Tắc Thi Đua
-            </h3>
+      {/* SUCCESS ACTION BANNER FOR QUICK REPEAT */}
+      {lastSubmittedSuccess && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+            <Check className="w-4 h-4 text-emerald-600" />
+            Đã sẵn sàng để tiếp tục ghi nhận hành vi "{selectedRule?.name}"
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setLastSubmittedSuccess(false);
+                if (targetMode === 'STUDENT') {
+                  setTimeout(() => studentSearchInputRef.current?.focus(), 100);
+                }
+              }}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors cursor-pointer"
+            >
+              + Ghi nhận tiếp
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.COMPETITION)}
+              className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-300 transition-colors cursor-pointer"
+            >
+              Về trang Thi đua
+            </button>
+          </div>
+        </div>
+      )}
 
-            {programs.length === 0 ? (
-              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Chưa có chương trình thi đua đang hoạt động.</span>
-                </div>
-                {onNavigateToPrograms && (
-                  <button
-                    type="button"
-                    onClick={onNavigateToPrograms}
-                    className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm shrink-0 cursor-pointer"
-                  >
-                    Tạo chương trình
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                    Chương trình thi đua <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={selectedProgramId}
-                    onChange={e => setSelectedProgramId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none cursor-pointer"
-                    required
-                  >
-                    <option value="">-- Chọn chương trình --</option>
-                    {programs.map(p => (
-                      <option key={p.id} value={p.id}>
-                        [{p.code}] {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                    Quy tắc thi đua / Hành vi <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={selectedRuleId}
-                    onChange={e => handleRuleChange(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none cursor-pointer"
-                    required
-                  >
-                    <option value="">-- Chọn quy tắc --</option>
-                    {rules.map(r => (
-                      <option key={r.id} value={r.id}>
-                        [{r.code}] {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {selectedRule && (
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-2 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-md bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 font-bold">
-                    {COMPETITION_CATEGORY_LABELS[selectedRule.category] || selectedRule.category}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-medium">
-                    Phạm vi: {COMPETITION_SCOPE_LABELS[selectedRule.effect_scope] || selectedRule.effect_scope}
-                  </span>
-                  {selectedRule.requires_approval ? (
-                    <span className="px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-medium flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      Yêu cầu kiểm duyệt
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-medium flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" />
-                      Duyệt tự động
-                    </span>
-                  )}
-                </div>
-
-                {selectedRule.description && (
-                  <p className="text-slate-600 dark:text-slate-300 italic pt-1">
-                    "{selectedRule.description}"
-                  </p>
-                )}
-              </div>
-            )}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Step 1: Chọn đối tượng ghi nhận */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-red-600" />
+              1. Chọn Đối Tượng Ghi Nhận
+            </span>
+            <span className="text-[11px] text-slate-400">Thao tác nhanh, chọn phương thức bên dưới</span>
           </div>
 
-          {/* Section 2: Student Search & Automatic Class Resolution */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-              <UserCheck className="w-5 h-5 text-blue-600" />
-              2. Tìm Đội Viên & Xác Định Chi Đội
-            </h3>
+          <div className="grid grid-cols-2 gap-3 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
+            <button
+              type="button"
+              onClick={() => {
+                setTargetMode('STUDENT');
+                setSelectedRuleId('');
+                setSelectedRule(null);
+              }}
+              className={`py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                targetMode === 'STUDENT'
+                  ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-md scale-[1.01]'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span>Cá nhân Đội viên</span>
+            </button>
 
-            {/* Selected Student Card */}
-            {selectedStudent ? (
-              <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center">
-                    {selectedStudent.full_name?.charAt(0) || 'S'}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                      {selectedStudent.full_name}
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Mã Đội viên: <span className="font-mono">{selectedStudent.student_code || 'Chưa cập nhật'}</span>
-                    </p>
-                    {unitInfo?.has_unit ? (
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-semibold">
-                        Chi đội / Lớp: {unitInfo.class_name}
-                      </span>
-                    ) : (
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[11px] font-semibold">
-                        ⚠️ Học sinh chưa được phân vào lớp trong năm học hiện tại.
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedStudent(null);
-                    setUnitInfo(null);
-                  }}
-                  className="p-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900 text-slate-500 transition-colors cursor-pointer"
-                  title="Đổi đội viên"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setTargetMode('UNIT');
+                setSelectedRuleId('');
+                setSelectedRule(null);
+              }}
+              className={`py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                targetMode === 'UNIT'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-md scale-[1.01]'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Chi đội / Tập thể</span>
+            </button>
+          </div>
+
+          {/* Target Selector */}
+          {targetMode === 'STUDENT' ? (
+            <div className="space-y-3 pt-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Tìm theo tên hoặc mã học sinh <span className="text-red-500">*</span>
+              </label>
+
               <div className="relative">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Tra cứu học sinh / Đội viên (Nhập tên hoặc Mã số)
-                </label>
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    placeholder="VD: Nguyễn Văn A hoặc HS202401..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                  />
-                  {isSearching && (
-                    <span className="absolute right-3.5 top-2.5 text-xs text-slate-400 animate-pulse">
-                      Đang tìm...
-                    </span>
-                  )}
-                </div>
+                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  ref={studentSearchInputRef}
+                  type="text"
+                  value={studentSearchTerm}
+                  onChange={e => setStudentSearchTerm(e.target.value)}
+                  placeholder="Nhập tên hoặc Mã số (VD: Nguyễn Văn A, 2025...)"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none"
+                />
+                {isSearchingStudents && (
+                  <span className="absolute right-3.5 top-2.5 text-xs text-slate-400 animate-pulse">
+                    Đang tìm...
+                  </span>
+                )}
 
                 {/* Dropdown Results */}
-                {searchResults.length > 0 && (
+                {studentSearchResults.length > 0 && (
                   <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-                    {searchResults.map(s => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => handleSelectStudent(s)}
-                        className="w-full text-left p-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between cursor-pointer"
-                      >
-                        <div>
-                          <div className="font-bold text-sm text-slate-900 dark:text-white">
-                            {s.full_name}
+                    {studentSearchResults.map(s => {
+                      const isAlreadySelected = selectedStudents.some(item => item.id === s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => handleSelectStudent(s)}
+                          disabled={isAlreadySelected}
+                          className={`w-full text-left p-3 transition-colors flex items-center justify-between cursor-pointer ${
+                            isAlreadySelected
+                              ? 'bg-slate-100 dark:bg-slate-800/50 opacity-60'
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <div>
+                            <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                              <span>{s.full_name}</span>
+                              {isAlreadySelected && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold">
+                                  Đã chọn
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-400 font-mono mt-0.5">
+                              {s.unit?.class_name ? `Lớp ${s.unit.class_name}` : 'Chưa phân lớp'} • Mã HS: {s.student_code || '---'}
+                            </div>
                           </div>
-                          <div className="text-xs text-slate-400 font-mono">
-                            Mã: {s.student_code || 'Chưa cập nhật'}
-                          </div>
-                        </div>
-                        {s.unit?.class_name ? (
-                          <div className="text-right">
-                            <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold block">
-                              Lớp {s.unit.class_name}
-                            </span>
-                            {s.unit.academic_year_name && (
-                              <span className="text-[10px] text-slate-400 block mt-0.5">
-                                {s.unit.academic_year_name}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 font-medium">
-                            Chưa phân lớp
-                          </span>
-                        )}
-                      </button>
-                    ))}
+                          <Plus className="w-4 h-4 text-slate-400" />
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
-            )}
+
+              {/* Selected Students Chips */}
+              {selectedStudents.length > 0 ? (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
+                    <span>Đã chọn ({selectedStudents.length} học sinh):</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStudents([])}
+                      className="text-red-600 hover:underline cursor-pointer"
+                    >
+                      Xóa tất cả
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedStudents.map(s => (
+                      <div
+                        key={s.id}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800/60 text-xs text-red-900 dark:text-red-200 font-semibold"
+                      >
+                        <User className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                        <span>{s.full_name}</span>
+                        {s.class_name && (
+                          <span className="text-[10px] opacity-75 font-mono">({s.class_name})</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveStudent(s.id)}
+                          className="p-0.5 rounded-md hover:bg-red-200 dark:hover:bg-red-900 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-400 italic">
+                  Chưa chọn học sinh nào. Có thể tìm và chọn nhiều học sinh cho cùng một hành vi.
+                </p>
+              )}
+            </div>
+          ) : (
+            /* Collective (Unit) Mode Class Picker */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Lọc theo Khối
+                </label>
+                <select
+                  value={selectedGradeId}
+                  onChange={e => setSelectedGradeId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
+                >
+                  <option value="ALL">Tất cả Khối lớp</option>
+                  {gradeLevels.map(g => (
+                    <option key={g.id} value={g.id}>
+                      Khối {g.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Chọn Chi đội / Lớp <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={selectedClassId}
+                  onChange={e => setSelectedClassId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
+                  required
+                >
+                  {availableClasses.length === 0 ? (
+                    <option value="">Không có lớp trong phạm vi</option>
+                  ) : (
+                    availableClasses.map(c => (
+                      <option key={c.id} value={c.id}>
+                        Lớp {c.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Step 2: Chọn hành vi / quy tắc thi đua */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <Award className="w-4 h-4 text-red-600" />
+              2. Chọn Hành Vi Thi Đua
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowAllBehaviors(prev => !prev)}
+              className="text-xs text-red-600 dark:text-red-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>{showAllBehaviors ? 'Thu gọn' : 'Xem tất cả hành vi'}</span>
+              {showAllBehaviors ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
           </div>
 
-          {/* Section 3: Time, Description & Evidence */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-              <Clock className="w-5 h-5 text-emerald-600" />
-              3. Thời Gian & Chi Tiết Sự Việc
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Thời gian xảy ra sự việc <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={occurredAt}
-                  onChange={e => setOccurredAt(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                  required
-                />
+          {/* Featured Behavior Chips */}
+          {!showAllBehaviors ? (
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Hành vi thường dùng:
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                {featuredRules.map(rule => {
+                  const isSelected = selectedRuleId === rule.id;
+                  const isNegative = (rule.student_merit_points < 0 || rule.unit_points < 0);
+                  return (
+                    <button
+                      key={rule.id}
+                      type="button"
+                      onClick={() => handleSelectRule(rule)}
+                      className={`p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 cursor-pointer ${
+                        isSelected
+                          ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-600/20 scale-[1.02]'
+                          : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700 text-slate-900 dark:text-white hover:border-red-400'
+                      }`}
+                    >
+                      <div className="font-bold text-xs line-clamp-2">{rule.name}</div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span
+                          className={`font-mono font-bold px-1.5 py-0.5 rounded ${
+                            isSelected
+                              ? 'bg-white/20 text-white'
+                              : isNegative
+                              ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                              : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                          }`}
+                        >
+                          {targetMode === 'STUDENT'
+                            ? rule.student_merit_points > 0 ? `+${rule.student_merit_points}` : rule.student_merit_points
+                            : rule.unit_points > 0 ? `+${rule.unit_points}` : rule.unit_points} đ
+                        </span>
+                        {isSelected && <Check className="w-4 h-4 text-white shrink-0" />}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Tiêu đề sự việc
-                </label>
+            </div>
+          ) : (
+            /* Extended Searchable Behavior Grid */
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
                 <input
                   type="text"
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="Mặc định theo tên quy tắc"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                  value={behaviorSearchTerm}
+                  onChange={e => setBehaviorSearchTerm(e.target.value)}
+                  placeholder="Tìm theo tên hoặc mã quy tắc..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                Mô tả chi tiết nội dung sự việc
-              </label>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="Ghi rõ diễn biến sự việc, địa điểm, nhân chứng (nếu có)..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-64 overflow-y-auto pr-1">
+                {searchedRules.map(rule => {
+                  const isSelected = selectedRuleId === rule.id;
+                  return (
+                    <button
+                      key={rule.id}
+                      type="button"
+                      onClick={() => handleSelectRule(rule)}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-red-600 text-white border-red-600 shadow-md'
+                          : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700 hover:border-red-400 text-slate-900 dark:text-white'
+                      }`}
+                    >
+                      <div className="font-bold text-xs">{rule.name}</div>
+                      <div className="text-[10px] opacity-80 mt-1 font-mono">
+                        Mã: {rule.code} • Phù hợp: {COMPETITION_SCOPE_LABELS[rule.effect_scope] || rule.effect_scope}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+          )}
 
-            {/* Evidence & Attachment */}
-            <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Minh chứng & Đính kèm (Ảnh / Liên kết)
-              </label>
+          {/* Selected Behavior Details Pill */}
+          {selectedRule && (
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-1.5 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-slate-900 dark:text-white">
+                  Đã chọn: <span className="text-red-600 dark:text-red-400">{selectedRule.name}</span>
+                </span>
+                <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-[10px]">
+                  {COMPETITION_CATEGORY_LABELS[selectedRule.category] || selectedRule.category}
+                </span>
+                {selectedRule.requires_evidence && (
+                  <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-bold text-[10px]">
+                    ⚠️ Bắt buộc minh chứng
+                  </span>
+                )}
+                {selectedRule.requires_approval ? (
+                  <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-semibold text-[10px]">
+                    Cần duyệt
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[10px]">
+                    Tự động duyệt
+                  </span>
+                )}
+              </div>
+              {selectedRule.description && (
+                <p className="text-slate-500 dark:text-slate-400 text-[11px] italic">
+                  "{selectedRule.description}"
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Step 3: Thông tin bổ sung */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+          <button
+            type="button"
+            onClick={() => setShowAdditionalInfo(prev => !prev)}
+            className="w-full flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-red-600 transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-emerald-600" />
+              <span>Thông tin bổ sung (Thời gian, Mô tả, Minh chứng)</span>
+              {isEvidenceRequired && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-bold text-[10px]">
+                  Bắt buộc mở
+                </span>
+              )}
+            </span>
+            {showAdditionalInfo ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+
+          {showAdditionalInfo && (
+            <div className="space-y-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                    Thời gian xảy ra
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={occurredAt}
+                    onChange={e => setOccurredAt(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                    Tiêu đề sự việc
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    placeholder="Mặc định lấy theo tên hành vi"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
+                  />
+                </div>
+              </div>
 
               <div>
+                <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                  Mô tả chi tiết / Diễn biến / Địa điểm
+                </label>
+                <textarea
+                  rows={2}
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Ghi rõ diễn biến sự việc, địa điểm (nếu có)..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+
+              {/* Evidence Section */}
+              <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-slate-700 dark:text-slate-300">
+                    Minh chứng đính kèm {isEvidenceRequired && <span className="text-red-500 font-bold">* (Bắt buộc)</span>}
+                  </label>
+                </div>
+
                 <input
                   type="text"
                   value={evidenceNote}
                   onChange={e => setEvidenceNote(e.target.value)}
-                  placeholder="Ghi chú minh chứng (VD: Biên bản số 05/BB-LĐ)"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none mb-3"
+                  placeholder="Ghi chú minh chứng (VD: Biên bản số 02/...)"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
                 />
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Image upload box */}
-                <div>
-                  <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 hover:border-red-500 cursor-pointer transition-colors w-full justify-center">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 hover:border-red-500 cursor-pointer justify-center">
                     <Upload className="w-4 h-4 text-slate-400" />
-                    <span>Chọn hình ảnh minh chứng</span>
+                    <span>Chọn ảnh minh chứng</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -585,141 +1205,159 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
                       className="hidden"
                     />
                   </label>
-                </div>
 
-                {/* External link input */}
-                <div>
                   <div className="relative">
-                    <LinkIcon className="w-3.5 h-3.5 absolute left-3 top-3.5 text-slate-400" />
+                    <LinkIcon className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
                     <input
                       type="url"
                       value={externalUrl}
                       onChange={e => setExternalUrl(e.target.value)}
-                      placeholder="Dán liên kết minh chứng (URL)..."
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
+                      placeholder="Dán URL minh chứng..."
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Uploaded File Previews */}
-              {evidenceFiles.length > 0 && (
-                <div className="flex flex-wrap gap-3 pt-2">
-                  {evidenceFiles.map((item, idx) => (
-                    <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-                      <img src={item.previewUrl} alt="Minh chứng" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeFile(idx)}
-                        className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full hover:bg-black/80 transition-colors cursor-pointer"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                {/* Uploaded File Previews */}
+                {evidenceFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {evidenceFiles.map((item, idx) => (
+                      <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <img src={item.previewUrl} alt="Minh chứng" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          className="absolute top-1 right-1 p-0.5 bg-black/60 text-white rounded-full hover:bg-black/80 transition-colors cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Right Column: Point Impact Preview & Submit Button */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6 sticky top-6">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-              Xem Trước Tác Động Điểm
-            </h3>
+        {/* Step 4: Tóm tắt & Nút ghi nhận */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              Tóm Tắt & Tác Động Điểm
+            </span>
+          </div>
 
-            {selectedRule ? (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 space-y-3">
-                  {/* Merit points */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-600 dark:text-slate-300 font-medium">
-                      Điểm rèn luyện Đội viên:
-                    </span>
-                    <span
-                      className={`font-mono font-bold text-sm px-2.5 py-0.5 rounded-lg ${
-                        selectedRule.student_merit_points > 0
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                          : selectedRule.student_merit_points < 0
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                          : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {selectedRule.student_merit_points > 0 ? `+${selectedRule.student_merit_points}` : selectedRule.student_merit_points}
-                    </span>
-                  </div>
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 space-y-3 text-xs">
+            {/* Target preview */}
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 dark:text-slate-400 font-medium">Đối tượng:</span>
+              <span className="font-bold text-slate-900 dark:text-white">
+                {targetMode === 'STUDENT' ? (
+                  selectedStudents.length === 0 ? (
+                    <span className="text-slate-400 italic">Chưa chọn học sinh</span>
+                  ) : selectedStudents.length === 1 ? (
+                    `${selectedStudents[0].full_name} (${selectedStudents[0].class_name || 'Chi đội'})`
+                  ) : (
+                    `${selectedStudents.length} học sinh`
+                  )
+                ) : (
+                  selectedClassId ? `Lớp ${allClasses.find(c => c.id === selectedClassId)?.name}` : <span className="text-slate-400 italic">Chưa chọn Lớp</span>
+                )}
+              </span>
+            </div>
 
-                  {/* Reward points */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-600 dark:text-slate-300 font-medium">
-                      Điểm thưởng đổi quà:
-                    </span>
-                    <span
-                      className={`font-mono font-bold text-sm px-2.5 py-0.5 rounded-lg ${
-                        selectedRule.student_reward_points > 0
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                          : selectedRule.student_reward_points < 0
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                          : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {selectedRule.student_reward_points > 0 ? `+${selectedRule.student_reward_points}` : selectedRule.student_reward_points}
-                    </span>
-                  </div>
+            {/* Behavior preview */}
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 dark:text-slate-400 font-medium">Hành vi:</span>
+              <span className="font-bold text-slate-900 dark:text-white">
+                {selectedRule ? selectedRule.name : <span className="text-slate-400 italic">Chưa chọn hành vi</span>}
+              </span>
+            </div>
 
-                  {/* Unit points */}
-                  <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60 dark:border-slate-700">
-                    <span className="text-slate-700 dark:text-slate-200 font-bold">
-                      Điểm thi đua Chi đội:
-                    </span>
-                    <span
-                      className={`font-mono font-bold text-sm px-2.5 py-0.5 rounded-lg ${
-                        selectedRule.unit_points > 0
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                          : selectedRule.unit_points < 0
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                          : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {selectedRule.unit_points > 0 ? `+${selectedRule.unit_points}` : selectedRule.unit_points}
-                    </span>
-                  </div>
+            {/* Point impact badges */}
+            {selectedRule && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">Điểm rèn luyện:</span>
+                  <span
+                    className={`font-mono font-bold ${
+                      selectedRule.student_merit_points > 0
+                        ? 'text-emerald-600'
+                        : selectedRule.student_merit_points < 0
+                        ? 'text-rose-600'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {selectedRule.student_merit_points > 0 ? `+${selectedRule.student_merit_points}` : selectedRule.student_merit_points}
+                  </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
-                  <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
-                  <span>
-                    Điểm số được tính toán tự động dựa trên quy tắc đã cấu hình. Hệ thống tuyệt đối không cho phép can thiệp gõ điểm tự do để đảm bảo tính công bằng và minh bạch.
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">Điểm thưởng đổi quà:</span>
+                  <span
+                    className={`font-mono font-bold ${
+                      selectedRule.student_reward_points > 0
+                        ? 'text-amber-600'
+                        : selectedRule.student_reward_points < 0
+                        ? 'text-rose-600'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {selectedRule.student_reward_points > 0 ? `+${selectedRule.student_reward_points}` : selectedRule.student_reward_points}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">Điểm thi đua Chi đội:</span>
+                  <span
+                    className={`font-mono font-bold ${
+                      selectedRule.unit_points > 0
+                        ? 'text-blue-600'
+                        : selectedRule.unit_points < 0
+                        ? 'text-rose-600'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {selectedRule.unit_points > 0 ? `+${selectedRule.unit_points}` : selectedRule.unit_points}
                   </span>
                 </div>
               </div>
-            ) : (
-              <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
-                Vui lòng chọn quy tắc thi đua ở cột bên trái để xem trước tác động điểm.
-              </div>
             )}
 
-            <button
-              type="submit"
-              disabled={isSubmitting || !selectedRuleId}
-              className="w-full py-3.5 px-6 rounded-2xl bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-red-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>{isUploading ? 'Đang tải minh chứng...' : 'Đang ghi nhận...'}</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>Xác Nhận Ghi Nhận Sự Việc</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center justify-between text-[11px] pt-1">
+              <span className="text-slate-400">Trạng thái sau khi ghi nhận:</span>
+              <span className="font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded">
+                Chờ duyệt
+              </span>
+            </div>
           </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={!canSubmit || isSubmitting}
+            className="w-full py-4 px-6 rounded-2xl bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-red-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {isSubmitting ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>
+                  {isUploading
+                    ? 'Đang tải minh chứng...'
+                    : submitProgress
+                    ? `Đang ghi nhận (${submitProgress.current}/${submitProgress.total})...`
+                    : 'Đang gửi...'}
+                </span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-5 h-5" />
+                <span>{submitButtonLabel}</span>
+              </>
+            )}
+          </button>
         </div>
       </form>
     </div>

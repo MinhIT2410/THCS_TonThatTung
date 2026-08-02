@@ -1395,12 +1395,26 @@ export const competitionService = {
   },
 
   async getMyActorAssignments() {
-    const { data, error } = await supabase.rpc('get_my_competition_actor_assignments');
-    if (error) {
-      console.error('Error fetching my actor assignments:', error);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) return [];
+
+      const { data, error } = await supabase.rpc('get_my_competition_actor_assignments');
+      if (!error && data) {
+        return data;
+      }
+
+      // Fallback if RPC fails or is not present
+      const { data: fallbackData } = await supabase
+        .from('competition_actor_assignments')
+        .select('*')
+        .eq('user_id', userData.user.id)
+        .eq('is_active', true);
+
+      return fallbackData || [];
+    } catch {
       return [];
     }
-    return data || [];
   },
 
   async getHomeroomIncidents(programId?: string, limit = 50, offset = 0) {

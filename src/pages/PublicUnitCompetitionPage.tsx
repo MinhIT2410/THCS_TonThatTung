@@ -97,7 +97,7 @@ export default function PublicUnitCompetitionPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-5 sm:space-y-6 font-sans pb-16">
       {/* Navigation Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+      <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400 text-center">
         <Link to={ROUTES.COMPETITION} className="hover:text-red-600 transition-colors flex items-center gap-1">
           <ChevronLeft className="w-4 h-4" />
           <span>Tổng quan Thi đua</span>
@@ -107,11 +107,11 @@ export default function PublicUnitCompetitionPage() {
       </div>
 
       {/* Header Banner - Compact Height */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 dark:from-red-950 dark:via-rose-900 dark:to-amber-950 p-5 sm:p-6 text-white shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 dark:from-red-950 dark:via-rose-900 dark:to-amber-950 p-5 sm:p-6 text-white shadow-lg text-center">
         <div className="absolute -right-5 -bottom-5 opacity-15 pointer-events-none">
           <Trophy className="w-44 h-44" />
         </div>
-        <div className="relative z-10 max-w-2xl space-y-2">
+        <div className="relative z-10 max-w-2xl mx-auto space-y-2">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-amber-100">
             <Sparkles className="w-3 h-3" />
             Bảng cờ thi đua chi đội
