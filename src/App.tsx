@@ -43,6 +43,7 @@ import PublicUnitCompetitionPage from './pages/PublicUnitCompetitionPage';
 import StudentCompetitionPage from './pages/StudentCompetitionPage';
 import PublicGoodDeedsPage from './pages/PublicGoodDeedsPage';
 import PublicRewardShopPage from './pages/PublicRewardShopPage';
+import RecordIncidentPage from './pages/RecordIncidentPage';
 import AdminCompetitionPage from './pages/admin/AdminCompetitionPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { RoleGuard } from './components/auth/RoleGuard';
@@ -316,6 +317,7 @@ function AppContent() {
           <Route path={ROUTES.COMPETITION_STUDENT} element={<StudentCompetitionPage />} />
           <Route path={ROUTES.COMPETITION_GOOD_DEEDS} element={<PublicGoodDeedsPage />} />
           <Route path={ROUTES.COMPETITION_REWARDS} element={<PublicRewardShopPage />} />
+          <Route path={ROUTES.COMPETITION_RECORD} element={<RecordIncidentPage />} />
           <Route path={ROUTES.CONTACT} element={<ContactPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />

@@ -4,11 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { 
   Award, 
-  Calendar,
-  PlusCircle, 
+  Calendar, 
   Clock, 
   History, 
   FileCheck, 
@@ -20,13 +19,13 @@ import {
 } from 'lucide-react';
 import ProgramsAndRulesTab from '../../components/admin/competition/ProgramsAndRulesTab';
 import ProgramAndWeeksTab from '../../components/admin/competition/ProgramAndWeeksTab';
-import RecordIncidentTab from '../../components/admin/competition/RecordIncidentTab';
 import PendingIncidentsTab from '../../components/admin/competition/PendingIncidentsTab';
 import IncidentsHistoryTab from '../../components/admin/competition/IncidentsHistoryTab';
 import { RedemptionsTab } from '../../components/admin/competition/RedemptionsTab';
 import { RewardsTab } from '../../components/admin/competition/RewardsTab';
 import { ReviewRequestsTab } from '../../components/admin/competition/ReviewRequestsTab';
 import ActorAssignmentsTab from '../../components/admin/competition/ActorAssignmentsTab';
+import { ROUTES } from '../../config/routes';
 
 type AdminCompetitionSubTab =
   | 'programs_rules'
@@ -45,9 +44,15 @@ type RewardSubSection = 'catalog' | 'redemptions';
 export default function AdminCompetitionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Redirect old URL /quan-tri/thi-dua?tab=record to /thi-dua/ghi-nhan
+  const tabParam = searchParams.get('tab');
+  if (tabParam === 'record') {
+    return <Navigate to={ROUTES.COMPETITION_RECORD} replace />;
+  }
 
   const getInitialTabState = (): { mainTab: AdminCompetitionSubTab; subTab: RewardSubSection } => {
-    const tabParam = searchParams.get('tab');
     const sectionParam = searchParams.get('section');
     const path = location.pathname;
 
@@ -75,7 +80,7 @@ export default function AdminCompetitionPage() {
     }
     if (
       tabParam &&
-      ['programs', 'rules', 'units', 'record', 'pending', 'history', 'reviews', 'assignments', 'programs_rules'].includes(tabParam)
+      ['programs', 'rules', 'units', 'pending', 'history', 'reviews', 'assignments', 'programs_rules'].includes(tabParam)
     ) {
       return { mainTab: (tabParam === 'units' ? 'programs' : tabParam) as AdminCompetitionSubTab, subTab: 'catalog' };
     }
@@ -152,18 +157,6 @@ export default function AdminCompetitionPage() {
           </button>
 
           <button
-            onClick={() => handleMainTabChange('record')}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-2 ${
-              activeTab === 'record'
-                ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-transparent'
-            }`}
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Ghi nhận</span>
-          </button>
-
-          <button
             onClick={() => handleMainTabChange('pending')}
             className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-2 ${
               activeTab === 'pending'
@@ -229,7 +222,6 @@ export default function AdminCompetitionPage() {
       {/* Tab Content */}
       <div>
         {(activeTab === 'programs' || activeTab === 'programs_rules' || activeTab === 'units') && <ProgramAndWeeksTab />}
-        {activeTab === 'record' && <RecordIncidentTab onNavigateToPrograms={() => handleMainTabChange('programs')} />}
         {activeTab === 'pending' && <PendingIncidentsTab />}
         {activeTab === 'history' && <IncidentsHistoryTab />}
         {activeTab === 'rewards' && (

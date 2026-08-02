@@ -16,6 +16,7 @@ export const ROUTES = {
   COMPETITION_STUDENT: '/thi-dua/doi-vien',
   COMPETITION_GOOD_DEEDS: '/thi-dua/nguoi-tot-viec-tot',
   COMPETITION_REWARDS: '/thi-dua/cua-hang',
+  COMPETITION_RECORD: '/thi-dua/ghi-nhan',
   CONTACT: '/lien-he',
   ADMIN: '/quan-tri',
   ADMIN_COMPETITION: '/quan-tri/thi-dua',
