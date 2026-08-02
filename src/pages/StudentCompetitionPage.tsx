@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Award,
   Gift,
@@ -78,32 +78,35 @@ export default function StudentCompetitionPage() {
   const [reviewReason, setReviewReason] = useState<string>('');
   const [reviewEvidenceUrl, setReviewEvidenceUrl] = useState<string>('');
 
+  const [searchParams] = useSearchParams();
+  const paramStudentId = searchParams.get('studentId') || searchParams.get('id') || undefined;
+
   const [submitting, setSubmitting] = useState(false);
 
-  const loadData = async () => {
-    if (!isUserAuthenticated || !isStudentRole) return;
+  const loadData = async (targetStudentId?: string) => {
+    if (!isUserAuthenticated && !targetStudentId) return;
     try {
       setLoading(true);
       setError(null);
 
       const [profData, txsData, incsData, deedsData, rewardsData, redemptionsData, reviewsData] =
         await Promise.all([
-          competitionService.getStudentCompetitionProfile(),
-          competitionService.getStudentPointTransactions(),
-          competitionService.getStudentIncidents(),
+          competitionService.getStudentCompetitionProfile(targetStudentId),
+          competitionService.getStudentPointTransactions(targetStudentId),
+          competitionService.getStudentIncidents(targetStudentId),
           competitionService.getGoodDeeds(10),
           competitionService.getRewardItems(true),
-          competitionService.getRewardRedemptions(),
-          competitionService.getReviewRequests(),
+          competitionService.getRewardRedemptions(targetStudentId),
+          competitionService.getReviewRequests(targetStudentId),
         ]);
 
       setProfile(profData);
-      setTransactions(txsData);
-      setIncidents(incsData);
-      setGoodDeeds(deedsData);
-      setRewardItems(rewardsData);
-      setMyRedemptions(redemptionsData);
-      setMyReviews(reviewsData);
+      setTransactions(txsData || []);
+      setIncidents(incsData || []);
+      setGoodDeeds(deedsData || []);
+      setRewardItems(rewardsData || []);
+      setMyRedemptions(redemptionsData || []);
+      setMyReviews(reviewsData || []);
     } catch (err: any) {
       console.error('Lỗi tải dữ liệu thi đua đội viên:', err);
       setError('Không thể tải dữ liệu lúc này. Vui lòng thử lại sau.');
@@ -114,13 +117,15 @@ export default function StudentCompetitionPage() {
 
   useEffect(() => {
     if (!authLoading && !profileLoading) {
-      if (isUserAuthenticated && isStudentRole) {
+      if (paramStudentId) {
+        loadData(paramStudentId);
+      } else if (isUserAuthenticated && isStudentRole) {
         loadData();
       } else {
         setLoading(false);
       }
     }
-  }, [authLoading, profileLoading, isUserAuthenticated, isStudentRole]);
+  }, [authLoading, profileLoading, isUserAuthenticated, isStudentRole, paramStudentId]);
 
   const handleOpenRedeemModal = (item: RewardItem) => {
     setSelectedReward(item);

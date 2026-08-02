@@ -1031,34 +1031,75 @@ export const competitionService = {
   },
 
   async getGoodDeeds(limit = 20) {
-    const { data, error } = await supabase
-      .from('competition_incidents')
-      .select(`
-        *,
-        rule:competition_rules!inner(name, category, student_merit_points),
-        student:profiles!competition_incidents_student_id_fkey(full_name, student_code, avatar_url),
-        unit:classes!competition_incidents_unit_id_fkey(name),
-        evidence_items:competition_incident_evidence(*)
-      `)
-      .eq('status', 'APPROVED')
-      .eq('rule.category', 'GOOD_DEED')
-      .order('occurred_at', { ascending: false })
-      .limit(limit);
+    try {
+      const { data, error } = await supabase
+        .from('competition_incidents')
+        .select(`
+          *,
+          rule:competition_rules!inner(name, category, student_merit_points),
+          student:profiles!competition_incidents_student_id_fkey(full_name, student_code, avatar_url),
+          unit:classes!competition_incidents_unit_id_fkey(name),
+          evidence_items:competition_incident_evidence(*)
+        `)
+        .eq('status', 'APPROVED')
+        .eq('rule.category', 'GOOD_DEED')
+        .order('occurred_at', { ascending: false })
+        .limit(limit);
 
-    if (error) throw error;
+      if (error) {
+        console.error('Error fetching good deeds:', error);
+        return [];
+      }
 
-    return (data || []).map((g: any) => ({
-      id: g.id,
-      title: g.title,
-      description: g.description,
-      occurred_at: g.occurred_at,
-      student_name: g.student?.full_name || 'Đội viên',
-      student_code: g.student?.student_code,
-      avatar_url: g.student?.avatar_url,
-      unit_name: g.unit?.name || 'Chi đội',
-      merit_points: g.rule?.student_merit_points || 0,
-      evidence_items: g.evidence_items || [],
-    }));
+      return (data || []).map((g: any) => ({
+        id: g.id,
+        title: g.title,
+        description: g.description,
+        occurred_at: g.occurred_at,
+        student_id: g.student_id,
+        student_name: g.student?.full_name || 'Đội viên',
+        student_code: g.student?.student_code,
+        avatar_url: g.student?.avatar_url,
+        unit_name: g.unit?.name || 'Chi đội',
+        merit_points: g.rule?.student_merit_points || 0,
+        evidence_items: g.evidence_items || [],
+      }));
+    } catch (err) {
+      console.error('Exception fetching good deeds:', err);
+      return [];
+    }
+  },
+
+  async getPublicGoodDeeds(limit = 6, offset = 0) {
+    try {
+      const { data, error } = await supabase.rpc('get_public_good_deeds', {
+        p_limit: limit,
+        p_offset: offset,
+      });
+
+      if (!error && data) {
+        const list = typeof data === 'string' ? JSON.parse(data) : data;
+        if (Array.isArray(list)) {
+          return list.map((g: any) => ({
+            id: g.incident_id,
+            title: g.title,
+            description: g.description,
+            occurred_at: g.occurred_at,
+            student_id: g.student_id,
+            student_name: g.full_name || 'Đội viên',
+            student_code: g.student_code,
+            avatar_url: g.avatar_url,
+            unit_name: g.class_name || 'Chi đội',
+            merit_points: g.reward_points || 0,
+            evidence_items: g.evidence_items || [],
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn('RPC get_public_good_deeds failed, falling back to client query:', err);
+    }
+
+    return this.getGoodDeeds(limit);
   },
 
   // --- REVIEW REQUESTS ---

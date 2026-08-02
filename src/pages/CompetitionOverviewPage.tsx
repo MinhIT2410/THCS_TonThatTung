@@ -18,7 +18,8 @@ import {
   Lock,
   Gift,
   AlertCircle,
-  Calendar
+  Calendar,
+  HeartHandshake
 } from 'lucide-react';
 import { competitionService } from '../services/competitionService';
 import { ROUTES } from '../config/routes';
@@ -151,6 +152,8 @@ export default function CompetitionOverviewPage() {
   ]);
 
   const [topStudents, setTopStudents] = useState<TopStudent[]>([]);
+  const [goodDeeds, setGoodDeeds] = useState<any[]>([]);
+  const [loadingGoodDeeds, setLoadingGoodDeeds] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [privacyToast, setPrivacyToast] = useState<string | null>(null);
 
@@ -238,6 +241,18 @@ export default function CompetitionOverviewPage() {
       console.error('Error loading top student rewards:', err);
     } finally {
       setLoadingStudents(false);
+    }
+
+    // 3. Fetch public good deeds (max 6 records)
+    try {
+      setLoadingGoodDeeds(true);
+      const deeds = await competitionService.getPublicGoodDeeds(6);
+      setGoodDeeds(deeds || []);
+    } catch (err) {
+      console.error('Error loading public good deeds:', err);
+      setGoodDeeds([]);
+    } finally {
+      setLoadingGoodDeeds(false);
     }
   }
 
@@ -505,6 +520,163 @@ export default function CompetitionOverviewPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* 4. SECTION 3: BẢNG VINH DANH NGƯỜI TỐT - VIỆC TỐT */}
+      <section className="space-y-6 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-emerald-200/80 dark:border-emerald-800/80 pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-200/80 dark:border-emerald-800/80">
+                <HeartHandshake className="w-4 h-4" />
+              </div>
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                Bảng vinh danh Người tốt - Việc tốt
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              Ghi nhận những Đội viên có hành động đẹp, việc làm ý nghĩa và đóng góp tích cực trong trường học.
+            </p>
+          </div>
+
+          <Link
+            to={ROUTES.COMPETITION_GOOD_DEEDS}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs transition-colors shrink-0 border border-emerald-200/60 dark:border-emerald-800/60"
+          >
+            <span>Xem tất cả gương Người tốt - Việc tốt</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {/* Good Deeds Grid Container */}
+        {loadingGoodDeeds ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="bg-white dark:bg-slate-900 rounded-3xl border border-emerald-100 dark:border-emerald-900/50 p-6 space-y-4 animate-pulse"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-md w-3/4" />
+                    <div className="h-3 bg-slate-100 dark:bg-slate-800/60 rounded-md w-1/2" />
+                  </div>
+                </div>
+                <div className="h-10 bg-slate-100 dark:bg-slate-800/40 rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : goodDeeds.length === 0 ? (
+          <div className="bg-emerald-50/30 dark:bg-emerald-950/10 border border-dashed border-emerald-200/80 dark:border-emerald-800/60 rounded-3xl p-10 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+              <HeartHandshake className="w-6 h-6" />
+            </div>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-semibold">
+              Chưa có gương Người tốt - Việc tốt nào được ghi nhận.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {goodDeeds.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-emerald-50/20 dark:bg-slate-900/90 rounded-3xl border border-emerald-200/80 dark:border-emerald-800/60 p-5 sm:p-6 shadow-xs hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-200 flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3.5">
+                    {/* Header: Student avatar, name, class & merit points */}
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 font-bold flex items-center justify-center text-sm shrink-0 border border-emerald-200 dark:border-emerald-800 overflow-hidden">
+                          {item.avatar_url ? (
+                            <img src={item.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-5 h-5 text-emerald-700 dark:text-emerald-300" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-slate-900 dark:text-white text-sm truncate">
+                            {item.student_name}
+                          </h3>
+                          <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5 truncate">
+                            Chi đội: {item.unit_name}
+                          </p>
+                        </div>
+                      </div>
+
+                      {item.merit_points > 0 && (
+                        <span className="font-extrabold text-xs text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800 shrink-0">
+                          +{item.merit_points} điểm
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Content: Title & Description */}
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-start gap-2 leading-snug">
+                        <Sparkles className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>{item.title}</span>
+                      </h4>
+                      {item.description && (
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed line-clamp-3">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Evidence Thumbnails */}
+                    {item.evidence_items && item.evidence_items.length > 0 && (
+                      <div className="pt-1 flex items-center gap-2 overflow-x-auto">
+                        {item.evidence_items.map((ev: any) =>
+                          ev.file_url ? (
+                            <img
+                              key={ev.id || ev.file_url}
+                              src={ev.file_url}
+                              alt=""
+                              className="w-14 h-14 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                            />
+                          ) : null
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Footer: Date & Xem hồ sơ button */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 text-[11px] flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 shrink-0">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {new Date(item.occurred_at).toLocaleDateString('vi-VN')}
+                    </span>
+
+                    <Link
+                      to={
+                        item.student_id
+                          ? `${ROUTES.COMPETITION_STUDENT}?studentId=${item.student_id}`
+                          : ROUTES.COMPETITION_STUDENT
+                      }
+                      className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors py-1 px-2.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/60"
+                    >
+                      <span>Xem hồ sơ</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom button */}
+            <div className="text-center pt-2">
+              <Link
+                to={ROUTES.COMPETITION_GOOD_DEEDS}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors"
+              >
+                <HeartHandshake className="w-4 h-4" />
+                <span>Xem tất cả gương Người tốt - Việc tốt</span>
+              </Link>
             </div>
           </div>
         )}
