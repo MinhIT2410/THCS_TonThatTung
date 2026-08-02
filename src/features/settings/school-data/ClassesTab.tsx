@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../services/supabaseClient';
+import { sortClassesNaturally } from '../../../utils/classSortUtils';
 import { Users, Plus, Edit2, Trash2, CheckCircle2, Loader2, AlertCircle, Search, Filter } from 'lucide-react';
 
 interface ClassEntity {
@@ -226,7 +227,7 @@ export default function ClassesTab() {
     }
   };
 
-  const filteredClasses = classes.filter(cls => {
+  const filteredClasses = sortClassesNaturally<ClassEntity>(classes.filter(cls => {
     const matchesSearch = 
       cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (cls.code && cls.code.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -235,7 +236,7 @@ export default function ClassesTab() {
     const matchesGrade = selectedGradeFilter === 'all' || cls.grade_level_id === selectedGradeFilter;
     
     return matchesSearch && matchesYear && matchesGrade;
-  });
+  }));
 
   return (
     <div className="space-y-6" id="classes-tab">

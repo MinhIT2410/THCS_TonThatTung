@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabaseClient';
+import { sortClassesNaturally } from '../utils/classSortUtils';
 
 export interface StudentEnrollmentItem {
   id: string; // student user id
@@ -88,7 +89,7 @@ export const studentEnrollmentService = {
       console.error('Error fetching classes:', error);
       throw error;
     }
-    return data || [];
+    return sortClassesNaturally(data || []);
   },
 
   /**

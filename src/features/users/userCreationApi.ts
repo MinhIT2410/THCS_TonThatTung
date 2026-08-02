@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../../services/supabaseClient';
+import { sortClassesNaturally } from '../../utils/classSortUtils';
 
 export interface CreateUserInput {
   full_name: string;
@@ -95,6 +96,6 @@ export const userCreationApi = {
     if (error) {
       throw error;
     }
-    return data || [];
+    return sortClassesNaturally(data || []);
   }
 };

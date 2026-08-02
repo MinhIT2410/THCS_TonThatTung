@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase/client';
+import { sortClassesNaturally, compareClassNames } from '../utils/classSortUtils';
 import {
   CompetitionProgram,
   CompetitionRule,
@@ -549,7 +550,7 @@ export const competitionService = {
       console.error('Error fetching classes:', error);
       throw error;
     }
-    return data || [];
+    return sortClassesNaturally(data || []);
   },
 
   // --- WEEKLY COMPETITION: WEEKS ---
@@ -732,7 +733,10 @@ export const competitionService = {
         if ((b.current_points ?? 0) !== (a.current_points ?? 0)) {
           return (b.current_points ?? 0) - (a.current_points ?? 0);
         }
-        return (a.total_penalty ?? 0) - (b.total_penalty ?? 0);
+        if ((a.total_penalty ?? 0) !== (b.total_penalty ?? 0)) {
+          return (a.total_penalty ?? 0) - (b.total_penalty ?? 0);
+        }
+        return compareClassNames(a.unit_name, b.unit_name);
       });
 
       let currentRank = 1;
@@ -753,7 +757,11 @@ export const competitionService = {
       });
     } else {
       // Sort by snapshot rank
-      processedUnits.sort((a, b) => (a.rank_snapshot || 999) - (b.rank_snapshot || 999));
+      processedUnits.sort((a, b) => {
+        const rankDiff = (a.rank_snapshot || 999) - (b.rank_snapshot || 999);
+        if (rankDiff !== 0) return rankDiff;
+        return compareClassNames(a.unit_name, b.unit_name);
+      });
     }
 
     // Fetch total incidents stats for the week

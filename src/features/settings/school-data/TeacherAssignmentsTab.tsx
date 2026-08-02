@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../services/supabaseClient';
+import { sortClassesNaturally } from '../../../utils/classSortUtils';
 import { Calendar, Plus, Edit2, Trash2, CheckCircle2, Loader2, AlertCircle, Search, Filter } from 'lucide-react';
 
 interface TeacherAssignment {
@@ -82,7 +83,7 @@ export default function TeacherAssignmentsTab() {
       const { data: yrData } = await supabase.from('academic_years').select('id, name').eq('is_active', true);
       const { data: trmData } = await supabase.from('academic_terms').select('id, name').eq('is_active', true);
 
-      setClasses(clsData || []);
+      setClasses(sortClassesNaturally(clsData || []));
       setSubjects(subData || []);
       setTeachers(tchrData || []);
       setYears(yrData || []);
@@ -223,18 +224,21 @@ export default function TeacherAssignmentsTab() {
     }
   };
 
-  const filteredAssignments = assignments.filter(as => {
-    const matchesSearch = 
-      (as.profiles?.full_name && as.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (as.subjects?.name && as.subjects.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (as.classes?.name && as.classes.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesYear = selectedYearFilter === 'all' || as.academic_year_id === selectedYearFilter;
-    const matchesTerm = selectedTermFilter === 'all' || as.academic_term_id === selectedTermFilter;
-    const matchesClass = selectedClassFilter === 'all' || as.class_id === selectedClassFilter;
+  const filteredAssignments = sortClassesNaturally<TeacherAssignment>(
+    assignments.filter(as => {
+      const matchesSearch = 
+        (as.profiles?.full_name && as.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (as.subjects?.name && as.subjects.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (as.classes?.name && as.classes.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesYear = selectedYearFilter === 'all' || as.academic_year_id === selectedYearFilter;
+      const matchesTerm = selectedTermFilter === 'all' || as.academic_term_id === selectedTermFilter;
+      const matchesClass = selectedClassFilter === 'all' || as.class_id === selectedClassFilter;
 
-    return matchesSearch && matchesYear && matchesTerm && matchesClass;
-  });
+      return matchesSearch && matchesYear && matchesTerm && matchesClass;
+    }),
+    as => as.classes?.name
+  );
 
   return (
     <div className="space-y-6" id="teacher-assignments-tab">

@@ -4,6 +4,7 @@
  */
 
 import * as XLSX from 'xlsx';
+import { sortClassesNaturally } from '../../../utils/classSortUtils';
 
 export const downloadImportTemplate = (classes: any[], academicYears: any[]) => {
   // 1. Tai_khoan sheet data
@@ -37,7 +38,7 @@ export const downloadImportTemplate = (classes: any[], academicYears: any[]) => 
   // 2. Danh_sach_lop sheet data
   let classRows: any[] = [];
   if (classes && classes.length > 0) {
-    classRows = classes.map(c => ({
+    classRows = sortClassesNaturally(classes).map(c => ({
       class_name: c.name,
       grade_level: c.grade_level || ''
     }));

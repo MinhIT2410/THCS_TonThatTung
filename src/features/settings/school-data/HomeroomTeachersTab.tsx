@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../services/supabaseClient';
+import { sortClassesNaturally } from '../../../utils/classSortUtils';
 import { Shield, Plus, Trash2, CheckCircle2, Loader2, AlertCircle, Search, Filter } from 'lucide-react';
 
 interface HomeroomAssignment {
@@ -66,7 +67,7 @@ export default function HomeroomTeachersTab() {
       const { data: teacherData } = await supabase.from('profiles').select('id, name:full_name').order('full_name');
       const { data: yearData } = await supabase.from('academic_years').select('id, name').eq('is_active', true);
 
-      setClasses(classData || []);
+      setClasses(sortClassesNaturally(classData || []));
       setTeachers(teacherData || []);
       setYears(yearData || []);
 
@@ -170,17 +171,20 @@ export default function HomeroomTeachersTab() {
     }
   };
 
-  const filteredAssignments = assignments.filter(as => {
-    const teacherName = as.profiles?.full_name || '';
-    const className = as.classes?.name || '';
-    const matchesSearch = 
-      teacherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      className.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesYear = selectedYearFilter === 'all' || as.academic_year_id === selectedYearFilter;
-    
-    return matchesSearch && matchesYear;
-  });
+  const filteredAssignments = sortClassesNaturally<HomeroomAssignment>(
+    assignments.filter(as => {
+      const teacherName = as.profiles?.full_name || '';
+      const className = as.classes?.name || '';
+      const matchesSearch = 
+        teacherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        className.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesYear = selectedYearFilter === 'all' || as.academic_year_id === selectedYearFilter;
+      
+      return matchesSearch && matchesYear;
+    }),
+    as => as.classes?.name
+  );
 
   return (
     <div className="space-y-6" id="homeroom-teachers-tab">

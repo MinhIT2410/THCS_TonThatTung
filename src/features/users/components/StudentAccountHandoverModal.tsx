@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { supabase } from '../../../services/supabaseClient';
+import { sortClassesNaturally } from '../../../utils/classSortUtils';
 import { userApi } from '../userApi';
 import { StudentForPasswordReset } from '../userTypes';
 import { 
@@ -163,11 +164,12 @@ export const StudentAccountHandoverModal: React.FC<StudentAccountHandoverModalPr
 
   // Filtered classes dependent on academic year and grade level
   const availableClasses = useMemo(() => {
-    return classes.filter(c => {
+    const filtered = classes.filter(c => {
       const matchYear = !selectedAcademicYearId || c.academic_year_id === selectedAcademicYearId;
       const matchGrade = selectedGradeLevelId === 'all' || c.grade_level_id === selectedGradeLevelId;
       return matchYear && matchGrade;
     });
+    return sortClassesNaturally(filtered);
   }, [classes, selectedAcademicYearId, selectedGradeLevelId]);
 
   // Reset page when filters change

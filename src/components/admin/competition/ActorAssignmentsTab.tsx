@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../services/supabaseClient';
+import { sortClassesNaturally } from '../../../utils/classSortUtils';
 import { competitionService } from '../../../services/competitionService';
 import {
   CompetitionActorAssignment,
@@ -92,9 +93,9 @@ export default function ActorAssignmentsTab() {
     fetchInitialData();
   }, []);
 
-  const classesForSelectedYear = classes.filter(
+  const classesForSelectedYear = sortClassesNaturally<ClassOption>(classes.filter(
     (c) => c.academic_year_id === selectedAcademicYearId
-  );
+  ));
 
   useEffect(() => {
     if (selectedAcademicYearId && classes.length > 0) {
@@ -155,7 +156,7 @@ export default function ActorAssignmentsTab() {
 
       setAcademicYears(yearsData || []);
       setGradeLevels(gradeData || []);
-      setClasses((classData || []) as ClassOption[]);
+      setClasses(sortClassesNaturally((classData || []) as ClassOption[]));
 
       // Current active year ID
       const { data: currentYearData } = await supabase
