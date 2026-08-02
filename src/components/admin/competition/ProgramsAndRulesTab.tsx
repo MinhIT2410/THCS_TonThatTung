@@ -805,122 +805,196 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredRules.map(rule => (
-                    <div
-                      key={rule.id}
-                      className={`bg-white dark:bg-slate-900 border ${
-                        rule.is_active 
-                          ? 'border-slate-200/80 dark:border-slate-800 hover:border-red-500/50' 
-                          : 'border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/50'
-                      } rounded-3xl p-5 shadow-xs space-y-4 transition-colors flex flex-col justify-between`}
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="px-2 py-0.5 rounded bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-mono font-bold text-[10px]">
-                                {rule.code}
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-[10px]">
+                <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold text-xs border-b border-slate-200 dark:border-slate-800">
+                        <th className="py-3.5 px-3 text-center w-12">STT</th>
+                        <th className="py-3.5 px-3">Nhóm hành vi</th>
+                        <th className="py-3.5 px-3">Nội dung</th>
+                        <th className="py-3.5 px-3">Phạm vi</th>
+                        <th className="py-3.5 px-3">Điểm</th>
+                        <th className="py-3.5 px-3">Trạng thái</th>
+                        <th className="py-3.5 px-3 text-right">Chỉnh sửa</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {filteredRules.map((rule, idx) => {
+                        const isPenalty =
+                          rule.student_merit_points < 0 ||
+                          rule.student_reward_points < 0 ||
+                          rule.unit_points < 0 ||
+                          rule.category === 'DISCIPLINE';
+
+                        const isBonus =
+                          rule.student_merit_points > 0 ||
+                          rule.student_reward_points > 0 ||
+                          rule.unit_points > 0 ||
+                          rule.category === 'GOOD_DEED' ||
+                          rule.category === 'ACHIEVEMENT';
+
+                        const borderAccent = isPenalty
+                          ? 'border-l-4 border-l-rose-500 bg-rose-50/20 dark:bg-rose-950/10 hover:bg-rose-50/40 dark:hover:bg-rose-950/25'
+                          : isBonus
+                          ? 'border-l-4 border-l-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/10 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/25'
+                          : 'border-l-4 border-l-slate-300 dark:border-l-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50';
+
+                        const opacityClass = rule.is_active ? '' : 'opacity-60 bg-slate-100/40 dark:bg-slate-900/40';
+
+                        return (
+                          <tr
+                            key={rule.id}
+                            className={`transition-colors ${borderAccent} ${opacityClass}`}
+                          >
+                            {/* 1. STT */}
+                            <td className="py-3 px-3 text-center font-mono text-slate-500 dark:text-slate-400 font-bold whitespace-nowrap">
+                              {idx + 1}
+                            </td>
+
+                            {/* 2. Nhóm hành vi */}
+                            <td className="py-3 px-3 min-w-[150px]">
+                              <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold inline-block border border-slate-200/60 dark:border-slate-700/60">
                                 {COMPETITION_CATEGORY_LABELS[rule.category] || rule.category}
                               </span>
-                              {rule.program?.name && (
-                                <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium text-[10px]">
-                                  {rule.program.name}
+                            </td>
+
+                            {/* 3. Nội dung */}
+                            <td className="py-3 px-3 min-w-[220px]">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-mono font-bold text-[10px]">
+                                    {rule.code}
+                                  </span>
+                                  <span className="font-bold text-slate-900 dark:text-white text-xs">
+                                    {rule.name}
+                                  </span>
+                                </div>
+                                {rule.description && (
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 italic line-clamp-2">
+                                    "{rule.description}"
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-2 text-[10px] pt-0.5">
+                                  {rule.requires_approval ? (
+                                    <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-0.5">
+                                      <Clock className="w-3 h-3" /> Cần duyệt
+                                    </span>
+                                  ) : (
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
+                                      <ShieldCheck className="w-3 h-3" /> Tự động
+                                    </span>
+                                  )}
+                                  {rule.requires_evidence && (
+                                    <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                                      • Cần minh chứng
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* 4. Phạm vi */}
+                            <td className="py-3 px-3 whitespace-nowrap text-xs font-medium text-slate-700 dark:text-slate-300 min-w-[130px]">
+                              {COMPETITION_SCOPE_LABELS[rule.effect_scope] || rule.effect_scope}
+                            </td>
+
+                            {/* 5. Điểm */}
+                            <td className="py-3 px-3 min-w-[180px]">
+                              <div className="flex flex-col gap-1 text-[11px] font-medium">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-400 dark:text-slate-500 w-16 shrink-0">Rèn luyện:</span>
+                                  <span
+                                    className={`font-mono font-bold px-1.5 py-0.5 rounded text-[11px] ${
+                                      rule.student_merit_points > 0
+                                        ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60'
+                                        : rule.student_merit_points < 0
+                                        ? 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60'
+                                        : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800'
+                                    }`}
+                                  >
+                                    {rule.student_merit_points > 0
+                                      ? `+${rule.student_merit_points}`
+                                      : rule.student_merit_points}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-400 dark:text-slate-500 w-16 shrink-0">Thưởng:</span>
+                                  <span
+                                    className={`font-mono font-bold px-1.5 py-0.5 rounded text-[11px] ${
+                                      rule.student_reward_points > 0
+                                        ? 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60'
+                                        : rule.student_reward_points < 0
+                                        ? 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60'
+                                        : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800'
+                                    }`}
+                                  >
+                                    {rule.student_reward_points > 0
+                                      ? `+${rule.student_reward_points}`
+                                      : rule.student_reward_points}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-400 dark:text-slate-500 w-16 shrink-0">Chi đội:</span>
+                                  <span
+                                    className={`font-mono font-bold px-1.5 py-0.5 rounded text-[11px] ${
+                                      rule.unit_points > 0
+                                        ? 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60'
+                                        : rule.unit_points < 0
+                                        ? 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60'
+                                        : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800'
+                                    }`}
+                                  >
+                                    {rule.unit_points > 0 ? `+${rule.unit_points}` : rule.unit_points}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* 6. Trạng thái */}
+                            <td className="py-3 px-3 whitespace-nowrap min-w-[120px]">
+                              {rule.is_active ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-200/80 dark:border-emerald-800/80">
+                                  Đang hoạt động
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                                  Ngừng sử dụng
                                 </span>
                               )}
-                            </div>
-                            <h4 className="font-bold text-base text-slate-900 dark:text-white">
-                              {rule.name}
-                            </h4>
-                          </div>
+                            </td>
 
-                          {rule.is_active ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md shrink-0">
-                              Đang hoạt động
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md shrink-0">
-                              Ngừng hoạt động
-                            </span>
-                          )}
-                        </div>
+                            {/* 7. Chỉnh sửa */}
+                            <td className="py-3 px-3 whitespace-nowrap text-right min-w-[120px]">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {canManage && (
+                                  <>
+                                    <button
+                                      onClick={() => openEditRuleModal(rule)}
+                                      className="px-2.5 py-1.5 rounded-xl font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1 text-xs"
+                                      title="Chỉnh sửa quy tắc"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                      <span>Sửa</span>
+                                    </button>
 
-                        {rule.description && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 italic">
-                            "{rule.description}"
-                          </p>
-                        )}
-
-                        {/* Point Values Grid */}
-                        <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 text-center text-xs">
-                          <div>
-                            <span className="text-[10px] text-slate-400 block font-medium">Điểm rèn luyện</span>
-                            <span className={`font-mono font-bold ${rule.student_merit_points > 0 ? 'text-emerald-600' : rule.student_merit_points < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                              {rule.student_merit_points > 0 ? `+${rule.student_merit_points}` : rule.student_merit_points}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-400 block font-medium">Điểm thưởng</span>
-                            <span className={`font-mono font-bold ${rule.student_reward_points > 0 ? 'text-amber-600' : rule.student_reward_points < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                              {rule.student_reward_points > 0 ? `+${rule.student_reward_points}` : rule.student_reward_points}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-400 block font-medium">Điểm Chi đội</span>
-                            <span className={`font-mono font-bold ${rule.unit_points > 0 ? 'text-blue-600' : rule.unit_points < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                              {rule.unit_points > 0 ? `+${rule.unit_points}` : rule.unit_points}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Scope & Flags Footer */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-                          <span>Phạm vi: <strong>{COMPETITION_SCOPE_LABELS[rule.effect_scope]}</strong></span>
-                          <div className="flex items-center gap-2">
-                            {rule.requires_approval ? (
-                              <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-0.5">
-                                <Clock className="w-3 h-3" /> Cần duyệt
-                              </span>
-                            ) : (
-                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
-                                <ShieldCheck className="w-3 h-3" /> Tự động
-                              </span>
-                            )}
-                            {rule.requires_evidence && (
-                              <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                                • Cần minh chứng
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {canManage && (
-                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
-                          <button
-                            onClick={() => openEditRuleModal(rule)}
-                            className="px-3 py-1.5 rounded-xl font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            Chỉnh sửa
-                          </button>
-
-                          {rule.is_active && (
-                            <button
-                              onClick={() => handleArchiveRule(rule)}
-                              className="px-3 py-1.5 rounded-xl font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors flex items-center gap-1.5"
-                              title="Ngừng sử dụng quy tắc này"
-                            >
-                              <Power className="w-3.5 h-3.5" />
-                              Ngừng sử dụng
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                                    {rule.is_active && (
+                                      <button
+                                        onClick={() => handleArchiveRule(rule)}
+                                        className="p-1.5 rounded-xl font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors inline-flex items-center gap-1"
+                                        title="Ngừng sử dụng quy tắc này"
+                                      >
+                                        <Power className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

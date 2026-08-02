@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { 
   Award, 
+  Calendar,
   PlusCircle, 
   Clock, 
   History, 
@@ -134,8 +135,8 @@ export default function AdminCompetitionPage() {
                 : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-transparent'
             }`}
           >
-            <Award className="w-4 h-4" />
-            <span>Chương trình thi đua</span>
+            <Calendar className="w-4 h-4" />
+            <span>Tuần thi đua</span>
           </button>
 
           <button
