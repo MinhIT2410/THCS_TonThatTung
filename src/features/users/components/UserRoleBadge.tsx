@@ -54,7 +54,7 @@ export const UserRoleBadge: React.FC<{ role: string }> = ({ role }) => {
   }
 
   return (
-    <span className={`inline-flex min-h-7 min-w-[78px] items-center justify-center rounded-full px-2.5 py-1 text-center text-[10px] font-bold leading-tight border ${bg} ${text}`}>
+    <span className={`inline-flex min-h-7 min-w-[84px] items-center justify-center rounded-full px-3 py-1 text-center text-[11px] font-semibold leading-normal border ${bg} ${text}`}>
       {label}
     </span>
   );

@@ -54,10 +54,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onOpenSidebar }) => {
             <UserIcon className="h-4 w-4" />
           </div>
           <div className="text-left hidden sm:block">
-            <p className="text-[11px] font-bold text-slate-800 dark:text-white leading-none">
+            <p className="text-xs font-semibold text-slate-800 dark:text-white leading-snug">
               {profile?.full_name || 'Người dùng'}
             </p>
-            <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400 leading-none mt-0.5 uppercase tracking-wide flex items-center gap-0.5">
+            <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-none mt-0.5 uppercase tracking-wide flex items-center gap-1">
               <Shield className="h-2.5 w-2.5 text-blue-500" />
               {primaryRole?.name || 'Chưa phân quyền'}
             </p>

@@ -30,15 +30,13 @@ export default function RecordIncidentPage() {
       try {
         setCheckingPermission(true);
 
-        // 1. Roles check: Admin, Teacher, Homeroom Teacher, or explicit COMPETITION_RECORD
+        // 1. Roles check: Admin/Principal/Vice Principal/Content Editor/Competition Record
         const hasDirectRole = hasAnyRole([
           'SUPER_ADMIN',
           'ADMIN',
           'CONTENT_EDITOR',
           'PRINCIPAL',
           'VICE_PRINCIPAL',
-          'TEACHER',
-          'HOMEROOM_TEACHER',
           'COMPETITION_RECORD'
         ]);
 
@@ -48,30 +46,29 @@ export default function RecordIncidentPage() {
           return;
         }
 
-        // 2. Check competition actor assignments (SUPERVISOR, LIEN_DOI_COMMAND, RED_STAR)
-        const myAssignments = await competitionService.getMyActorAssignments();
-        const activeAssignments = (myAssignments || []).filter(
-          (a: any) => a.is_active !== false
-        );
+        // 2. Check active competition actor assignments (SUPERVISOR or RED_STAR with can_record_incident = true)
+        try {
+          const myAssignments = await competitionService.getMyActorAssignments();
+          const today = new Date().toISOString().split('T')[0];
 
-        if (activeAssignments.length > 0) {
-          setHasPermission(true);
-          setCheckingPermission(false);
-          return;
-        }
+          const activeAssignments = (myAssignments || []).filter((a: any) => {
+            if (a.is_active === false) return false;
 
-        // 3. Check if active GVCN in homeroom_assignments
-        const { data: homeroomData } = await supabase
-          .from('homeroom_assignments')
-          .select('id')
-          .eq('teacher_id', user.id)
-          .eq('is_active', true)
-          .limit(1);
+            const isSupervisorOrRedStar = a.assignment_type === 'SUPERVISOR' || a.assignment_type === 'RED_STAR';
+            const canRecord = a.can_record_incident !== false;
+            const isValidStart = !a.start_date || a.start_date <= today;
+            const isValidEnd = !a.end_date || a.end_date >= today;
 
-        if (homeroomData && homeroomData.length > 0) {
-          setHasPermission(true);
-          setCheckingPermission(false);
-          return;
+            return isSupervisorOrRedStar && canRecord && isValidStart && isValidEnd;
+          });
+
+          if (activeAssignments.length > 0) {
+            setHasPermission(true);
+            setCheckingPermission(false);
+            return;
+          }
+        } catch (err: any) {
+          console.error('[RecordIncidentPage] Lỗi kiểm tra nhiệm vụ thi đua (get_my_competition_actor_assignments):', err);
         }
 
         // User logged in but no recording privileges
@@ -119,7 +116,7 @@ export default function RecordIncidentPage() {
               Bạn không có quyền ghi nhận sự việc thi đua.
             </p>
             <p className="text-xs text-slate-400 dark:text-slate-500 pt-2">
-              Chức năng này dành cho Giám thị, GVCN, Ban chỉ huy Liên đội, Đội Sao đỏ hoặc người được phân quyền.
+              Chức năng này dành cho Giám thị, Đội Sao đỏ, Ban BGH, Quản trị viên hoặc người được phân quyền thi đua.
             </p>
           </div>
 

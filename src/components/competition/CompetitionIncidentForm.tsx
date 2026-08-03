@@ -96,17 +96,11 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
     isSupervisor: boolean;
     isRedStar: boolean;
     isLienDoiCommand: boolean;
-    isHomeroomTeacher: boolean;
-    assignedClassIds: string[];
-    assignedGradeLevelIds: string[];
   }>({
     isAdminOrStaff: false,
     isSupervisor: false,
     isRedStar: false,
     isLienDoiCommand: false,
-    isHomeroomTeacher: false,
-    assignedClassIds: [],
-    assignedGradeLevelIds: [],
   });
 
   // Master Data: Rules & Classes
@@ -175,39 +169,28 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
         let isSupervisor = false;
         let isRedStar = false;
         let isLienDoiCommand = false;
-        let isHomeroom = false;
-        const assignedClassIds: string[] = [];
-        const assignedGradeLevelIds: string[] = [];
 
         if (user) {
           // Check Actor Assignments
-          const actorAssignments = await competitionService.getMyActorAssignments();
-          (actorAssignments || []).forEach((a: any) => {
-            if (a.is_active !== false) {
-              if (a.assignment_type === 'SUPERVISOR') isSupervisor = true;
-              if (a.assignment_type === 'LIEN_DOI_COMMAND') isLienDoiCommand = true;
-              if (a.assignment_type === 'RED_STAR') {
-                isRedStar = true;
-                if (a.assigned_class_id) assignedClassIds.push(a.assigned_class_id);
-                if (a.assigned_grade_level_id) assignedGradeLevelIds.push(a.assigned_grade_level_id);
-              }
-            }
-          });
+          try {
+            const actorAssignments = await competitionService.getMyActorAssignments();
+            const today = new Date().toISOString().split('T')[0];
 
-          // Check Homeroom Assignments
-          const { data: homeroomData } = await supabase
-            .from('homeroom_assignments')
-            .select('class_id')
-            .eq('teacher_id', user.id)
-            .eq('is_active', true);
+            (actorAssignments || []).forEach((a: any) => {
+              if (a.is_active !== false) {
+                const canRecord = a.can_record_incident !== false;
+                const isValidStart = !a.start_date || a.start_date <= today;
+                const isValidEnd = !a.end_date || a.end_date >= today;
 
-          if (homeroomData && homeroomData.length > 0) {
-            isHomeroom = true;
-            homeroomData.forEach((h: any) => {
-              if (h.class_id && !assignedClassIds.includes(h.class_id)) {
-                assignedClassIds.push(h.class_id);
+                if (isValidStart && isValidEnd) {
+                  if (a.assignment_type === 'SUPERVISOR' && canRecord) isSupervisor = true;
+                  if (a.assignment_type === 'LIEN_DOI_COMMAND') isLienDoiCommand = true;
+                  if (a.assignment_type === 'RED_STAR' && canRecord) isRedStar = true;
+                }
               }
             });
+          } catch (err) {
+            console.error('[CompetitionIncidentForm] Lỗi tải danh sách nhiệm vụ thi đua:', err);
           }
         }
 
@@ -216,15 +199,12 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           isSupervisor,
           isRedStar,
           isLienDoiCommand,
-          isHomeroomTeacher: isHomeroom,
-          assignedClassIds,
-          assignedGradeLevelIds,
         };
         setUserScope(calculatedScope);
 
         // Default Mode selection:
         // SUPERVISOR defaults to 'UNIT'; others default to 'STUDENT'
-        if (isSupervisor && !isAdminStaff && !isRedStar && !isHomeroom) {
+        if (isSupervisor && !isAdminStaff && !isRedStar) {
           setTargetMode('UNIT');
         } else {
           setTargetMode('STUDENT');
@@ -296,21 +276,11 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
   }, [user, hasAnyRole]);
 
   // ---------------------------------------------------------------------------
-  // 2. FILTERED CLASSES & STUDENTS ACCORDING TO USER PERMISSIONS
+  // 2. CLASSES & STUDENTS FOR RECORDING (SCHOOL-WIDE FOR ALL AUTHORIZED USERS)
   // ---------------------------------------------------------------------------
   const availableClasses = useMemo(() => {
-    let list = allClasses;
-    if (!userScope.isAdminOrStaff && !userScope.isSupervisor && !userScope.isLienDoiCommand) {
-      if (userScope.assignedClassIds.length > 0) {
-        list = allClasses.filter(c => userScope.assignedClassIds.includes(c.id));
-      } else if (userScope.assignedGradeLevelIds.length > 0) {
-        list = allClasses.filter(c => c.grade_level_id && userScope.assignedGradeLevelIds.includes(c.grade_level_id));
-      } else {
-        list = [];
-      }
-    }
-    return sortClassesNaturally(list);
-  }, [allClasses, userScope]);
+    return sortClassesNaturally(allClasses);
+  }, [allClasses]);
 
   // Click outside & Escape key listeners for class search dropdown
   useEffect(() => {
@@ -395,7 +365,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
   };
 
   // ---------------------------------------------------------------------------
-  // 3. STUDENT SEARCH WITH DEBOUNCE & SCOPE FILTERING
+  // 3. STUDENT SEARCH WITH DEBOUNCE (SERVER-SIDE SEARCH)
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!studentSearchTerm || studentSearchTerm.trim().length < 2) {
@@ -407,22 +377,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
       setIsSearchingStudents(true);
       try {
         const results = await competitionService.searchStudents(studentSearchTerm);
-
-        // Filter search results according to scope if needed
-        let filtered = results;
-        if (!userScope.isAdminOrStaff && !userScope.isSupervisor && !userScope.isLienDoiCommand) {
-          if (userScope.assignedClassIds.length > 0) {
-            filtered = results.filter(s => s.unit?.class_id && userScope.assignedClassIds.includes(s.unit.class_id));
-          } else if (userScope.assignedGradeLevelIds.length > 0) {
-            // keep if student's class belongs to assigned grade levels
-            const allowedClassIds = allClasses
-              .filter(c => c.grade_level_id && userScope.assignedGradeLevelIds.includes(c.grade_level_id))
-              .map(c => c.id);
-            filtered = results.filter(s => s.unit?.class_id && allowedClassIds.includes(s.unit.class_id));
-          }
-        }
-
-        setStudentSearchResults(filtered);
+        setStudentSearchResults(results);
       } catch (err) {
         console.error('Student search error:', err);
       } finally {
@@ -431,7 +386,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [studentSearchTerm, userScope, allClasses]);
+  }, [studentSearchTerm]);
 
   const handleSelectStudent = (s: StudentOption) => {
     if (selectedStudents.some(item => item.id === s.id)) {
@@ -883,11 +838,11 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
         {/* Step 1: Chọn đối tượng ghi nhận */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
               <Users className="w-4 h-4 text-red-600" />
               1. Chọn Đối Tượng Ghi Nhận
             </span>
-            <span className="text-[11px] text-slate-400">Thao tác nhanh, chọn phương thức bên dưới</span>
+            <span className="text-xs text-slate-400 font-normal">Thao tác nhanh, chọn phương thức bên dưới</span>
           </div>
 
           <div className="grid grid-cols-2 gap-3 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80">

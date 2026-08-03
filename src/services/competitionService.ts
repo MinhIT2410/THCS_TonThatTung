@@ -321,32 +321,53 @@ export const competitionService = {
 
     const rawTerm = searchTerm.trim();
     const normTerm = removeVietnameseTones(rawTerm);
-    const words = normTerm.split(/\s+/).filter(Boolean);
 
-    // Build flexible PostgREST or filter
-    const wildcardPattern = normTerm.replace(/[aeiouy]/g, '%').replace(/\s+/g, '%');
-    const orConditions: string[] = [
-      `full_name.ilike.%${rawTerm}%`,
-      `student_code.ilike.%${rawTerm}%`,
-    ];
+    // Clean terms for safe PostgREST filter string (remove quotes, parens, commas)
+    const cleanRaw = rawTerm.replace(/["(),]/g, '');
+    const cleanNorm = normTerm.replace(/["(),]/g, '');
 
-    if (wildcardPattern) {
-      orConditions.push(`full_name.ilike.%${wildcardPattern}%`);
-      orConditions.push(`student_code.ilike.%${wildcardPattern}%`);
+    const rawWords = cleanRaw.split(/\s+/).filter(Boolean);
+    const normWords = cleanNorm.split(/\s+/).filter(Boolean);
+
+    // Build flexible PostgREST or filter conditions
+    // CRITICAL FIX: Wrap pattern values in double quotes so spaces in multi-word queries don't cause PostgREST syntax errors!
+    const conditionSet = new Set<string>();
+
+    if (cleanRaw) {
+      conditionSet.add(`full_name.ilike."%${cleanRaw}%"`);
+      conditionSet.add(`student_code.ilike."%${cleanRaw}%"`);
     }
 
-    words.forEach(w => {
+    if (cleanNorm && cleanNorm !== cleanRaw) {
+      conditionSet.add(`full_name.ilike."%${cleanNorm}%"`);
+      conditionSet.add(`student_code.ilike."%${cleanNorm}%"`);
+    }
+
+    // Add word-by-word matching
+    rawWords.forEach(w => {
       if (w.length >= 2) {
-        const wWildcard = w.replace(/[aeiouy]/g, '%');
-        orConditions.push(`full_name.ilike.%${wWildcard}%`);
+        conditionSet.add(`full_name.ilike."%${w}%"`);
+        conditionSet.add(`student_code.ilike."%${w}%"`);
       }
     });
 
+    normWords.forEach(w => {
+      if (w.length >= 2) {
+        conditionSet.add(`full_name.ilike."%${w}%"`);
+        conditionSet.add(`student_code.ilike."%${w}%"`);
+      }
+    });
+
+    if (conditionSet.size === 0) return [];
+
+    const orFilter = Array.from(conditionSet).join(',');
+
     const { data: students, error } = await supabase
       .from('profiles')
-      .select('id, full_name, student_code, avatar_url')
-      .or(orConditions.join(','))
-      .limit(35);
+      .select('id, full_name, student_code, avatar_url, user_roles!inner(role_code)')
+      .eq('user_roles.role_code', 'STUDENT')
+      .or(orFilter)
+      .limit(50);
 
     if (error) {
       console.error('Error searching students:', error);
@@ -363,7 +384,7 @@ export const competitionService = {
         const combined = `${normName} ${normCode}`;
 
         if (normName.includes(normTerm) || normCode.includes(normTerm)) return true;
-        return words.every(w => combined.includes(w));
+        return normWords.every(w => combined.includes(w));
       })
       .sort((a, b) => {
         const nameA = removeVietnameseTones(a.full_name || '');
@@ -383,20 +404,27 @@ export const competitionService = {
 
         return nameA.localeCompare(nameB, 'vi');
       })
-      .slice(0, 15);
+      .slice(0, 20);
 
     if (filteredAndRanked.length === 0) return [];
 
-    // Fetch student active enrollments
+    // Fetch student active/current enrollments
     const studentIds = filteredAndRanked.map(s => s.id);
     const { data: enrollments } = await supabase
       .from('student_enrollments')
-      .select('student_id, class_id, classes(id, name), academic_years(id, name)')
+      .select('student_id, class_id, classes(id, name), academic_years(id, name, is_current, is_active)')
       .in('student_id', studentIds);
 
     const enrollmentMap: Record<string, { class_id: string; class_name: string; academic_year_name: string }> = {};
     if (enrollments) {
-      enrollments.forEach((e: any) => {
+      // Sort enrollments so current/active academic year takes precedence
+      const sortedEnrollments = [...enrollments].sort((a: any, b: any) => {
+        const scoreA = (a.academic_years?.is_current ? 2 : 0) + (a.academic_years?.is_active ? 1 : 0);
+        const scoreB = (b.academic_years?.is_current ? 2 : 0) + (b.academic_years?.is_active ? 1 : 0);
+        return scoreA - scoreB;
+      });
+
+      sortedEnrollments.forEach((e: any) => {
         if (e.classes) {
           enrollmentMap[e.student_id] = {
             class_id: e.class_id,
@@ -408,7 +436,10 @@ export const competitionService = {
     }
 
     return filteredAndRanked.map(s => ({
-      ...s,
+      id: s.id,
+      full_name: s.full_name,
+      student_code: s.student_code,
+      avatar_url: s.avatar_url,
       unit: enrollmentMap[s.id] || null,
     }));
   },
@@ -1455,26 +1486,39 @@ export const competitionService = {
   },
 
   async getMyActorAssignments() {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) return [];
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user?.id) return [];
 
-      const { data, error } = await supabase.rpc('get_my_competition_actor_assignments');
-      if (!error && data) {
-        return data;
+    const { data, error } = await supabase.rpc('get_my_competition_actor_assignments');
+
+    if (error) {
+      console.error('[competitionService] RPC get_my_competition_actor_assignments failed:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+
+      // Attempt fallback direct table query for active assignments in current academic year
+      const today = new Date().toISOString().split('T')[0];
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('competition_actor_assignments')
+        .select('*, academic_years!inner(id, name, is_current)')
+        .eq('user_id', userData.user.id)
+        .eq('is_active', true)
+        .eq('academic_years.is_current', true)
+        .lte('start_date', today);
+
+      if (fallbackError) {
+        console.error('[competitionService] Fallback getMyActorAssignments query error:', fallbackError);
+        throw new Error(`[GET_ACTOR_ASSIGNMENTS_FAILED] RPC error (${error.code || 'UNKNOWN'}: ${error.message}) & Fallback error (${fallbackError.message})`);
       }
 
-      // Fallback if RPC fails or is not present
-      const { data: fallbackData } = await supabase
-        .from('competition_actor_assignments')
-        .select('*')
-        .eq('user_id', userData.user.id)
-        .eq('is_active', true);
-
-      return fallbackData || [];
-    } catch {
-      return [];
+      const validFallback = (fallbackData || []).filter((item: any) => !item.end_date || item.end_date >= today);
+      return validFallback;
     }
+
+    return data || [];
   },
 
   async getHomeroomIncidents(programId?: string, limit = 50, offset = 0) {

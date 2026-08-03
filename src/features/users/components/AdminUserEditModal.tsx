@@ -382,7 +382,7 @@ export const AdminUserEditModal: React.FC<AdminUserEditModalProps> = ({
               </div>
 
               <div className="space-y-1.5 pt-1">
-                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
                   Trạng thái hoạt động tài khoản
                 </label>
                 <select
@@ -406,7 +406,7 @@ export const AdminUserEditModal: React.FC<AdminUserEditModalProps> = ({
                     2. Nhiệm vụ Thi đua
                   </h3>
                 </div>
-                <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">Competition Actor Tasks</span>
+                <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Competition Actor Tasks</span>
               </div>
 
               {!isEligibleForSupervisor ? (
