@@ -1395,6 +1395,8 @@ export const competitionService = {
     assigned_grade_level_id?: string | null;
     start_date?: string;
     end_date?: string | null;
+    can_record_incident?: boolean;
+    can_approve_red_star?: boolean;
   }) {
     const { data: userData } = await supabase.auth.getUser();
 
@@ -1408,6 +1410,8 @@ export const competitionService = {
         assigned_grade_level_id: payload.assigned_grade_level_id || null,
         start_date: payload.start_date || new Date().toISOString().split('T')[0],
         end_date: payload.end_date || null,
+        can_record_incident: payload.can_record_incident ?? true,
+        can_approve_red_star: payload.can_approve_red_star ?? false,
         created_by: userData.user?.id || null,
       })
       .select()
@@ -1425,6 +1429,8 @@ export const competitionService = {
       start_date?: string;
       end_date?: string | null;
       is_active?: boolean;
+      can_record_incident?: boolean;
+      can_approve_red_star?: boolean;
     }
   ) {
     const { data, error } = await supabase

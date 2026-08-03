@@ -169,7 +169,6 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           'CONTENT_EDITOR',
           'PRINCIPAL',
           'VICE_PRINCIPAL',
-          'STAFF',
           'COMPETITION_RECORD'
         ]);
 
@@ -281,7 +280,13 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
 
       } catch (err: any) {
         console.error('Failed to initialize incident form:', err);
-        setNoProgramOrWeekError('Không thể tải dữ liệu khởi tạo thi đua. Vui lòng thử lại sau.');
+        const errCode = err?.code || err?.status;
+        const errMsg = err?.message || 'Lỗi không xác định';
+        if (errCode === '42501' || errCode === 403 || String(errMsg).toLowerCase().includes('permission') || String(errMsg).toLowerCase().includes('policy')) {
+          setNoProgramOrWeekError(`Lỗi phân quyền (${errCode || '403'}): Tài khoản của bạn chưa có đủ quyền đọc dữ liệu thi đua.`);
+        } else {
+          setNoProgramOrWeekError(`Lỗi khởi tạo thi đua (${errCode || 'ERROR'}): ${errMsg}`);
+        }
       } finally {
         setLoadingInitial(false);
       }

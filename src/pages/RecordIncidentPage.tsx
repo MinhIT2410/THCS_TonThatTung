@@ -30,14 +30,13 @@ export default function RecordIncidentPage() {
       try {
         setCheckingPermission(true);
 
-        // 1. Roles check: Admin, Staff, Teacher, Homeroom Teacher, or explicit COMPETITION_RECORD
+        // 1. Roles check: Admin, Teacher, Homeroom Teacher, or explicit COMPETITION_RECORD
         const hasDirectRole = hasAnyRole([
           'SUPER_ADMIN',
           'ADMIN',
           'CONTENT_EDITOR',
           'PRINCIPAL',
           'VICE_PRINCIPAL',
-          'STAFF',
           'TEACHER',
           'HOMEROOM_TEACHER',
           'COMPETITION_RECORD'

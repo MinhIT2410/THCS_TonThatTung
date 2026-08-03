@@ -21,6 +21,8 @@ export interface CompetitionActorAssignment {
   start_date: string;
   end_date?: string | null;
   is_active: boolean;
+  can_record_incident?: boolean;
+  can_approve_red_star?: boolean;
   created_by?: string | null;
   created_at: string;
   updated_at: string;
