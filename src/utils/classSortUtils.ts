@@ -4,6 +4,38 @@ const classCollator = new Intl.Collator('vi', {
 });
 
 /**
+ * Strip Vietnamese diacritics / tones from a string, convert to lowercase and trim.
+ */
+export function removeVietnameseTones(str: string): string {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Normalizes class search string / class name for matching.
+ * e.g.,
+ * normalizeClassSearch("Lớp 6/10") -> "610"
+ * normalizeClassSearch("lop 6-10") -> "610"
+ * normalizeClassSearch("6/2") -> "62"
+ * normalizeClassSearch("62") -> "62"
+ */
+export function normalizeClassSearch(str: string): string {
+  if (!str) return '';
+  let cleaned = removeVietnameseTones(str);
+  // Remove prefix words like "lop", "khoi", "chi doi"
+  cleaned = cleaned.replace(/\b(lop|khoi|chi doi)\b/g, '');
+  // Remove all non-alphanumeric characters
+  cleaned = cleaned.replace(/[^a-z0-9]/g, '');
+  return cleaned;
+}
+
+/**
  * Natural comparison for class names or strings containing numbers
  * (e.g. "Lớp 6/1", "Lớp 6/2", "Lớp 6/10", "Khối 6", "Khối 10").
  */
@@ -29,3 +61,4 @@ export function sortClassesNaturally<T = any>(
     return compareClassNames(nameA, nameB);
   });
 }
+

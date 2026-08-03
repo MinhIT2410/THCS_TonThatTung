@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase/client';
-import { sortClassesNaturally, compareClassNames } from '../utils/classSortUtils';
+import { sortClassesNaturally, compareClassNames, removeVietnameseTones } from '../utils/classSortUtils';
 import {
   CompetitionProgram,
   CompetitionRule,
@@ -319,12 +319,34 @@ export const competitionService = {
   async searchStudents(searchTerm: string) {
     if (!searchTerm || searchTerm.trim().length < 2) return [];
 
-    const term = searchTerm.trim();
+    const rawTerm = searchTerm.trim();
+    const normTerm = removeVietnameseTones(rawTerm);
+    const words = normTerm.split(/\s+/).filter(Boolean);
+
+    // Build flexible PostgREST or filter
+    const wildcardPattern = normTerm.replace(/[aeiouy]/g, '%').replace(/\s+/g, '%');
+    const orConditions: string[] = [
+      `full_name.ilike.%${rawTerm}%`,
+      `student_code.ilike.%${rawTerm}%`,
+    ];
+
+    if (wildcardPattern) {
+      orConditions.push(`full_name.ilike.%${wildcardPattern}%`);
+      orConditions.push(`student_code.ilike.%${wildcardPattern}%`);
+    }
+
+    words.forEach(w => {
+      if (w.length >= 2) {
+        const wWildcard = w.replace(/[aeiouy]/g, '%');
+        orConditions.push(`full_name.ilike.%${wWildcard}%`);
+      }
+    });
+
     const { data: students, error } = await supabase
       .from('profiles')
       .select('id, full_name, student_code, avatar_url')
-      .or(`full_name.ilike.%${term}%,student_code.ilike.%${term}%`)
-      .limit(10);
+      .or(orConditions.join(','))
+      .limit(35);
 
     if (error) {
       console.error('Error searching students:', error);
@@ -333,8 +355,40 @@ export const competitionService = {
 
     if (!students || students.length === 0) return [];
 
+    // Filter and rank on client using removeVietnameseTones
+    const filteredAndRanked = students
+      .filter(s => {
+        const normName = removeVietnameseTones(s.full_name || '');
+        const normCode = removeVietnameseTones(s.student_code || '');
+        const combined = `${normName} ${normCode}`;
+
+        if (normName.includes(normTerm) || normCode.includes(normTerm)) return true;
+        return words.every(w => combined.includes(w));
+      })
+      .sort((a, b) => {
+        const nameA = removeVietnameseTones(a.full_name || '');
+        const nameB = removeVietnameseTones(b.full_name || '');
+        const codeA = removeVietnameseTones(a.student_code || '');
+        const codeB = removeVietnameseTones(b.student_code || '');
+
+        const isExactA = nameA === normTerm || codeA === normTerm;
+        const isExactB = nameB === normTerm || codeB === normTerm;
+        if (isExactA && !isExactB) return -1;
+        if (!isExactA && isExactB) return 1;
+
+        const isStartA = nameA.startsWith(normTerm) || codeA.startsWith(normTerm);
+        const isStartB = nameB.startsWith(normTerm) || codeB.startsWith(normTerm);
+        if (isStartA && !isStartB) return -1;
+        if (!isStartA && isStartB) return 1;
+
+        return nameA.localeCompare(nameB, 'vi');
+      })
+      .slice(0, 15);
+
+    if (filteredAndRanked.length === 0) return [];
+
     // Fetch student active enrollments
-    const studentIds = students.map(s => s.id);
+    const studentIds = filteredAndRanked.map(s => s.id);
     const { data: enrollments } = await supabase
       .from('student_enrollments')
       .select('student_id, class_id, classes(id, name), academic_years(id, name)')
@@ -353,7 +407,7 @@ export const competitionService = {
       });
     }
 
-    return students.map(s => ({
+    return filteredAndRanked.map(s => ({
       ...s,
       unit: enrollmentMap[s.id] || null,
     }));

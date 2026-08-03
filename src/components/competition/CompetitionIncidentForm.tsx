@@ -39,6 +39,12 @@ import {
   COMPETITION_CATEGORY_LABELS, 
   COMPETITION_SCOPE_LABELS 
 } from '../../types/competition';
+import { 
+  removeVietnameseTones, 
+  normalizeClassSearch, 
+  compareClassNames, 
+  sortClassesNaturally 
+} from '../../utils/classSortUtils';
 
 interface CompetitionIncidentFormProps {
   onNavigateToPrograms?: () => void;
@@ -116,8 +122,11 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
   const studentSearchInputRef = useRef<HTMLInputElement>(null);
 
   // Selection State - Collective (Unit) Mode
-  const [selectedGradeId, setSelectedGradeId] = useState<string>('ALL');
-  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [selectedClasses, setSelectedClasses] = useState<ClassOption[]>([]);
+  const [classSearchTerm, setClassSearchTerm] = useState<string>('');
+  const [showClassDropdown, setShowClassDropdown] = useState(false);
+  const classSearchInputRef = useRef<HTMLInputElement>(null);
+  const classSearchContainerRef = useRef<HTMLDivElement>(null);
 
   // Behavior / Rule Selection
   const [selectedRuleId, setSelectedRuleId] = useState<string>('');
@@ -285,33 +294,100 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
   // 2. FILTERED CLASSES & STUDENTS ACCORDING TO USER PERMISSIONS
   // ---------------------------------------------------------------------------
   const availableClasses = useMemo(() => {
-    // If Admin/Staff/Supervisor/BCH, show all classes
-    if (userScope.isAdminOrStaff || userScope.isSupervisor || userScope.isLienDoiCommand) {
-      if (selectedGradeId === 'ALL') return allClasses;
-      return allClasses.filter(c => c.grade_level_id === selectedGradeId);
+    let list = allClasses;
+    if (!userScope.isAdminOrStaff && !userScope.isSupervisor && !userScope.isLienDoiCommand) {
+      if (userScope.assignedClassIds.length > 0) {
+        list = allClasses.filter(c => userScope.assignedClassIds.includes(c.id));
+      } else if (userScope.assignedGradeLevelIds.length > 0) {
+        list = allClasses.filter(c => c.grade_level_id && userScope.assignedGradeLevelIds.includes(c.grade_level_id));
+      } else {
+        list = [];
+      }
     }
+    return sortClassesNaturally(list);
+  }, [allClasses, userScope]);
 
-    // Restrict to assignedClassIds or assignedGradeLevelIds
-    let filtered = allClasses;
-    if (userScope.assignedClassIds.length > 0) {
-      filtered = filtered.filter(c => userScope.assignedClassIds.includes(c.id));
-    } else if (userScope.assignedGradeLevelIds.length > 0) {
-      filtered = filtered.filter(c => c.grade_level_id && userScope.assignedGradeLevelIds.includes(c.grade_level_id));
-    }
-
-    if (selectedGradeId !== 'ALL') {
-      filtered = filtered.filter(c => c.grade_level_id === selectedGradeId);
-    }
-
-    return filtered;
-  }, [allClasses, userScope, selectedGradeId]);
-
-  // Set default class if available classes exist and none selected
+  // Click outside & Escape key listeners for class search dropdown
   useEffect(() => {
-    if (availableClasses.length > 0 && (!selectedClassId || !availableClasses.some(c => c.id === selectedClassId))) {
-      setSelectedClassId(availableClasses[0].id);
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        classSearchContainerRef.current &&
+        !classSearchContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowClassDropdown(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowClassDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  // Matching classes for the single class search box
+  const matchingClasses = useMemo(() => {
+    const trimmed = classSearchTerm.trim();
+    if (!trimmed || trimmed.length < 1) {
+      return [];
     }
-  }, [availableClasses, selectedClassId]);
+
+    const unselected = availableClasses.filter(c => !selectedClasses.some(sc => sc.id === c.id));
+    const queryNorm = normalizeClassSearch(trimmed);
+    const queryRawNorm = removeVietnameseTones(trimmed);
+
+    const matches: { cls: ClassOption; priority: number }[] = [];
+
+    for (const c of unselected) {
+      const classNorm = normalizeClassSearch(c.name);
+      const classRawNorm = removeVietnameseTones(c.name);
+
+      let priority = 0;
+      if (classNorm === queryNorm) {
+        priority = 1; // Exact match (e.g. "62" -> "6/2", "610" -> "6/10")
+      } else if (classNorm.startsWith(queryNorm) || classRawNorm.startsWith(queryRawNorm)) {
+        priority = 2; // StartsWith (e.g. "7" -> "7/1", "7/2")
+      } else if (classNorm.includes(queryNorm) || classRawNorm.includes(queryRawNorm)) {
+        priority = 3; // Contains
+      }
+
+      if (priority > 0) {
+        matches.push({ cls: c, priority });
+      }
+    }
+
+    matches.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return compareClassNames(a.cls.name, b.cls.name);
+    });
+
+    return matches.map(m => m.cls).slice(0, 15);
+  }, [availableClasses, selectedClasses, classSearchTerm]);
+
+  const handleSelectClass = (cls: ClassOption) => {
+    if (selectedClasses.some(c => c.id === cls.id)) {
+      setClassSearchTerm('');
+      setShowClassDropdown(false);
+      return;
+    }
+    setSelectedClasses(prev => [...prev, cls]);
+    setClassSearchTerm('');
+    setShowClassDropdown(false);
+  };
+
+  const handleRemoveClass = (classId: string) => {
+    setSelectedClasses(prev => prev.filter(c => c.id !== classId));
+  };
 
   // ---------------------------------------------------------------------------
   // 3. STUDENT SEARCH WITH DEBOUNCE & SCOPE FILTERING
@@ -497,7 +573,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
     if (targetMode === 'STUDENT') {
       return selectedStudents.length > 0;
     } else {
-      return !!selectedClassId;
+      return selectedClasses.length > 0;
     }
   }, [
     loadingInitial,
@@ -510,7 +586,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
     hasEvidenceProvided,
     targetMode,
     selectedStudents,
-    selectedClassId,
+    selectedClasses,
   ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -566,25 +642,59 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
       };
 
       if (targetMode === 'UNIT') {
-        // Submit single unit record
-        await competitionService.createIncident({
-          ...basePayload,
-          unit_id: selectedClassId,
-          student_id: null,
-        });
+        // Multi-Unit Mode: loop through selected classes sequentially
+        const total = selectedClasses.length;
+        setSubmitProgress({ current: 0, total });
 
-        const selectedClassName = allClasses.find(c => c.id === selectedClassId)?.name || 'Chi đội';
-        setToastMessage({
-          type: 'success',
-          text: `Đã gửi ghi nhận cho Lớp ${selectedClassName} và chuyển sang Chờ duyệt.`,
-        });
-        setLastSubmittedSuccess(true);
+        let successCount = 0;
+        let failCount = 0;
+        const failedClasses: ClassOption[] = [];
 
-        // Clear unit-specific fields
-        setDescription('');
-        setEvidenceNote('');
-        setExternalUrl('');
-        setEvidenceFiles([]);
+        for (let i = 0; i < selectedClasses.length; i++) {
+          const cls = selectedClasses[i];
+          setSubmitProgress({ current: i + 1, total });
+
+          try {
+            await competitionService.createIncident({
+              ...basePayload,
+              unit_id: cls.id,
+              student_id: null,
+            });
+            successCount++;
+          } catch (err) {
+            console.error(`Failed to create incident for class ${cls.name}:`, err);
+            failCount++;
+            failedClasses.push(cls);
+          }
+        }
+
+        setSubmitProgress(null);
+
+        if (failCount === 0) {
+          setToastMessage({
+            type: 'success',
+            text: total === 1
+              ? `Đã gửi ghi nhận cho Lớp ${selectedClasses[0].name} và chuyển sang Chờ duyệt.`
+              : `Đã gửi ghi nhận cho ${successCount} Chi đội và chuyển sang Chờ duyệt.`,
+          });
+          setLastSubmittedSuccess(true);
+          setSelectedClasses([]);
+          setDescription('');
+          setEvidenceNote('');
+          setExternalUrl('');
+          setEvidenceFiles([]);
+        } else if (successCount > 0) {
+          setToastMessage({
+            type: 'warning',
+            text: `Đã gửi thành công ${successCount}/${total} Chi đội. Có ${failCount} Chi đội bị lỗi.`,
+          });
+          setSelectedClasses(failedClasses); // keep failed classes for retry
+        } else {
+          setToastMessage({
+            type: 'error',
+            text: 'Không thể tạo ghi nhận cho các Chi đội đã chọn. Vui lòng kiểm tra lại.',
+          });
+        }
 
       } else {
         // Individual Mode: loop through selected students sequentially
@@ -659,11 +769,11 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
       if (selectedStudents.length === 1) return `Ghi nhận cho ${selectedStudents[0].full_name}`;
       return `Ghi nhận cho ${selectedStudents.length} học sinh`;
     } else {
-      if (!selectedClassId) return 'Chọn Chi đội để ghi nhận';
-      const cName = allClasses.find(c => c.id === selectedClassId)?.name;
-      return cName ? `Ghi nhận cho Lớp ${cName}` : 'Ghi nhận cho Chi đội';
+      if (selectedClasses.length === 0) return 'Chọn Chi đội để ghi nhận';
+      if (selectedClasses.length === 1) return `Ghi nhận cho Lớp ${selectedClasses[0].name}`;
+      return `Ghi nhận cho ${selectedClasses.length} Chi đội`;
     }
-  }, [targetMode, selectedStudents, selectedClassId, allClasses]);
+  }, [targetMode, selectedStudents, selectedClasses]);
 
   // Loading state
   if (loadingInitial) {
@@ -915,46 +1025,113 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
             </div>
           ) : (
             /* Collective (Unit) Mode Class Picker */
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Lọc theo Khối
-                </label>
-                <select
-                  value={selectedGradeId}
-                  onChange={e => setSelectedGradeId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
-                >
-                  <option value="ALL">Tất cả Khối lớp</option>
-                  {gradeLevels.map(g => (
-                    <option key={g.id} value={g.id}>
-                      Khối {g.name}
-                    </option>
-                  ))}
-                </select>
+            <div className="space-y-3 pt-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Tìm Chi đội / Lớp <span className="text-red-500">*</span>
+              </label>
+
+              <div ref={classSearchContainerRef} className="relative">
+                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  ref={classSearchInputRef}
+                  type="text"
+                  value={classSearchTerm}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setClassSearchTerm(val);
+                    setShowClassDropdown(val.trim().length >= 1);
+                  }}
+                  onFocus={() => {
+                    if (classSearchTerm.trim().length >= 1) {
+                      setShowClassDropdown(true);
+                    }
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') {
+                      setShowClassDropdown(false);
+                    }
+                  }}
+                  placeholder="Nhập tên lớp (VD: 62, 6/2, 610, 6/10, lớp 7...)"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                />
+
+                {/* Class Search Dropdown */}
+                {showClassDropdown && classSearchTerm.trim().length >= 1 && (
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {matchingClasses.length === 0 ? (
+                      <div className="p-3 text-xs text-slate-500 dark:text-slate-400 text-center italic">
+                        Không tìm thấy Chi đội phù hợp.
+                      </div>
+                    ) : (
+                      matchingClasses.map(c => {
+                        const isAlreadySelected = selectedClasses.some(sc => sc.id === c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => handleSelectClass(c)}
+                            disabled={isAlreadySelected}
+                            className={`w-full text-left p-3 transition-colors flex items-center justify-between cursor-pointer ${
+                              isAlreadySelected
+                                ? 'bg-slate-100 dark:bg-slate-800/50 opacity-60'
+                                : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                            }`}
+                          >
+                            <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
+                              <span>Lớp {c.name}</span>
+                              {isAlreadySelected && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-semibold">
+                                  Đã chọn
+                                </span>
+                              )}
+                            </div>
+                            <Plus className="w-4 h-4 text-slate-400" />
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Chọn Chi đội / Lớp <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedClassId}
-                  onChange={e => setSelectedClassId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
-                  required
-                >
-                  {availableClasses.length === 0 ? (
-                    <option value="">Không có lớp trong phạm vi</option>
-                  ) : (
-                    availableClasses.map(c => (
-                      <option key={c.id} value={c.id}>
-                        Lớp {c.name}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
+              {/* Selected Classes Chips */}
+              {selectedClasses.length > 0 ? (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
+                    <span>Đã chọn ({selectedClasses.length} Chi đội / Lớp):</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedClasses([])}
+                      className="text-red-600 hover:underline cursor-pointer"
+                    >
+                      Xóa tất cả
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedClasses.map(c => (
+                      <div
+                        key={c.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/60 text-xs text-blue-900 dark:text-blue-200 font-semibold"
+                      >
+                        <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>Lớp {c.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveClass(c.id)}
+                          className="p-0.5 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-400 italic">
+                  Chưa chọn Chi đội nào. Nhập tên lớp để tìm và chọn nhiều Chi đội cho cùng một hành vi.
+                </p>
+              )}
             </div>
           )}
         </div>
