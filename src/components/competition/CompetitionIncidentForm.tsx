@@ -677,9 +677,9 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
 
   return (
     <div className="max-w-4xl mx-auto w-full space-y-6 font-sans">
-      {/* Active Program & Week Banner or Error Banner */}
-      {noProgramOrWeekError ? (
-        <div className="p-5 rounded-3xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+      {/* Active Program & Week Error Banner */}
+      {noProgramOrWeekError && (
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-2xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 shrink-0">
               <AlertTriangle className="w-5 h-5" />
@@ -695,34 +695,10 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
             <button
               type="button"
               onClick={onNavigateToPrograms}
-              className="px-4 py-2 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm shrink-0 cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm shrink-0 cursor-pointer text-center"
             >
               Mở tuần thi đua
             </button>
-          )}
-        </div>
-      ) : (
-        <div className="p-3.5 px-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            <span className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
-              <Award className="w-4 h-4 text-red-600" />
-              <span>Chương trình:</span>
-              <span className="text-red-600 dark:text-red-400">{activeProgram?.name}</span>
-            </span>
-            <span className="hidden sm:inline text-slate-300 dark:text-slate-600">•</span>
-            <span className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
-              <Calendar className="w-3.5 h-3.5 text-blue-600" />
-              <span>Tuần thi đua:</span>
-              <span className="font-bold text-slate-900 dark:text-white">{openWeek?.name || `Tuần ${openWeek?.week_number}`}</span>
-              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold">
-                Đang mở
-              </span>
-            </span>
-          </div>
-          {userScope.isRedStar && (
-            <span className="px-2.5 py-0.5 rounded-lg bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 font-bold text-[11px]">
-              ⭐ Quyền Sao Đỏ
-            </span>
           )}
         </div>
       )}
@@ -1240,105 +1216,12 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           )}
         </div>
 
-        {/* Step 4: Tóm tắt & Nút ghi nhận */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              Tóm Tắt & Tác Động Điểm
-            </span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 space-y-3 text-xs">
-            {/* Target preview */}
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Đối tượng:</span>
-              <span className="font-bold text-slate-900 dark:text-white">
-                {targetMode === 'STUDENT' ? (
-                  selectedStudents.length === 0 ? (
-                    <span className="text-slate-400 italic">Chưa chọn học sinh</span>
-                  ) : selectedStudents.length === 1 ? (
-                    `${selectedStudents[0].full_name} (${selectedStudents[0].class_name || 'Chi đội'})`
-                  ) : (
-                    `${selectedStudents.length} học sinh`
-                  )
-                ) : (
-                  selectedClassId ? `Lớp ${allClasses.find(c => c.id === selectedClassId)?.name}` : <span className="text-slate-400 italic">Chưa chọn Lớp</span>
-                )}
-              </span>
-            </div>
-
-            {/* Behavior preview */}
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Hành vi:</span>
-              <span className="font-bold text-slate-900 dark:text-white">
-                {selectedRule ? selectedRule.name : <span className="text-slate-400 italic">Chưa chọn hành vi</span>}
-              </span>
-            </div>
-
-            {/* Point impact badges */}
-            {selectedRule && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700">
-                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">Điểm rèn luyện:</span>
-                  <span
-                    className={`font-mono font-bold ${
-                      selectedRule.student_merit_points > 0
-                        ? 'text-emerald-600'
-                        : selectedRule.student_merit_points < 0
-                        ? 'text-rose-600'
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    {selectedRule.student_merit_points > 0 ? `+${selectedRule.student_merit_points}` : selectedRule.student_merit_points}
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">Điểm thưởng đổi quà:</span>
-                  <span
-                    className={`font-mono font-bold ${
-                      selectedRule.student_reward_points > 0
-                        ? 'text-amber-600'
-                        : selectedRule.student_reward_points < 0
-                        ? 'text-rose-600'
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    {selectedRule.student_reward_points > 0 ? `+${selectedRule.student_reward_points}` : selectedRule.student_reward_points}
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">Điểm thi đua Chi đội:</span>
-                  <span
-                    className={`font-mono font-bold ${
-                      selectedRule.unit_points > 0
-                        ? 'text-blue-600'
-                        : selectedRule.unit_points < 0
-                        ? 'text-rose-600'
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    {selectedRule.unit_points > 0 ? `+${selectedRule.unit_points}` : selectedRule.unit_points}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between text-[11px] pt-1">
-              <span className="text-slate-400">Trạng thái sau khi ghi nhận:</span>
-              <span className="font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded">
-                Chờ duyệt
-              </span>
-            </div>
-          </div>
-
-          {/* Submit Button */}
+        {/* Step 4: Nút ghi nhận */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm">
           <button
             type="submit"
             disabled={!canSubmit || isSubmitting}
-            className="w-full py-4 px-6 rounded-2xl bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-red-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 sm:py-4 px-6 rounded-xl sm:rounded-2xl bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-bold text-sm sm:text-base shadow-lg shadow-red-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <>
