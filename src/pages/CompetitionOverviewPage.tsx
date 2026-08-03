@@ -19,12 +19,12 @@ import {
   Gift,
   AlertCircle,
   Calendar,
-  HeartHandshake,
-  PlusCircle
+  HeartHandshake
 } from 'lucide-react';
 import { competitionService } from '../services/competitionService';
 import { ROUTES } from '../config/routes';
 import { supabase } from '../lib/supabase/client';
+import CompetitionQuickActions from '../components/competition/CompetitionQuickActions';
 
 interface GradeTopClasses {
   grade: string;
@@ -293,17 +293,10 @@ export default function CompetitionOverviewPage() {
         <p className="font-sans text-sm text-slate-500 dark:text-slate-400">
           Theo dõi kết quả thi đua của các chi đội, thành tích của đội viên và các hoạt động tuyên dương trong năm học.
         </p>
-
-        <div className="pt-2">
-          <Link
-            to={ROUTES.COMPETITION_RECORD}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md shadow-red-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Ghi nhận sự việc</span>
-          </Link>
-        </div>
       </div>
+
+      {/* 1.5 Quick Actions */}
+      <CompetitionQuickActions />
 
       {/* 2. SECTION 1: THI ĐUA CHI ĐỘI */}
       <section className="space-y-6">
