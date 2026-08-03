@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
 import { 
   BarChart3, 
   ArrowLeft, 
@@ -12,11 +12,129 @@ import {
   TrendingUp, 
   AlertTriangle, 
   Calendar,
-  Users
+  Users,
+  ShieldAlert,
+  Loader2
 } from 'lucide-react';
+import { useAuth } from '../features/auth/AuthContext';
+import { competitionService } from '../services/competitionService';
 import { ROUTES } from '../config/routes';
 
 export default function CompetitionReportPage() {
+  const { user, isAuthenticated, loading, profileLoading, hasAnyRole } = useAuth();
+  const [checkingPermission, setCheckingPermission] = useState(true);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (loading || profileLoading) return;
+
+    if (!isAuthenticated || !user) {
+      setHasPermission(false);
+      setCheckingPermission(false);
+      return;
+    }
+
+    async function checkReportPermission() {
+      try {
+        setCheckingPermission(true);
+
+        // 1. Direct roles
+        const isAuthorizedByRole = hasAnyRole([
+          'SUPER_ADMIN',
+          'ADMIN',
+          'PRINCIPAL',
+          'VICE_PRINCIPAL',
+          'COMPETITION_MANAGE',
+          'COMPETITION_REPORT_VIEW',
+        ]);
+
+        if (isAuthorizedByRole) {
+          setHasPermission(true);
+          setCheckingPermission(false);
+          return;
+        }
+
+        // 2. Actor assignments (SUPERVISOR or RED_STAR)
+        const myAssignments = await competitionService.getMyActorAssignments();
+        const today = new Date().toISOString().split('T')[0];
+
+        const hasActorAssignment = (myAssignments || []).some((a: any) => {
+          if (a.is_active === false) return false;
+          const isActor = a.assignment_type === 'SUPERVISOR' || a.assignment_type === 'RED_STAR';
+          const isValidStart = !a.start_date || a.start_date <= today;
+          const isValidEnd = !a.end_date || a.end_date >= today;
+
+          return isActor && isValidStart && isValidEnd;
+        });
+
+        if (hasActorAssignment) {
+          setHasPermission(true);
+          setCheckingPermission(false);
+          return;
+        }
+
+        setHasPermission(false);
+      } catch (err) {
+        console.error('[CompetitionReportPage] Error checking report permission:', err);
+        setHasPermission(false);
+      } finally {
+        setCheckingPermission(false);
+      }
+    }
+
+    checkReportPermission();
+  }, [user, isAuthenticated, loading, profileLoading, hasAnyRole]);
+
+  // Loading state
+  if (loading || profileLoading || (isAuthenticated && checkingPermission)) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3 font-sans">
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        <p className="text-xs text-slate-500 font-medium">Đang kiểm tra quyền xem báo cáo...</p>
+      </div>
+    );
+  }
+
+  // Not authenticated -> redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to={ROUTES.LOGIN} replace />;
+  }
+
+  // Authenticated but no permission
+  if (hasPermission === false) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 font-sans">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-8 sm:p-12 text-center space-y-6 shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2 max-w-md mx-auto">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              Quyền truy cập bị hạn chế
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Bạn không có quyền xem báo cáo thi đua.
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 pt-2">
+              Chức năng này dành cho Giám thị, Đội Sao đỏ, Ban BGH, Quản trị viên hoặc lực lượng được ủy quyền thi đua.
+            </p>
+          </div>
+
+          <div>
+            <Link
+              to={ROUTES.COMPETITION}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold text-xs hover:opacity-90 transition-all shadow-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Quay lại trang Thi đua</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 font-sans pb-16">
       {/* Header & Navigation */}
@@ -36,11 +154,11 @@ export default function CompetitionReportPage() {
                 <BarChart3 className="w-5 h-5" />
               </div>
               <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                Báo cáo thống kê thi đua
+                Báo cáo thi đua
               </h1>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 pl-0.5">
-              Theo dõi tình hình thi đua trong ngày, tổng hợp tuần, phân tích vi phạm và xuất báo cáo.
+              Theo dõi tình hình ghi nhận trong ngày, tổng hợp theo tuần, nhóm lỗi và lớp vi phạm.
             </p>
           </div>
 
@@ -53,7 +171,7 @@ export default function CompetitionReportPage() {
         </div>
       </div>
 
-      {/* Overview Metric Placeholders */}
+      {/* Overview Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">

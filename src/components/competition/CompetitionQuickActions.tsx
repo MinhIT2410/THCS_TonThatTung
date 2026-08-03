@@ -145,7 +145,7 @@ export default function CompetitionQuickActions() {
       description: 'Xem các sự việc đang chờ duyệt từ Sao đỏ hoặc lực lượng ghi nhận.',
       icon: Clock,
       btnText: 'Xem chờ duyệt',
-      route: '/quan-tri/thi-dua?tab=pending',
+      route: ROUTES.COMPETITION_PENDING,
       visible: permissions.canApprove,
       badgeColor: 'bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400',
       borderColor: 'border-amber-200/80 hover:border-amber-400 dark:border-amber-900/50 dark:hover:border-amber-700',
