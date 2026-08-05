@@ -19,6 +19,8 @@ import { ROUTES } from '../../config/routes';
 export default function CompetitionQuickActions() {
   const { user, isAuthenticated, hasAnyRole } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+  const [pendingLoading, setPendingLoading] = useState<boolean>(false);
 
   const [permissions, setPermissions] = useState({
     canRecord: false,
@@ -109,6 +111,20 @@ export default function CompetitionQuickActions() {
           canApprove,
           canViewReports,
         });
+
+        // 2. Fetch pending incidents count if user can approve
+        if (canApprove) {
+          try {
+            setPendingLoading(true);
+            const count = await competitionService.getPendingIncidentsCount();
+            if (isMounted) setPendingCount(count);
+          } catch (err) {
+            console.error('[CompetitionQuickActions] Lỗi tải số lượng sự việc chờ duyệt:', err);
+            if (isMounted) setPendingCount(0);
+          } finally {
+            if (isMounted) setPendingLoading(false);
+          }
+        }
       } catch (err) {
         console.error('[CompetitionQuickActions] Evaluate permissions error:', err);
       } finally {
@@ -206,15 +222,52 @@ export default function CompetitionQuickActions() {
                 <div className={`w-10 h-10 rounded-xl ${action.badgeColor} flex items-center justify-center shrink-0 shadow-2xs`}>
                   <action.icon className="w-5 h-5" />
                 </div>
+
+                {action.key === 'pending' && (
+                  <div>
+                    {pendingLoading ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 animate-pulse">
+                        ...
+                      </span>
+                    ) : pendingCount !== null ? (
+                      <span
+                        className={`inline-flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full text-xs font-black shadow-2xs transition-all ${
+                          pendingCount > 0
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                        }`}
+                      >
+                        {pendingCount}
+                      </span>
+                    ) : null}
+                  </div>
+                )}
               </div>
 
               <div>
                 <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
                   {action.title}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-3 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
                   {action.description}
                 </p>
+
+                {action.key === 'pending' && (
+                  <div className="mt-2 text-xs font-semibold">
+                    {pendingLoading ? (
+                      <span className="text-slate-400 animate-pulse">Đang tải số lượng...</span>
+                    ) : pendingCount !== null && pendingCount > 0 ? (
+                      <span className="text-amber-700 dark:text-amber-300 font-bold flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                        <span>Có <strong className="font-extrabold text-amber-800 dark:text-amber-200">{pendingCount}</strong> sự việc cần xử lý</span>
+                      </span>
+                    ) : (
+                      <span className="text-slate-500 dark:text-slate-400">
+                        • Không có sự việc chờ duyệt
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

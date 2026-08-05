@@ -566,6 +566,19 @@ export const competitionService = {
     })) as CompetitionIncident[];
   },
 
+  async getPendingIncidentsCount(): Promise<number> {
+    const { count, error } = await supabase
+      .from('competition_incidents')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'PENDING');
+
+    if (error) {
+      console.error('Error fetching pending incidents count:', error);
+      return 0;
+    }
+    return count || 0;
+  },
+
   // --- CLASSES / UNITS ---
   async getClasses(academicYearId?: string) {
     let query = supabase
@@ -1447,23 +1460,27 @@ export const competitionService = {
         hint: error.hint,
       });
 
-      // Attempt fallback direct table query for active assignments in current academic year
-      const today = new Date().toISOString().split('T')[0];
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('competition_actor_assignments')
-        .select('*, academic_years!inner(id, name, is_current)')
-        .eq('user_id', userData.user.id)
-        .eq('is_active', true)
-        .eq('academic_years.is_current', true)
-        .lte('start_date', today);
+      // Attempt fallback direct table query for active assignments
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('competition_actor_assignments')
+          .select('*')
+          .eq('user_id', userData.user.id)
+          .eq('is_active', true)
+          .lte('start_date', today);
 
-      if (fallbackError) {
-        console.error('[competitionService] Fallback getMyActorAssignments query error:', fallbackError);
-        throw new Error(`[GET_ACTOR_ASSIGNMENTS_FAILED] RPC error (${error.code || 'UNKNOWN'}: ${error.message}) & Fallback error (${fallbackError.message})`);
+        if (fallbackError) {
+          console.error('[competitionService] Fallback getMyActorAssignments query error:', fallbackError);
+          return [];
+        }
+
+        const validFallback = (fallbackData || []).filter((item: any) => !item.end_date || item.end_date >= today);
+        return validFallback;
+      } catch (err) {
+        console.error('[competitionService] Fallback exception in getMyActorAssignments:', err);
+        return [];
       }
-
-      const validFallback = (fallbackData || []).filter((item: any) => !item.end_date || item.end_date >= today);
-      return validFallback;
     }
 
     return data || [];
