@@ -7,6 +7,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext';
 import {
+  Medal,
   Newspaper,
   FileText,
   Image as ImageIcon,
@@ -22,6 +23,13 @@ export default function AdminDashboardPage() {
   const navigate = useNavigate();
 
   const cards = [
+    {
+      title: 'Quản lý Thi đua',
+      description: 'Quản lý tuần thi đua, quy tắc, sự việc chờ duyệt, phần thưởng và phân công nhiệm vụ.',
+      href: '/quan-tri/thi-dua',
+      icon: Medal,
+      color: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/40',
+    },
     {
       title: 'Quản lý Tin tức',
       description: 'Đăng tin giáo dục, thông báo học đường, sự kiện hoạt động của nhà trường.',
@@ -53,14 +61,14 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Người dùng & Phân quyền',
-      description: 'Phân vai trò quản trị cho giáo viên, kiểm soát trạng thái hoạt động tài khoản.',
+      description: 'Phân vai trò quản trị cho giáo viên, học sinh và kiểm soát trạng thái hoạt động tài khoản.',
       href: '/quan-tri/nguoi-dung',
       icon: Users,
       color: 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/30 border-cyan-100 dark:border-cyan-900/40',
     },
     {
       title: 'Cài đặt hệ thống',
-      description: 'Thiết lập thông tin liên hệ của trường, mạng xã hội, các cấu hình nền tảng.',
+      description: 'Thiết lập thông tin của trường, lớp, giáo viên, học sinh và các cấu hình nền tảng.',
       href: '/quan-tri/cai-dat',
       icon: Settings,
       badge: 'Cấu hình chung',

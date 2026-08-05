@@ -113,18 +113,18 @@ export default function AdminCompetitionPage() {
   };
 
   return (
-    <div className="space-y-6 font-sans pb-16">
+    <div className="space-y-6 py-4 font-sans pb-16">
       {/* Header */}
-      <div className="flex flex-col items-center text-center justify-center gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight font-display text-slate-900 dark:text-white flex items-center justify-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-red-600 text-white shadow-md shadow-red-600/20">
-              <Award className="w-6 h-6" />
-            </div>
-            Quản lý thi đua và khen thưởng
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl mx-auto">
-            Ghi nhận sự việc, quản lý điểm thi đua và theo dõi hoạt động khen thưởng của Liên đội.
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2.5">
+            <Award className="h-6 w-6 text-red-600 dark:text-red-400" />
+            <h1 className="font-display text-xl font-bold text-slate-900 dark:text-white">
+              Quản lý thi đua và khen thưởng
+            </h1>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Quản lý tuần thi đua, quy tắc, sự việc chờ duyệt, phần thưởng và phân công nhiệm vụ.
           </p>
         </div>
       </div>
