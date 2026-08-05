@@ -11,7 +11,11 @@ DROP CONSTRAINT IF EXISTS check_competition_rules_allowed_recorder_types;
 
 ALTER TABLE public.competition_rules
 ADD CONSTRAINT check_competition_rules_allowed_recorder_types
-CHECK (allowed_recorder_types <@ ARRAY['ADMIN', 'SUPERVISOR', 'RED_STAR']::text[]);
+CHECK (
+  cardinality(allowed_recorder_types) > 0
+  AND allowed_recorder_types
+      <@ ARRAY['ADMIN', 'SUPERVISOR', 'RED_STAR']::text[]
+);
 
 ALTER TABLE public.competition_rules
 DROP CONSTRAINT IF EXISTS check_competition_rules_allowed_approver_types;
