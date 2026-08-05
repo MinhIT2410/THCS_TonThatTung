@@ -36,6 +36,7 @@ import {
   CompetitionProgram, 
   CompetitionRule, 
   CompetitionWeek,
+  CompetitionRecorderType,
   COMPETITION_CATEGORY_LABELS, 
   COMPETITION_SCOPE_LABELS 
 } from '../../types/competition';
@@ -239,9 +240,22 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           setNoProgramOrWeekError(null);
         }
 
-        // D. Load active rules for this program
+        // D. Load active rules for this program and filter by user's recorder role
         const rules = await competitionService.getRules(prog.id, true);
-        const activeRules = rules.filter(r => r.is_active);
+        const userActorTypes: CompetitionRecorderType[] = [];
+        if (calculatedScope.isAdminOrStaff) userActorTypes.push('ADMIN');
+        if (calculatedScope.isSupervisor) userActorTypes.push('SUPERVISOR');
+        if (calculatedScope.isRedStar) userActorTypes.push('RED_STAR');
+
+        const activeRules = rules.filter(r => {
+          if (!r.is_active) return false;
+          const allowedRecorders = (r.allowed_recorder_types && r.allowed_recorder_types.length > 0)
+            ? r.allowed_recorder_types
+            : ['ADMIN', 'SUPERVISOR', 'RED_STAR'];
+
+          if (userActorTypes.length === 0) return false;
+          return userActorTypes.some(actor => allowedRecorders.includes(actor));
+        });
         setAllRules(activeRules);
 
         // E. Load Classes

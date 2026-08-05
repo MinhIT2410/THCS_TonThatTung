@@ -124,6 +124,15 @@ export interface CompetitionProgram {
   updated_at: string;
 }
 
+export type CompetitionRecorderType =
+  | 'ADMIN'
+  | 'SUPERVISOR'
+  | 'RED_STAR';
+
+export type CompetitionApproverType =
+  | 'ADMIN'
+  | 'SUPERVISOR';
+
 export interface CompetitionRule {
   id: string;
   program_id: string;
@@ -137,6 +146,8 @@ export interface CompetitionRule {
   unit_points: number;
   requires_evidence: boolean;
   requires_approval: boolean;
+  allowed_recorder_types?: CompetitionRecorderType[];
+  allowed_approver_types?: CompetitionApproverType[];
   daily_limit?: number | null;
   is_active: boolean;
   display_order: number;

@@ -171,6 +171,12 @@ export const competitionService = {
   },
 
   async createCompetitionRule(rule: Partial<CompetitionRule>): Promise<CompetitionRule> {
+    const approverTypes = rule.allowed_approver_types || [];
+    const requiresApproval = approverTypes.length > 0;
+    const recorderTypes = rule.allowed_recorder_types && rule.allowed_recorder_types.length > 0
+      ? rule.allowed_recorder_types
+      : ['ADMIN', 'SUPERVISOR', 'RED_STAR'];
+
     const { data, error } = await supabase
       .from('competition_rules')
       .insert({
@@ -184,7 +190,9 @@ export const competitionService = {
         student_reward_points: rule.student_reward_points ?? 0,
         unit_points: rule.unit_points ?? 0,
         requires_evidence: rule.requires_evidence ?? false,
-        requires_approval: rule.requires_approval ?? false,
+        requires_approval: requiresApproval,
+        allowed_recorder_types: recorderTypes,
+        allowed_approver_types: approverTypes,
         daily_limit: rule.daily_limit || null,
         is_active: rule.is_active ?? true,
         display_order: rule.display_order ?? 0,
@@ -204,6 +212,12 @@ export const competitionService = {
   },
 
   async updateCompetitionRule(id: string, rule: Partial<CompetitionRule>): Promise<CompetitionRule> {
+    const approverTypes = rule.allowed_approver_types ?? [];
+    const requiresApproval = approverTypes.length > 0;
+    const recorderTypes = rule.allowed_recorder_types && rule.allowed_recorder_types.length > 0
+      ? rule.allowed_recorder_types
+      : ['ADMIN', 'SUPERVISOR', 'RED_STAR'];
+
     const { data, error } = await supabase
       .from('competition_rules')
       .update({
@@ -217,7 +231,9 @@ export const competitionService = {
         student_reward_points: rule.student_reward_points ?? 0,
         unit_points: rule.unit_points ?? 0,
         requires_evidence: rule.requires_evidence ?? false,
-        requires_approval: rule.requires_approval ?? false,
+        requires_approval: requiresApproval,
+        allowed_recorder_types: recorderTypes,
+        allowed_approver_types: approverTypes,
         daily_limit: rule.daily_limit || null,
         is_active: rule.is_active ?? true,
         display_order: rule.display_order ?? 0,
@@ -258,6 +274,26 @@ export const competitionService = {
       ...data,
       program: (data as any).competition_programs,
     } as CompetitionRule;
+  },
+
+  async deleteCompetitionRule(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('competition_rules')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting competition rule:', error);
+      if (
+        error.code === '23503' ||
+        error.message?.includes('foreign key constraint') ||
+        error.message?.includes('violates foreign key constraint') ||
+        error.details?.includes('competition_incidents')
+      ) {
+        throw new Error('Quy tắc này đã phát sinh dữ liệu thi đua nên không thể xóa.');
+      }
+      throw error;
+    }
   },
 
   // Backward compatibility aliases
@@ -524,7 +560,7 @@ export const competitionService = {
       .select(`
         *,
         competition_programs(name, code),
-        competition_rules(name, code, category, effect_scope, student_merit_points, student_reward_points, unit_points),
+        competition_rules(name, code, category, effect_scope, student_merit_points, student_reward_points, unit_points, requires_approval, allowed_recorder_types, allowed_approver_types),
         student:profiles!competition_incidents_student_id_fkey(full_name, student_code),
         unit:classes!competition_incidents_unit_id_fkey(name),
         recorder:profiles!competition_incidents_recorded_by_fkey(full_name),

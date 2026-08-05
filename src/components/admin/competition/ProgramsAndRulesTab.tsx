@@ -20,7 +20,9 @@ import {
   AlertCircle,
   Archive,
   Power,
-  ChevronRight
+  ChevronRight,
+  Check,
+  Trash2
 } from 'lucide-react';
 import { competitionService } from '../../../services/competitionService';
 import { 
@@ -28,6 +30,8 @@ import {
   CompetitionRule, 
   CompetitionCategory, 
   CompetitionEffectScope,
+  CompetitionRecorderType,
+  CompetitionApproverType,
   COMPETITION_CATEGORY_LABELS, 
   COMPETITION_SCOPE_LABELS 
 } from '../../../types/competition';
@@ -264,7 +268,9 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
       student_reward_points: 0,
       unit_points: 0,
       requires_evidence: false,
-      requires_approval: false,
+      requires_approval: true,
+      allowed_recorder_types: ['ADMIN', 'SUPERVISOR', 'RED_STAR'],
+      allowed_approver_types: ['ADMIN'],
       daily_limit: null,
       display_order: 0,
       is_active: true,
@@ -274,8 +280,43 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
 
   const openEditRuleModal = (rule: CompetitionRule) => {
     setRuleFormError(null);
-    setEditingRule({ ...rule });
+    const recorderTypes: CompetitionRecorderType[] = (rule.allowed_recorder_types && rule.allowed_recorder_types.length > 0)
+      ? rule.allowed_recorder_types
+      : ['ADMIN', 'SUPERVISOR', 'RED_STAR'];
+
+    let approverTypes: CompetitionApproverType[] = [];
+    if (rule.allowed_approver_types !== undefined && rule.allowed_approver_types !== null) {
+      approverTypes = rule.allowed_approver_types;
+    } else if (rule.requires_approval) {
+      approverTypes = ['ADMIN'];
+    } else {
+      approverTypes = [];
+    }
+
+    setEditingRule({
+      ...rule,
+      allowed_recorder_types: recorderTypes,
+      allowed_approver_types: approverTypes,
+    });
     setIsRuleModalOpen(true);
+  };
+
+  const toggleRecorderType = (type: CompetitionRecorderType) => {
+    if (!editingRule) return;
+    const current = editingRule.allowed_recorder_types || ['ADMIN', 'SUPERVISOR', 'RED_STAR'];
+    const next = current.includes(type)
+      ? current.filter(t => t !== type)
+      : [...current, type];
+    setEditingRule({ ...editingRule, allowed_recorder_types: next });
+  };
+
+  const toggleApproverType = (type: CompetitionApproverType) => {
+    if (!editingRule) return;
+    const current = editingRule.allowed_approver_types || [];
+    const next = current.includes(type)
+      ? current.filter(t => t !== type)
+      : [...current, type];
+    setEditingRule({ ...editingRule, allowed_approver_types: next });
   };
 
   const handleRuleNameChange = (name: string) => {
@@ -342,6 +383,11 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
       return;
     }
 
+    if (!editingRule.allowed_recorder_types || editingRule.allowed_recorder_types.length === 0) {
+      setRuleFormError('Vui lòng chọn ít nhất một đối tượng được phép ghi nhận.');
+      return;
+    }
+
     // Enforce points logic based on effect_scope
     const scope = editingRule.effect_scope || 'BOTH';
     let studentMerit = editingRule.student_merit_points ?? 0;
@@ -393,19 +439,22 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
     }
   };
 
-  const handleArchiveRule = async (rule: CompetitionRule) => {
-    if (!confirm(`Bạn có chắc chắn muốn ngừng sử dụng quy tắc "${rule.name}"?`)) {
+  const handleDeleteRule = async (rule: CompetitionRule) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa quy tắc '${rule.name}' không? Hành động này không thể hoàn tác.`)) {
       return;
     }
 
     try {
       setSaving(true);
-      await competitionService.archiveCompetitionRule(rule.id);
-      setToast({ type: 'success', text: `Đã chuyển quy tắc "${rule.name}" sang trạng thái Ngừng hoạt động.` });
+      await competitionService.deleteCompetitionRule(rule.id);
+      setToast({ type: 'success', text: `Đã xóa quy tắc "${rule.name}" thành công!` });
       await fetchData();
     } catch (err: any) {
-      console.error('Archive rule error:', err);
-      setToast({ type: 'error', text: err.message || 'Lỗi khi ngừng sử dụng quy tắc.' });
+      console.error('Delete rule error:', err);
+      const errMsg = err.message?.includes('phát sinh dữ liệu')
+        ? err.message
+        : (err.code === '23503' ? 'Quy tắc này đã phát sinh dữ liệu thi đua nên không thể xóa.' : (err.message || 'Lỗi khi xóa quy tắc.'));
+      setToast({ type: 'error', text: errMsg });
     } finally {
       setSaving(false);
     }
@@ -731,16 +780,16 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                 </div>
 
                 {/* Filters for Nhóm hành vi & Phạm vi ảnh hưởng */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 flex-wrap">
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <label htmlFor="rule-category-filter" className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2.5 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <label htmlFor="rule-category-filter" className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 whitespace-nowrap">
                       Nhóm hành vi:
                     </label>
                     <select
                       id="rule-category-filter"
                       value={categoryFilter}
                       onChange={e => setCategoryFilter(e.target.value)}
-                      className="w-full sm:w-[280px] sm:min-w-[280px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
+                      className="w-[230px] max-w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20 truncate"
                     >
                       <option value="ALL">Tất cả nhóm hành vi</option>
                       <option value="GOOD_DEED">Người tốt - Việc tốt</option>
@@ -754,15 +803,15 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                     </select>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <label htmlFor="rule-scope-filter" className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <label htmlFor="rule-scope-filter" className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 whitespace-nowrap">
                       Phạm vi:
                     </label>
                     <select
                       id="rule-scope-filter"
                       value={scopeFilter}
                       onChange={e => setScopeFilter(e.target.value)}
-                      className="w-full sm:w-[190px] sm:min-w-[190px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20"
+                      className="w-[180px] max-w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-red-500/20 truncate"
                     >
                       <option value="ALL">Tất cả phạm vi</option>
                       <option value="BOTH">Đội viên & Chi đội</option>
@@ -775,7 +824,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
               </div>
 
               {programRules.length === 0 ? (
-                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     Chương trình này chưa có quy tắc tính điểm.
                   </p>
@@ -790,7 +839,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                   )}
                 </div>
               ) : filteredRules.length === 0 ? (
-                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="py-8 px-4 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5">
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     Không có quy tắc phù hợp với bộ lọc hiện tại.
                   </p>
@@ -799,7 +848,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                       setCategoryFilter('ALL');
                       setScopeFilter('ALL');
                     }}
-                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors inline-flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors inline-flex items-center gap-1.5"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Xóa bộ lọc</span>
@@ -810,13 +859,15 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold text-xs border-b border-slate-200 dark:border-slate-800">
-                        <th className="py-3.5 px-3 text-center w-12">STT</th>
-                        <th className="py-3.5 px-3">Nhóm hành vi</th>
-                        <th className="py-3.5 px-3">Nội dung</th>
-                        <th className="py-3.5 px-3">Phạm vi</th>
-                        <th className="py-3.5 px-3">Điểm</th>
-                        <th className="py-3.5 px-3">Trạng thái</th>
-                        <th className="py-3.5 px-3 text-right">Chỉnh sửa</th>
+                        <th className="py-2.5 px-2 text-center w-10">STT</th>
+                        <th className="py-2.5 px-2.5 w-[170px]">Nhóm hành vi</th>
+                        <th className="py-2.5 px-2.5">Nội dung</th>
+                        <th className="py-2.5 px-2.5 w-[110px]">Phạm vi</th>
+                        <th className="py-2.5 px-2.5 w-[130px]">Điểm</th>
+                        <th className="py-2.5 px-2.5 w-[100px]">Ghi nhận</th>
+                        <th className="py-2.5 px-2.5 w-[90px]">Xét duyệt</th>
+                        <th className="py-2.5 px-2.5 w-[95px]">Minh chứng</th>
+                        <th className="py-2.5 px-2.5 text-center w-[100px]">Thao tác</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -840,70 +891,55 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                           ? 'border-l-4 border-l-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/10 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/25'
                           : 'border-l-4 border-l-slate-300 dark:border-l-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50';
 
-                        const opacityClass = rule.is_active ? '' : 'opacity-60 bg-slate-100/40 dark:bg-slate-900/40';
+                        const recorderList = (rule.allowed_recorder_types && rule.allowed_recorder_types.length > 0)
+                          ? rule.allowed_recorder_types
+                          : ['ADMIN', 'SUPERVISOR', 'RED_STAR'];
+
+                        const approverList = rule.allowed_approver_types !== undefined && rule.allowed_approver_types !== null
+                          ? rule.allowed_approver_types
+                          : (rule.requires_approval ? ['ADMIN'] : []);
 
                         return (
                           <tr
                             key={rule.id}
-                            className={`transition-colors ${borderAccent} ${opacityClass}`}
+                            className={`transition-colors ${borderAccent}`}
                           >
                             {/* 1. STT */}
-                            <td className="py-3 px-3 text-center font-mono text-slate-500 dark:text-slate-400 font-bold whitespace-nowrap">
+                            <td className="py-2.5 px-2 text-center font-mono text-slate-500 dark:text-slate-400 font-bold whitespace-nowrap">
                               {idx + 1}
                             </td>
 
                             {/* 2. Nhóm hành vi */}
-                            <td className="py-3 px-3 min-w-[150px]">
-                              <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold inline-block border border-slate-200/60 dark:border-slate-700/60">
+                            <td className="py-2.5 px-2.5">
+                              <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-semibold inline-block border border-slate-200/60 dark:border-slate-700/60">
                                 {COMPETITION_CATEGORY_LABELS[rule.category] || rule.category}
                               </span>
                             </td>
 
                             {/* 3. Nội dung */}
-                            <td className="py-3 px-3 min-w-[220px]">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-mono font-bold text-[10px]">
-                                    {rule.code}
-                                  </span>
-                                  <span className="font-bold text-slate-900 dark:text-white text-xs">
-                                    {rule.name}
-                                  </span>
-                                </div>
+                            <td className="py-2.5 px-2.5">
+                              <div className="space-y-0.5">
+                                <span className="font-bold text-slate-900 dark:text-white text-xs block leading-snug">
+                                  {rule.name}
+                                </span>
                                 {rule.description && (
-                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 italic line-clamp-2">
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 italic line-clamp-2 leading-tight">
                                     "{rule.description}"
                                   </p>
                                 )}
-                                <div className="flex items-center gap-2 text-[10px] pt-0.5">
-                                  {rule.requires_approval ? (
-                                    <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-0.5">
-                                      <Clock className="w-3 h-3" /> Cần duyệt
-                                    </span>
-                                  ) : (
-                                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
-                                      <ShieldCheck className="w-3 h-3" /> Tự động
-                                    </span>
-                                  )}
-                                  {rule.requires_evidence && (
-                                    <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                                      • Cần minh chứng
-                                    </span>
-                                  )}
-                                </div>
                               </div>
                             </td>
 
                             {/* 4. Phạm vi */}
-                            <td className="py-3 px-3 whitespace-nowrap text-xs font-medium text-slate-700 dark:text-slate-300 min-w-[130px]">
+                            <td className="py-2.5 px-2.5 text-xs font-medium text-slate-700 dark:text-slate-300">
                               {COMPETITION_SCOPE_LABELS[rule.effect_scope] || rule.effect_scope}
                             </td>
 
                             {/* 5. Điểm */}
-                            <td className="py-3 px-3 min-w-[180px]">
-                              <div className="flex flex-col gap-1 text-[11px] font-medium">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-400 dark:text-slate-500 w-16 shrink-0">Rèn luyện:</span>
+                            <td className="py-2.5 px-2.5">
+                              <div className="flex flex-col gap-0.5 text-[11px] font-medium">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-slate-400 dark:text-slate-500 w-14 shrink-0">Rèn luyện:</span>
                                   <span
                                     className={`font-mono font-bold px-1.5 py-0.5 rounded text-[11px] ${
                                       rule.student_merit_points > 0
@@ -918,8 +954,8 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                                       : rule.student_merit_points}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-400 dark:text-slate-500 w-16 shrink-0">Thưởng:</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-slate-400 dark:text-slate-500 w-14 shrink-0">Thưởng:</span>
                                   <span
                                     className={`font-mono font-bold px-1.5 py-0.5 rounded text-[11px] ${
                                       rule.student_reward_points > 0
@@ -934,8 +970,8 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                                       : rule.student_reward_points}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-400 dark:text-slate-500 w-16 shrink-0">Chi đội:</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-slate-400 dark:text-slate-500 w-14 shrink-0">Chi đội:</span>
                                   <span
                                     className={`font-mono font-bold px-1.5 py-0.5 rounded text-[11px] ${
                                       rule.unit_points > 0
@@ -951,42 +987,75 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                               </div>
                             </td>
 
-                            {/* 6. Trạng thái */}
-                            <td className="py-3 px-3 whitespace-nowrap min-w-[120px]">
-                              {rule.is_active ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-200/80 dark:border-emerald-800/80">
-                                  Đang hoạt động
-                                </span>
+                            {/* 6. Ghi nhận */}
+                            <td className="py-2.5 px-2.5">
+                              <div className="flex flex-wrap gap-1">
+                                {recorderList.map(type => {
+                                  const label = type === 'ADMIN' ? 'Quản trị' : type === 'SUPERVISOR' ? 'Giám thị' : 'Sao đỏ';
+                                  return (
+                                    <span key={type} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 whitespace-nowrap">
+                                      {label}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </td>
+
+                            {/* 7. Xét duyệt */}
+                            <td className="py-2.5 px-2.5">
+                              {approverList.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {approverList.map(type => {
+                                    const label = type === 'ADMIN' ? 'Quản trị' : type === 'SUPERVISOR' ? 'Giám thị' : type;
+                                    return (
+                                      <span key={type} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 whitespace-nowrap">
+                                        {label}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700">
-                                  Ngừng sử dụng
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/80 whitespace-nowrap">
+                                  Tự động
                                 </span>
                               )}
                             </td>
 
-                            {/* 7. Chỉnh sửa */}
-                            <td className="py-3 px-3 whitespace-nowrap text-right min-w-[120px]">
-                              <div className="flex items-center justify-end gap-1.5">
+                            {/* 8. Minh chứng */}
+                            <td className="py-2.5 px-2.5 whitespace-nowrap">
+                              {rule.requires_evidence ? (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/80">
+                                  Bắt buộc
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium text-slate-500 bg-slate-100 dark:text-slate-400 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
+                                  Không bắt buộc
+                                </span>
+                              )}
+                            </td>
+
+                            {/* 9. Thao tác */}
+                            <td className="py-2.5 px-2.5 whitespace-nowrap text-center">
+                              <div className="flex items-center justify-center gap-1">
                                 {canManage && (
                                   <>
                                     <button
                                       onClick={() => openEditRuleModal(rule)}
-                                      className="px-2.5 py-1.5 rounded-xl font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1 text-xs"
+                                      className="px-2 py-1 rounded-lg font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1 text-[11px]"
                                       title="Chỉnh sửa quy tắc"
                                     >
                                       <Edit3 className="w-3.5 h-3.5" />
                                       <span>Sửa</span>
                                     </button>
 
-                                    {rule.is_active && (
-                                      <button
-                                        onClick={() => handleArchiveRule(rule)}
-                                        className="p-1.5 rounded-xl font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors inline-flex items-center gap-1"
-                                        title="Ngừng sử dụng quy tắc này"
-                                      >
-                                        <Power className="w-3.5 h-3.5" />
-                                      </button>
-                                    )}
+                                    <button
+                                      onClick={() => handleDeleteRule(rule)}
+                                      className="px-2 py-1 rounded-lg font-bold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors inline-flex items-center gap-1 text-[11px]"
+                                      title="Xóa quy tắc"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Xóa</span>
+                                    </button>
                                   </>
                                 )}
                               </div>
@@ -1372,42 +1441,85 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
                 </div>
               </div>
 
-              <div className="space-y-2 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingRule.requires_approval ?? false}
-                    onChange={e => setEditingRule({ ...editingRule, requires_approval: e.target.checked })}
-                    className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
-                  />
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    Yêu cầu duyệt bởi Tổng phụ trách trước khi tính điểm
-                  </span>
-                </label>
+              <div className="space-y-4 pt-1">
+                {/* Group 1: Ghi nhận */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Ghi nhận <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: 'ADMIN' as CompetitionRecorderType, label: 'Tổng phụ trách Đội' },
+                      { key: 'SUPERVISOR' as CompetitionRecorderType, label: 'Giám thị' },
+                      { key: 'RED_STAR' as CompetitionRecorderType, label: 'Sao đỏ' },
+                    ].map(actor => {
+                      const isSelected = (editingRule.allowed_recorder_types || ['ADMIN', 'SUPERVISOR', 'RED_STAR']).includes(actor.key);
+                      return (
+                        <button
+                          key={actor.key}
+                          type="button"
+                          onClick={() => toggleRecorderType(actor.key)}
+                          className={`px-3 py-1.5 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 transition-all ${
+                            isSelected
+                              ? 'bg-red-50 text-red-700 border-red-500 dark:bg-red-950/60 dark:text-red-300 dark:border-red-600 shadow-2xs'
+                              : 'bg-white text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />}
+                          <span>{actor.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingRule.requires_evidence ?? false}
-                    onChange={e => setEditingRule({ ...editingRule, requires_evidence: e.target.checked })}
-                    className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
-                  />
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    Bắt buộc đính kèm hình ảnh/minh chứng khi ghi nhận
-                  </span>
-                </label>
+                {/* Group 2: Xét duyệt */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Xét duyệt
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: 'ADMIN' as CompetitionApproverType, label: 'Tổng phụ trách Đội' },
+                      { key: 'SUPERVISOR' as CompetitionApproverType, label: 'Giám thị' },
+                    ].map(actor => {
+                      const isSelected = (editingRule.allowed_approver_types || []).includes(actor.key);
+                      return (
+                        <button
+                          key={actor.key}
+                          type="button"
+                          onClick={() => toggleApproverType(actor.key)}
+                          className={`px-3 py-1.5 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 transition-all ${
+                            isSelected
+                              ? 'bg-red-50 text-red-700 border-red-500 dark:bg-red-950/60 dark:text-red-300 dark:border-red-600 shadow-2xs'
+                              : 'bg-white text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />}
+                          <span>{actor.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 italic">
+                    * Không chọn người xét duyệt nghĩa là sự việc được tự động duyệt.
+                  </p>
+                </div>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingRule.is_active ?? true}
-                    onChange={e => setEditingRule({ ...editingRule, is_active: e.target.checked })}
-                    className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
-                  />
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    Đang hoạt động (Kích hoạt quy tắc)
-                  </span>
-                </label>
+                {/* Checkboxes */}
+                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingRule.requires_evidence ?? false}
+                      onChange={e => setEditingRule({ ...editingRule, requires_evidence: e.target.checked })}
+                      className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
+                    />
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      Bắt buộc đính kèm hình ảnh/minh chứng khi ghi nhận
+                    </span>
+                  </label>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
