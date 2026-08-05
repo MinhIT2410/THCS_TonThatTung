@@ -96,7 +96,10 @@ export default function WeeklyUnitsTab() {
       setAcademicYears(years);
 
       const activeProg = progs.find(p => p.is_active) || progs[0];
-      const currentYear = years.find((y: any) => y.is_current || y.is_active) || years[0];
+      const currentYear =
+        years.find((y: any) => y.is_current === true) ||
+        years.find((y: any) => y.is_active === true) ||
+        years[0];
 
       if (activeProg) setSelectedProgramId(activeProg.id);
       if (currentYear) setSelectedYearId(currentYear.id);

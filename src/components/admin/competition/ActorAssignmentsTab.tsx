@@ -138,7 +138,7 @@ export default function ActorAssignmentsTab() {
       // Academic years
       const { data: yearsData } = await supabase
         .from('academic_years')
-        .select('id, name')
+        .select('id, name, is_active, is_current')
         .order('start_date', { ascending: false });
 
       // Grade levels
@@ -158,17 +158,13 @@ export default function ActorAssignmentsTab() {
       setGradeLevels(gradeData || []);
       setClasses(sortClassesNaturally((classData || []) as ClassOption[]));
 
-      // Current active year ID
-      const { data: currentYearData } = await supabase
-        .from('academic_years')
-        .select('id')
-        .eq('is_current', true)
-        .single();
+      const defaultYear =
+        (yearsData || []).find((y: any) => y.is_current === true) ||
+        (yearsData || []).find((y: any) => y.is_active === true) ||
+        (yearsData || [])[0];
 
-      if (currentYearData) {
-        setSelectedAcademicYearId(currentYearData.id);
-      } else if (yearsData && yearsData.length > 0) {
-        setSelectedAcademicYearId(yearsData[0].id);
+      if (defaultYear) {
+        setSelectedAcademicYearId(defaultYear.id);
       }
 
       await loadAssignments();

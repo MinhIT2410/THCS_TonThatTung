@@ -125,7 +125,10 @@ export default function ProgramAndWeeksTab() {
         if (yearParam && years.some(y => y.id === yearParam)) {
           setSelectedYearId(yearParam);
         } else {
-          const defaultYear = years.find((y: any) => y.is_current || y.is_active) || years[0];
+          const defaultYear =
+            years.find((y: any) => y.is_current === true) ||
+            years.find((y: any) => y.is_active === true) ||
+            years[0];
           if (defaultYear) {
             setSelectedYearId(defaultYear.id);
           }

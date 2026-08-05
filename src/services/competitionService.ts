@@ -302,10 +302,10 @@ export const competitionService = {
     }
   },
 
-  async getAcademicYears(): Promise<{ id: string; name: string; is_active?: boolean }[]> {
+  async getAcademicYears(): Promise<{ id: string; name: string; is_active?: boolean; is_current?: boolean }[]> {
     const { data, error } = await supabase
       .from('academic_years')
-      .select('id, name, is_active')
+      .select('id, name, is_active, is_current')
       .order('name', { ascending: false });
 
     if (error) {
@@ -319,128 +319,76 @@ export const competitionService = {
   async searchStudents(searchTerm: string) {
     if (!searchTerm || searchTerm.trim().length < 2) return [];
 
-    const rawTerm = searchTerm.trim();
-    const normTerm = removeVietnameseTones(rawTerm);
+    const cleanTerm = searchTerm.trim();
 
-    // Clean terms for safe PostgREST filter string (remove quotes, parens, commas)
-    const cleanRaw = rawTerm.replace(/["(),]/g, '');
-    const cleanNorm = normTerm.replace(/["(),]/g, '');
-
-    const rawWords = cleanRaw.split(/\s+/).filter(Boolean);
-    const normWords = cleanNorm.split(/\s+/).filter(Boolean);
-
-    // Build flexible PostgREST or filter conditions
-    // CRITICAL FIX: Wrap pattern values in double quotes so spaces in multi-word queries don't cause PostgREST syntax errors!
-    const conditionSet = new Set<string>();
-
-    if (cleanRaw) {
-      conditionSet.add(`full_name.ilike."%${cleanRaw}%"`);
-      conditionSet.add(`student_code.ilike."%${cleanRaw}%"`);
-    }
-
-    if (cleanNorm && cleanNorm !== cleanRaw) {
-      conditionSet.add(`full_name.ilike."%${cleanNorm}%"`);
-      conditionSet.add(`student_code.ilike."%${cleanNorm}%"`);
-    }
-
-    // Add word-by-word matching
-    rawWords.forEach(w => {
-      if (w.length >= 2) {
-        conditionSet.add(`full_name.ilike."%${w}%"`);
-        conditionSet.add(`student_code.ilike."%${w}%"`);
-      }
+    // Call RPC search_competition_students with unaccent support
+    const { data, error } = await supabase.rpc('search_competition_students', {
+      p_search_term: cleanTerm,
+      p_limit: 20,
     });
-
-    normWords.forEach(w => {
-      if (w.length >= 2) {
-        conditionSet.add(`full_name.ilike."%${w}%"`);
-        conditionSet.add(`student_code.ilike."%${w}%"`);
-      }
-    });
-
-    if (conditionSet.size === 0) return [];
-
-    const orFilter = Array.from(conditionSet).join(',');
-
-    const { data: students, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, student_code, avatar_url, user_roles!inner(role_code)')
-      .eq('user_roles.role_code', 'STUDENT')
-      .or(orFilter)
-      .limit(50);
 
     if (error) {
-      console.error('Error searching students:', error);
-      return [];
-    }
-
-    if (!students || students.length === 0) return [];
-
-    // Filter and rank on client using removeVietnameseTones
-    const filteredAndRanked = students
-      .filter(s => {
-        const normName = removeVietnameseTones(s.full_name || '');
-        const normCode = removeVietnameseTones(s.student_code || '');
-        const combined = `${normName} ${normCode}`;
-
-        if (normName.includes(normTerm) || normCode.includes(normTerm)) return true;
-        return normWords.every(w => combined.includes(w));
-      })
-      .sort((a, b) => {
-        const nameA = removeVietnameseTones(a.full_name || '');
-        const nameB = removeVietnameseTones(b.full_name || '');
-        const codeA = removeVietnameseTones(a.student_code || '');
-        const codeB = removeVietnameseTones(b.student_code || '');
-
-        const isExactA = nameA === normTerm || codeA === normTerm;
-        const isExactB = nameB === normTerm || codeB === normTerm;
-        if (isExactA && !isExactB) return -1;
-        if (!isExactA && isExactB) return 1;
-
-        const isStartA = nameA.startsWith(normTerm) || codeA.startsWith(normTerm);
-        const isStartB = nameB.startsWith(normTerm) || codeB.startsWith(normTerm);
-        if (isStartA && !isStartB) return -1;
-        if (!isStartA && isStartB) return 1;
-
-        return nameA.localeCompare(nameB, 'vi');
-      })
-      .slice(0, 20);
-
-    if (filteredAndRanked.length === 0) return [];
-
-    // Fetch student active/current enrollments
-    const studentIds = filteredAndRanked.map(s => s.id);
-    const { data: enrollments } = await supabase
-      .from('student_enrollments')
-      .select('student_id, class_id, classes(id, name), academic_years(id, name, is_current, is_active)')
-      .in('student_id', studentIds);
-
-    const enrollmentMap: Record<string, { class_id: string; class_name: string; academic_year_name: string }> = {};
-    if (enrollments) {
-      // Sort enrollments so current/active academic year takes precedence
-      const sortedEnrollments = [...enrollments].sort((a: any, b: any) => {
-        const scoreA = (a.academic_years?.is_current ? 2 : 0) + (a.academic_years?.is_active ? 1 : 0);
-        const scoreB = (b.academic_years?.is_current ? 2 : 0) + (b.academic_years?.is_active ? 1 : 0);
-        return scoreA - scoreB;
+      console.error('Error searching students via RPC search_competition_students:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
       });
 
-      sortedEnrollments.forEach((e: any) => {
-        if (e.classes) {
-          enrollmentMap[e.student_id] = {
-            class_id: e.class_id,
-            class_name: e.classes.name,
-            academic_year_name: e.academic_years?.name || '',
-          };
+      if (import.meta.env.DEV) {
+        console.warn('[DEV ONLY Fallback] Searching students using basic ilike query (unaccent not supported in DEV fallback)');
+        const { data: fallbackData } = await supabase
+          .from('profiles')
+          .select('id, full_name, student_code, avatar_url, user_roles!inner(role_code)')
+          .eq('user_roles.role_code', 'STUDENT')
+          .or(`full_name.ilike."%${cleanTerm}%",student_code.ilike."%${cleanTerm}%"`)
+          .limit(20);
+
+        if (!fallbackData) return [];
+
+        const studentIds = fallbackData.map(s => s.id);
+        const { data: enrollments } = await supabase
+          .from('student_enrollments')
+          .select('student_id, class_id, classes(id, name), academic_years(id, name, is_current)')
+          .in('student_id', studentIds);
+
+        const enrollmentMap: Record<string, { class_id: string; class_name: string; academic_year_name: string }> = {};
+        if (enrollments) {
+          enrollments.forEach((e: any) => {
+            if (e.classes && e.academic_years?.is_current) {
+              enrollmentMap[e.student_id] = {
+                class_id: e.class_id,
+                class_name: e.classes.name,
+                academic_year_name: e.academic_years?.name || '',
+              };
+            }
+          });
         }
-      });
+
+        return fallbackData.map(s => ({
+          id: s.id,
+          full_name: s.full_name,
+          student_code: s.student_code,
+          avatar_url: s.avatar_url,
+          unit: enrollmentMap[s.id] || null,
+        }));
+      }
+
+      throw error;
     }
 
-    return filteredAndRanked.map(s => ({
+    if (!data) return [];
+
+    return (data as any[]).map(s => ({
       id: s.id,
       full_name: s.full_name,
       student_code: s.student_code,
       avatar_url: s.avatar_url,
-      unit: enrollmentMap[s.id] || null,
+      unit: s.class_id ? {
+        class_id: s.class_id,
+        class_name: s.class_name,
+        academic_year_name: s.academic_year_name || '',
+      } : null,
     }));
   },
 

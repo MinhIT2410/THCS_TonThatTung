@@ -63,7 +63,7 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
   // Data states
   const [programs, setPrograms] = useState<CompetitionProgram[]>([]);
   const [rules, setRules] = useState<CompetitionRule[]>([]);
-  const [academicYears, setAcademicYears] = useState<{ id: string; name: string }[]>([]);
+  const [academicYears, setAcademicYears] = useState<{ id: string; name: string; is_current?: boolean; is_active?: boolean }[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedProgramFilter, setSelectedProgramFilter] = useState<string>('ALL');
 
@@ -131,11 +131,12 @@ export default function ProgramsAndRulesTab({ initialSubTab = 'programs', onProg
   // ---------------------------------------------------------------------------
   const openNewProgramModal = () => {
     setProgramFormError(null);
+    const defaultYear = academicYears.find(y => y.is_current === true) || academicYears.find(y => y.is_active === true) || academicYears[0];
     setEditingProgram({
       code: '',
       name: '',
       description: '',
-      academic_year_id: academicYears.length > 0 ? academicYears[0].id : '',
+      academic_year_id: defaultYear ? defaultYear.id : '',
       starts_at: new Date().toISOString().slice(0, 10),
       ends_at: '',
       is_active: true,

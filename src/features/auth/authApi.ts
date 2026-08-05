@@ -44,12 +44,14 @@ export const authApi = {
         .maybeSingle();
 
       if (error) {
-        throw new ApiError('DATABASE_ERROR', 'Lỗi truy vấn hồ sơ người dùng từ cơ sở dữ liệu.', error);
+        console.warn('Lỗi truy vấn hồ sơ người dùng:', error);
+        return null;
       }
 
       return data as UserProfile | null;
     } catch (err) {
-      throw normalizeApiError(err);
+      console.warn('Cannot fetch current profile:', err);
+      return null;
     }
   },
 
@@ -67,12 +69,13 @@ export const authApi = {
         .eq('user_id', userId);
 
       if (error) {
-        throw new ApiError('DATABASE_ERROR', 'Lỗi truy vấn vai trò người dùng.', error);
+        console.warn('Lỗi truy vấn vai trò người dùng:', error);
+        return [];
       }
 
       return (data || []).map((row: any) => row.role_code);
     } catch (err) {
-      console.error('Error fetching user roles:', err);
+      console.warn('Error fetching user roles:', err);
       return [];
     }
   },
