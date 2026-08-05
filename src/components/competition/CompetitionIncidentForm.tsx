@@ -884,7 +884,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           {/* Target Selector */}
           {targetMode === 'STUDENT' ? (
             <div className="space-y-3 pt-2">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Tìm theo tên hoặc mã học sinh <span className="text-red-500">*</span>
               </label>
 
@@ -986,7 +986,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           ) : (
             /* Collective (Unit) Mode Class Picker */
             <div className="space-y-3 pt-2">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Tìm Chi đội / Lớp <span className="text-red-500">*</span>
               </label>
 

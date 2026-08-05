@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
               <div className="pt-6 border-t border-slate-100 dark:border-slate-900 mt-6">
                 <button
                   onClick={() => navigate(card.href)}
-                  className="flex items-center space-x-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 transition-transform group-hover:translate-x-1"
+                  className="flex items-center space-x-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 transition-transform group-hover:translate-x-1 font-sans"
                 >
                   <span>Đi tới quản lý</span>
                   <ChevronRight className="h-4 w-4" />

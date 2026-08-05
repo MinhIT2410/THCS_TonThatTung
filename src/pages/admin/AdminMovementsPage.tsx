@@ -520,79 +520,79 @@ export default function AdminMovementsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200/80 dark:border-slate-700/80 uppercase tracking-wider text-[11px]">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-left">
+              <thead className="bg-slate-50/70 dark:bg-slate-900/40">
                 <tr>
-                  <th className="py-3 px-4">Phong trào</th>
-                  <th className="py-3 px-4">Phân loại</th>
-                  <th className="py-3 px-4">Thời gian</th>
-                  <th className="py-3 px-4">Trạng thái</th>
-                  <th className="py-3 px-4 text-center">Hoạt động / Minh chứng</th>
-                  <th className="py-3 px-4 text-center">Hiển thị</th>
-                  <th className="py-3 px-4 text-right">Thao tác</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phong trào / Ảnh</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phân loại</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thời gian</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Trạng thái</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Hoạt động / Minh chứng</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Hiển thị</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-transparent text-slate-700 dark:text-slate-300 font-sans">
                 {filteredCampaigns.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors">
+                  <tr key={c.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/20 transition-colors">
                     
                     {/* Title & Cover */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-900 overflow-hidden shrink-0 border border-slate-200/60 dark:border-slate-700/60">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-3.5">
+                        <div className="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-150 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
                           {c.cover_image_url ? (
-                            <img src={c.cover_image_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <img src={c.cover_image_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
+                            <div className="flex h-full w-full items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-400">
                               <Flag className="w-5 h-5 text-slate-400" />
                             </div>
                           )}
                         </div>
-                        <div className="space-y-0.5 max-w-xs">
-                          <div className="font-bold text-slate-900 dark:text-white line-clamp-1 flex items-center gap-1.5">
+                        <div className="space-y-1 max-w-xs">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white line-clamp-1 flex items-center gap-1.5">
                             {c.title}
                             {c.is_featured && (
                               <Sparkles className="w-3.5 h-3.5 text-yellow-500 shrink-0" title="Ghim nổi bật" />
                             )}
-                          </div>
-                          <div className="text-[11px] text-slate-400 font-mono truncate">
+                          </p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
                             /{c.slug}
-                          </div>
+                          </p>
                         </div>
                       </div>
                     </td>
 
                     {/* Category & Academic Year */}
-                    <td className="py-3.5 px-4">
+                    <td className="px-6 py-4">
                       <div className="space-y-1">
-                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 text-[11px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
                           {CAMPAIGN_TYPE_LABELS[c.campaign_type]}
                         </span>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
                           {c.academic_year}
                         </div>
                       </div>
                     </td>
 
                     {/* Dates */}
-                    <td className="py-3.5 px-4 text-xs text-slate-600 dark:text-slate-300">
-                      <div>{c.start_date ? new Date(c.start_date).toLocaleDateString('vi-VN') : '---'}</div>
-                      <div className="text-[11px] text-slate-400">đến {c.end_date ? new Date(c.end_date).toLocaleDateString('vi-VN') : '---'}</div>
+                    <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-300">
+                      <div className="font-medium text-xs text-slate-800 dark:text-slate-200">{c.start_date ? new Date(c.start_date).toLocaleDateString('vi-VN') : '---'}</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">đến {c.end_date ? new Date(c.end_date).toLocaleDateString('vi-VN') : '---'}</div>
                     </td>
 
                     {/* Status */}
-                    <td className="py-3.5 px-4">
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                         {CAMPAIGN_STATUS_LABELS[c.status]}
                       </span>
                     </td>
 
                     {/* Counts & Manage buttons */}
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => setActiveEventsCampaign(c)}
-                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 text-[11px] font-bold flex items-center gap-1"
+                          className="px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-900/60 flex items-center gap-1 cursor-pointer transition-colors"
                           title="Quản lý hoạt động con"
                         >
                           <Layers className="w-3.5 h-3.5" />
@@ -601,7 +601,7 @@ export default function AdminMovementsPage() {
 
                         <button
                           onClick={() => setActiveEvidenceCampaign(c)}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1"
+                          className="px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-900/60 flex items-center gap-1 cursor-pointer transition-colors"
                           title="Quản lý minh chứng"
                         >
                           <FileCheck className="w-3.5 h-3.5" />
@@ -611,10 +611,10 @@ export default function AdminMovementsPage() {
                     </td>
 
                     {/* Published toggle */}
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => handleTogglePublished(c)}
-                        className={`p-1.5 rounded-lg transition-colors ${
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                           c.is_published
                             ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100'
                             : 'text-slate-400 bg-slate-100 dark:bg-slate-800 hover:text-slate-600'
@@ -626,7 +626,7 @@ export default function AdminMovementsPage() {
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleOpenEdit(c)}
