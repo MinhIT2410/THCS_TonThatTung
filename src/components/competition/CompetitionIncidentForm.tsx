@@ -838,11 +838,11 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
         {/* Step 1: Chọn đối tượng ghi nhận */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+            <span className="text-xs font-semibold uppercase tracking-normal text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-sans">
               <Users className="w-4 h-4 text-red-600" />
               1. Chọn Đối Tượng Ghi Nhận
             </span>
-            <span className="text-xs text-slate-400 font-normal">Thao tác nhanh, chọn phương thức bên dưới</span>
+            <span className="text-xs text-slate-400 font-normal font-sans">Thao tác nhanh, chọn phương thức bên dưới</span>
           </div>
 
           <div className="grid grid-cols-2 gap-3 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
@@ -853,7 +853,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
                 setSelectedRuleId('');
                 setSelectedRule(null);
               }}
-              className={`py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              className={`py-3 px-4 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer font-sans tracking-normal ${
                 targetMode === 'STUDENT'
                   ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-md scale-[1.01]'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -870,7 +870,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
                 setSelectedRuleId('');
                 setSelectedRule(null);
               }}
-              className={`py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              className={`py-3 px-4 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer font-sans tracking-normal ${
                 targetMode === 'UNIT'
                   ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-md scale-[1.01]'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -1099,14 +1099,14 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
         {/* Step 2: Chọn hành vi / quy tắc thi đua */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <span className="text-xs font-semibold uppercase tracking-normal text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-sans">
               <Award className="w-4 h-4 text-red-600" />
               2. Chọn Hành Vi Thi Đua
             </span>
             <button
               type="button"
               onClick={() => setShowAllBehaviors(prev => !prev)}
-              className="text-xs text-red-600 dark:text-red-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs text-red-600 dark:text-red-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer font-sans"
             >
               <span>{showAllBehaviors ? 'Thu gọn' : 'Xem tất cả hành vi'}</span>
               {showAllBehaviors ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -1116,7 +1116,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           {/* Featured Behavior Chips */}
           {!showAllBehaviors ? (
             <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-normal font-sans">
                 Hành vi thường dùng:
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
@@ -1128,16 +1128,16 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
                       key={rule.id}
                       type="button"
                       onClick={() => handleSelectRule(rule)}
-                      className={`p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 cursor-pointer ${
+                      className={`p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 cursor-pointer font-sans ${
                         isSelected
                           ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-600/20 scale-[1.02]'
                           : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700 text-slate-900 dark:text-white hover:border-red-400'
                       }`}
                     >
-                      <div className="font-bold text-xs line-clamp-2">{rule.name}</div>
+                      <div className="font-semibold text-xs line-clamp-2 tracking-normal font-sans">{rule.name}</div>
                       <div className="flex items-center justify-between text-[11px]">
                         <span
-                          className={`font-mono font-bold px-1.5 py-0.5 rounded ${
+                          className={`font-mono font-semibold px-1.5 py-0.5 rounded ${
                             isSelected
                               ? 'bg-white/20 text-white'
                               : isNegative
@@ -1166,7 +1166,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
                   value={behaviorSearchTerm}
                   onChange={e => setBehaviorSearchTerm(e.target.value)}
                   placeholder="Tìm theo tên hoặc mã quy tắc..."
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none font-sans"
                 />
               </div>
 
@@ -1178,13 +1178,13 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
                       key={rule.id}
                       type="button"
                       onClick={() => handleSelectRule(rule)}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer font-sans ${
                         isSelected
                           ? 'bg-red-600 text-white border-red-600 shadow-md'
                           : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700 hover:border-red-400 text-slate-900 dark:text-white'
                       }`}
                     >
-                      <div className="font-bold text-xs">{rule.name}</div>
+                      <div className="font-semibold text-xs tracking-normal font-sans">{rule.name}</div>
                       <div className="text-[10px] opacity-80 mt-1 font-mono">
                         Mã: {rule.code} • Phù hợp: {COMPETITION_SCOPE_LABELS[rule.effect_scope] || rule.effect_scope}
                       </div>
@@ -1358,7 +1358,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           <button
             type="submit"
             disabled={!canSubmit || isSubmitting}
-            className="w-full py-3.5 sm:py-4 px-6 rounded-xl sm:rounded-2xl bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-bold text-sm sm:text-base shadow-lg shadow-red-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 sm:py-4 px-6 rounded-xl sm:rounded-2xl bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-semibold text-sm sm:text-base shadow-lg shadow-red-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer font-sans tracking-normal"
           >
             {isSubmitting ? (
               <>
