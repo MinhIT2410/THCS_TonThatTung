@@ -8,7 +8,6 @@ import { useSearchParams, useLocation, useNavigate, Navigate } from 'react-route
 import { 
   Award, 
   Calendar, 
-  Clock, 
   History, 
   FileCheck, 
   Layers,
@@ -19,7 +18,6 @@ import {
 } from 'lucide-react';
 import ProgramsAndRulesTab from '../../components/admin/competition/ProgramsAndRulesTab';
 import ProgramAndWeeksTab from '../../components/admin/competition/ProgramAndWeeksTab';
-import PendingIncidentsTab from '../../components/admin/competition/PendingIncidentsTab';
 import IncidentsHistoryTab from '../../components/admin/competition/IncidentsHistoryTab';
 import { RedemptionsTab } from '../../components/admin/competition/RedemptionsTab';
 import { RewardsTab } from '../../components/admin/competition/RewardsTab';
@@ -31,7 +29,6 @@ type AdminCompetitionSubTab =
   | 'programs_rules'
   | 'units'
   | 'record'
-  | 'pending'
   | 'history'
   | 'rewards'
   | 'reviews'
@@ -50,6 +47,9 @@ export default function AdminCompetitionPage() {
   const tabParam = searchParams.get('tab');
   if (tabParam === 'record') {
     return <Navigate to={ROUTES.COMPETITION_RECORD} replace />;
+  }
+  if (tabParam === 'pending') {
+    return <Navigate to={`${location.pathname}?tab=programs`} replace />;
   }
 
   const getInitialTabState = (): { mainTab: AdminCompetitionSubTab; subTab: RewardSubSection } => {
@@ -80,7 +80,7 @@ export default function AdminCompetitionPage() {
     }
     if (
       tabParam &&
-      ['programs', 'rules', 'units', 'pending', 'history', 'reviews', 'assignments', 'programs_rules'].includes(tabParam)
+      ['programs', 'rules', 'units', 'history', 'reviews', 'assignments', 'programs_rules'].includes(tabParam)
     ) {
       return { mainTab: (tabParam === 'units' ? 'programs' : tabParam) as AdminCompetitionSubTab, subTab: 'catalog' };
     }
@@ -124,7 +124,7 @@ export default function AdminCompetitionPage() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Quản lý tuần thi đua, quy tắc, sự việc chờ duyệt, phần thưởng và phân công nhiệm vụ.
+            Quản lý tuần thi đua, quy tắc, phần thưởng và phân công nhiệm vụ.
           </p>
         </div>
       </div>
@@ -154,18 +154,6 @@ export default function AdminCompetitionPage() {
           >
             <FileCheck className="w-4 h-4" />
             <span>Quy tắc</span>
-          </button>
-
-          <button
-            onClick={() => handleMainTabChange('pending')}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-2 ${
-              activeTab === 'pending'
-                ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-transparent'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Chờ duyệt</span>
           </button>
 
           <button
@@ -222,7 +210,6 @@ export default function AdminCompetitionPage() {
       {/* Tab Content */}
       <div>
         {(activeTab === 'programs' || activeTab === 'programs_rules' || activeTab === 'units') && <ProgramAndWeeksTab />}
-        {activeTab === 'pending' && <PendingIncidentsTab />}
         {activeTab === 'history' && <IncidentsHistoryTab />}
         {activeTab === 'rewards' && (
           <div className="space-y-6">
