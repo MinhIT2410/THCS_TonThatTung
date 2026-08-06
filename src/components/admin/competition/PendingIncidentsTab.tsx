@@ -95,7 +95,7 @@ export default function PendingIncidentsTab() {
         <div className="space-y-1">
           <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Clock className="w-5 h-5 text-amber-500 shrink-0" />
-            <span>Danh Sách Sự Việc Chờ Duyệt</span>
+            <span>Danh sách chờ quyệt</span>
             <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-xs font-extrabold">
               {incidents.length}
             </span>

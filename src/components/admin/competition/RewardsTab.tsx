@@ -109,7 +109,7 @@ export const RewardsTab: React.FC = () => {
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Gift className="w-5 h-5 text-amber-600" />
-            Danh Mục Phần Thưởng Đổi Quà
+            Danh mục quà đổi thưởng
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             Cấu hình danh sách phần thưởng, điểm cần đổi và số lượng quà sẵn có.

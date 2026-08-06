@@ -622,6 +622,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
 
         let successCount = 0;
         let failCount = 0;
+        let approvedCount = 0;
         const failedClasses: ClassOption[] = [];
 
         for (let i = 0; i < selectedClasses.length; i++) {
@@ -629,12 +630,15 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           setSubmitProgress({ current: i + 1, total });
 
           try {
-            await competitionService.createIncident({
+            const res = await competitionService.createIncident({
               ...basePayload,
               unit_id: cls.id,
               student_id: null,
             });
             successCount++;
+            if (res?.status === 'APPROVED') {
+              approvedCount++;
+            }
           } catch (err) {
             console.error(`Failed to create incident for class ${cls.name}:`, err);
             failCount++;
@@ -645,11 +649,16 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
         setSubmitProgress(null);
 
         if (failCount === 0) {
+          const isAutoApproved = approvedCount > 0;
           setToastMessage({
             type: 'success',
-            text: total === 1
-              ? `Đã gửi ghi nhận cho Lớp ${selectedClasses[0].name} và chuyển sang Chờ duyệt.`
-              : `Đã gửi ghi nhận cho ${successCount} Chi đội và chuyển sang Chờ duyệt.`,
+            text: isAutoApproved
+              ? (total === 1
+                  ? `Đã ghi nhận và duyệt trực tiếp cho Lớp ${selectedClasses[0].name}.`
+                  : `Đã ghi nhận và duyệt trực tiếp cho ${successCount} Chi đội.`)
+              : (total === 1
+                  ? `Đã gửi ghi nhận cho Lớp ${selectedClasses[0].name} và chuyển sang Chờ duyệt.`
+                  : `Đã gửi ghi nhận cho ${successCount} Chi đội và chuyển sang Chờ duyệt.`),
           });
           setLastSubmittedSuccess(true);
           setSelectedClasses([]);
@@ -677,6 +686,7 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
 
         let successCount = 0;
         let failCount = 0;
+        let approvedCount = 0;
         const failedStudents: SelectedStudent[] = [];
 
         for (let i = 0; i < selectedStudents.length; i++) {
@@ -684,12 +694,15 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
           setSubmitProgress({ current: i + 1, total });
 
           try {
-            await competitionService.createIncident({
+            const res = await competitionService.createIncident({
               ...basePayload,
               student_id: student.id,
               unit_id: student.class_id || null,
             });
             successCount++;
+            if (res?.status === 'APPROVED') {
+              approvedCount++;
+            }
           } catch (err) {
             console.error(`Failed to create incident for student ${student.full_name}:`, err);
             failCount++;
@@ -700,9 +713,12 @@ export default function CompetitionIncidentForm({ onNavigateToPrograms }: Compet
         setSubmitProgress(null);
 
         if (failCount === 0) {
+          const isAutoApproved = approvedCount > 0;
           setToastMessage({
             type: 'success',
-            text: `Đã gửi ${successCount} ghi nhận và chuyển sang Chờ duyệt.`,
+            text: isAutoApproved
+              ? `Đã ghi nhận và duyệt thành công ${successCount} sự việc.`
+              : `Đã gửi ${successCount} ghi nhận và chuyển sang Chờ duyệt.`,
           });
           setLastSubmittedSuccess(true);
           setSelectedStudents([]);

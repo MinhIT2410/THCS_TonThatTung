@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase/client';
-import { sortClassesNaturally, compareClassNames, removeVietnameseTones } from '../utils/classSortUtils';
+import { sortClassesNaturally, compareClassNames, removeVietnameseTones, parseClassParts } from '../utils/classSortUtils';
 import {
   CompetitionProgram,
   CompetitionRule,
@@ -756,7 +756,7 @@ export const competitionService = {
     // Fetch units
     const { data: unitsData, error: unitsError } = await supabase
       .from('competition_week_units')
-      .select('*, class:classes!competition_week_units_unit_id_fkey(name)')
+      .select('*, class:classes!competition_week_units_unit_id_fkey(name, grade_level_id)')
       .eq('week_id', weekId)
       .order('created_at', { ascending: true });
 
@@ -841,35 +841,54 @@ export const competitionService = {
       };
     });
 
-    // Compute dynamic real-time rank for admin views
-    processedUnits.sort((a, b) => {
-      if ((b.total_points ?? 0) !== (a.total_points ?? 0)) {
-        return (b.total_points ?? 0) - (a.total_points ?? 0);
+    // Compute dynamic real-time rank independently per grade level
+    const gradeGroups = new Map<string, CompetitionWeekUnit[]>();
+    processedUnits.forEach(u => {
+      let gradeKey = u.grade_level_id;
+      if (!gradeKey && u.unit_name) {
+        const parts = parseClassParts(u.unit_name);
+        gradeKey = parts.grade !== 999 ? `GRADE_${parts.grade}` : 'OTHER';
       }
-      if ((a.total_penalty_points ?? 0) !== (b.total_penalty_points ?? 0)) {
-        return (a.total_penalty_points ?? 0) - (b.total_penalty_points ?? 0);
+      if (!gradeKey) gradeKey = 'OTHER';
+      if (!gradeGroups.has(gradeKey)) {
+        gradeGroups.set(gradeKey, []);
       }
-      return compareClassNames(a.unit_name, b.unit_name);
+      gradeGroups.get(gradeKey)!.push(u);
     });
 
-    processedUnits.forEach((u, idx) => {
-      if (idx > 0) {
-        const prev = processedUnits[idx - 1];
-        if (
-          prev.total_points === u.total_points &&
-          prev.total_penalty_points === u.total_penalty_points
-        ) {
-          u.rank = prev.rank;
-          u.rank_snapshot = prev.rank;
-        } else {
-          u.rank = idx + 1;
-          u.rank_snapshot = idx + 1;
+    gradeGroups.forEach(group => {
+      group.sort((a, b) => {
+        if ((b.total_points ?? 0) !== (a.total_points ?? 0)) {
+          return (b.total_points ?? 0) - (a.total_points ?? 0);
         }
-      } else {
-        u.rank = 1;
-        u.rank_snapshot = 1;
-      }
+        if ((a.total_penalty_points ?? 0) !== (b.total_penalty_points ?? 0)) {
+          return (a.total_penalty_points ?? 0) - (b.total_penalty_points ?? 0);
+        }
+        return compareClassNames(a.unit_name, b.unit_name);
+      });
+
+      group.forEach((u, idx) => {
+        if (idx > 0) {
+          const prev = group[idx - 1];
+          if (
+            prev.total_points === u.total_points &&
+            prev.total_penalty_points === u.total_penalty_points
+          ) {
+            u.rank = prev.rank;
+            u.rank_snapshot = prev.rank;
+          } else {
+            u.rank = idx + 1;
+            u.rank_snapshot = idx + 1;
+          }
+        } else {
+          u.rank = 1;
+          u.rank_snapshot = 1;
+        }
+      });
     });
+
+    // Default sorting for admin view: Grade ASC, Class number ASC (natural order)
+    processedUnits.sort((a, b) => compareClassNames(a.unit_name, b.unit_name));
 
     // Fetch total incidents stats for the week
     const { count: pendingCount } = await supabase

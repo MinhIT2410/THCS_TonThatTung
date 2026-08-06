@@ -137,7 +137,7 @@ export const RedemptionsTab: React.FC = () => {
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Gift className="w-5 h-5 text-amber-600" />
-            Xử Lý Đổi Quà & Trao Thưởng Học Sinh
+            Duyệt quà & Trao thưởng
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             Duyệt yêu cầu đổi quà, chuẩn bị quà và trao quà trực tiếp. Điểm thưởng sẽ tự động trừ chính thức khi xác nhận trao quà.

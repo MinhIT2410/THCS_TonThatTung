@@ -41,6 +41,7 @@ export default function WeeklyUnitsTab() {
   const [selectedProgramId, setSelectedProgramId] = useState<string>('');
   const [selectedYearId, setSelectedYearId] = useState<string>('');
   const [selectedWeekId, setSelectedWeekId] = useState<string>('');
+  const [selectedGrade, setSelectedGrade] = useState<string>('ALL');
 
   const [currentWeek, setCurrentWeek] = useState<CompetitionWeek | null>(null);
   const [units, setUnits] = useState<CompetitionWeekUnit[]>([]);
@@ -303,6 +304,20 @@ export default function WeeklyUnitsTab() {
     }
   }
 
+  const filteredUnits = units.filter(u => {
+    if (selectedGrade === 'ALL') return true;
+    const gradeStr = selectedGrade;
+    if ((u as any).grade_level && String((u as any).grade_level) === gradeStr) return true;
+    if ((u as any).grade_level_id && String((u as any).grade_level_id) === gradeStr) return true;
+    if ((u as any).grade_name && String((u as any).grade_name).includes(gradeStr)) return true;
+
+    if (u.unit_name) {
+      const match = u.unit_name.trim().match(/(?:Lớp\s*|Chi đội\s*|Khối\s*)?([6789])/i);
+      if (match && match[1] === gradeStr) return true;
+    }
+    return false;
+  });
+
   return (
     <div className="space-y-6 font-sans">
       {/* Alert Banner */}
@@ -508,11 +523,11 @@ export default function WeeklyUnitsTab() {
 
           {/* Units Leaderboard Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                   <Users className="w-5 h-5 text-red-600" />
-                  Bảng Xếp Hạng Thi Đua Chi Đội ({units.length} Chi đội)
+                  Bảng Xếp Hạng Thi Đua Chi Đội ({filteredUnits.length} Chi đội)
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   {currentWeek.status === 'PUBLISHED' 
@@ -520,15 +535,33 @@ export default function WeeklyUnitsTab() {
                     : 'Điểm số đang tự động tổng hợp theo sổ giao dịch UNIT_COMPETITION'}
                 </p>
               </div>
+
+              {/* Grade Filter Pills */}
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+                {['ALL', '6', '7', '8', '9'].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setSelectedGrade(g)}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      selectedGrade === g
+                        ? 'bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 shadow-sm font-bold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {g === 'ALL' ? 'Tất cả khối' : `Khối ${g}`}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {loading ? (
               <div className="p-8 text-center text-xs text-slate-400 animate-pulse">
                 Đang tổng hợp điểm số thi đua...
               </div>
-            ) : units.length === 0 ? (
+            ) : filteredUnits.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
-                Chưa có chi đội nào được thêm vào tuần thi đua này.
+                Chưa có chi đội nào thuộc khối đã chọn trong tuần thi đua này.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -546,8 +579,8 @@ export default function WeeklyUnitsTab() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                    {units.map((unit) => {
-                      const rank = unit.rank_snapshot || '-';
+                    {filteredUnits.map((unit) => {
+                      const rank = unit.rank ?? unit.rank_snapshot ?? '-';
                       const isTop3 = typeof rank === 'number' && rank <= 3;
 
                       return (

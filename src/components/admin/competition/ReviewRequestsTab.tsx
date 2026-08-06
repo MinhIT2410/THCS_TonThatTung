@@ -117,10 +117,10 @@ export const ReviewRequestsTab: React.FC = () => {
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <HelpCircle className="w-5 h-5 text-amber-600" />
-            Giải Quyết Yêu Cầu Xem Lại Điểm & Sự Việc
+            Giải quyết yêu cầu khiếu nại
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Xử lý đề nghị khiếu nại, giải trình hoặc đề nghị xem lại điểm thi đua từ Đội viên. Không sửa trực tiếp sổ cũ, tạo giao dịch điều chỉnh (`ADJUSTMENT`).
+            Xử lý đề nghị khiếu nại, giải trình hoặc đề nghị xem lại điểm thi đua từ Đội viên
           </p>
         </div>
 
