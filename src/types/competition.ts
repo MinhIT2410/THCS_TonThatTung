@@ -388,3 +388,12 @@ export interface StudentCompetitionProfile {
   unit_contribution_points: number;
 }
 
+export interface CompetitionAutoPublishConfig {
+  id?: string;
+  academic_year_id: string;
+  is_enabled: boolean;
+  publish_times: string[];
+  last_published_at?: string | null;
+  next_publish_at?: string | null;
+}
+

@@ -23,14 +23,17 @@ import {
   FileText, 
   ChevronRight,
   ShieldCheck,
-  Users
+  Users,
+  Clock,
+  Check
 } from 'lucide-react';
 import { competitionService } from '../../../services/competitionService';
 import { 
   CompetitionProgram, 
   CompetitionWeek, 
   CompetitionWeekUnit, 
-  WEEK_STATUS_LABELS 
+  WEEK_STATUS_LABELS,
+  CompetitionAutoPublishConfig,
 } from '../../../types/competition';
 import { formatCode } from './ProgramsAndRulesTab';
 
@@ -42,6 +45,18 @@ function formatDateDisplay(dateStr?: string): string {
     return `${d}/${m}/${y}`;
   }
   return dateStr;
+}
+
+function formatDateTimeDisplay(dtStr?: string | null): string {
+  if (!dtStr) return '---';
+  try {
+    const d = new Date(dtStr);
+    const timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const dateStr = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return `${timeStr} ngày ${dateStr}`;
+  } catch (e) {
+    return dtStr;
+  }
 }
 
 export default function ProgramAndWeeksTab() {
@@ -95,6 +110,98 @@ export default function ProgramAndWeeksTab() {
   const [unitDetails, setUnitDetails] = useState<any[]>([]);
   const [loadingUnitDetails, setLoadingUnitDetails] = useState(false);
   const [unitCommentInput, setUnitCommentInput] = useState('');
+
+  // Auto Publish Schedule State
+  const PRESET_TIMES = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+  const [autoPublishConfig, setAutoPublishConfig] = useState<CompetitionAutoPublishConfig | null>(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleTimes, setScheduleTimes] = useState<string[]>(['06:00', '12:00', '18:00']);
+  const [customTimeInput, setCustomTimeInput] = useState('');
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [triggeringPublish, setTriggeringPublish] = useState(false);
+
+  const handleToggleScheduleTime = (timeStr: string) => {
+    if (scheduleTimes.includes(timeStr)) {
+      setScheduleTimes(prev => prev.filter(t => t !== timeStr));
+    } else {
+      setScheduleTimes(prev => [...prev, timeStr].sort());
+    }
+  };
+
+  const handleSelectAllPresetTimes = () => {
+    const combined = Array.from(new Set([...scheduleTimes, ...PRESET_TIMES])).sort();
+    setScheduleTimes(combined);
+  };
+
+  const handleDeselectAllTimes = () => {
+    setScheduleTimes([]);
+  };
+
+  const handleAddCustomTime = () => {
+    if (!customTimeInput) return;
+    if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(customTimeInput)) {
+      alert('Khung giờ không hợp lệ. Vui lòng chọn định dạng HH:mm.');
+      return;
+    }
+    const [h, m] = customTimeInput.split(':');
+    const formatted = `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+    if (!scheduleTimes.includes(formatted)) {
+      setScheduleTimes(prev => [...prev, formatted].sort());
+    }
+    setCustomTimeInput('');
+  };
+
+  const handleSaveAutoPublishSchedule = async () => {
+    if (scheduleEnabled && scheduleTimes.length === 0) {
+      alert('Vui lòng chọn ít nhất một khung giờ công bố.');
+      return;
+    }
+
+    try {
+      setScheduleSaving(true);
+      const res = await competitionService.saveAutoPublishConfig(
+        selectedYearId,
+        scheduleEnabled,
+        scheduleTimes
+      );
+      if (res?.config) {
+        setAutoPublishConfig(res.config);
+      }
+      setMessage({ type: 'success', text: res.message || 'Đã lưu cấu hình tự động công bố!' });
+      setIsScheduleModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi lưu cấu hình tự động công bố.');
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
+
+  const handleTriggerImmediatePublish = async () => {
+    if (!selectedYearId) return;
+    if (!window.confirm('Xác nhận CẬP NHẬT NGAY dữ liệu điểm và thứ hạng công bố cho năm học này?')) return;
+
+    try {
+      setTriggeringPublish(true);
+      const res = await competitionService.triggerAutoPublish(selectedYearId);
+
+      const config = await competitionService.getAutoPublishConfig(selectedYearId);
+      setAutoPublishConfig(config);
+
+      if (currentWeek) {
+        const summary = await competitionService.getWeekSummary(currentWeek.id);
+        setCurrentWeek(summary.week);
+        setUnits(summary.units);
+      }
+
+      setMessage({ type: 'success', text: res.message || 'Đã công bố điểm và thứ hạng thành công!' });
+      setIsScheduleModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi cập nhật công bố điểm.');
+    } finally {
+      setTriggeringPublish(false);
+    }
+  };
 
   // Grade Filter
   const selectedGrade = searchParams.get('grade') || 'ALL';
@@ -170,6 +277,20 @@ export default function ProgramAndWeeksTab() {
       try {
         setLoadingProgram(true);
         setMessage(null);
+
+        // Fetch auto publish config for selected academic year
+        competitionService.getAutoPublishConfig(selectedYearId).then(cfg => {
+          setAutoPublishConfig(cfg);
+          if (cfg) {
+            setScheduleEnabled(cfg.is_enabled);
+            setScheduleTimes(cfg.publish_times?.length > 0 ? cfg.publish_times : ['06:00', '12:00', '18:00']);
+          } else {
+            setScheduleEnabled(false);
+            setScheduleTimes(['06:00', '12:00', '18:00']);
+          }
+        }).catch(err => {
+          console.error('Error loading auto publish config:', err);
+        });
 
         // Get all programs
         const allPrograms = await competitionService.getCompetitionPrograms(true);
@@ -553,8 +674,8 @@ export default function ProgramAndWeeksTab() {
           </div>
         </div>
 
-        {/* Academic Year Dropdown */}
-        <div className="flex items-center gap-2">
+        {/* Academic Year Dropdown & Auto Publish Config Button */}
+        <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="academic-year-select" className="text-xs font-bold text-slate-600 dark:text-slate-400 whitespace-nowrap">
             Năm học:
           </label>
@@ -563,7 +684,7 @@ export default function ProgramAndWeeksTab() {
             value={selectedYearId}
             onChange={e => handleYearChange(e.target.value)}
             disabled={loadingData}
-            className="px-3.5 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 min-w-[180px]"
+            className="px-3.5 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 min-w-[170px]"
           >
             {academicYears.map(y => (
               <option key={y.id} value={y.id}>
@@ -571,6 +692,32 @@ export default function ProgramAndWeeksTab() {
               </option>
             ))}
           </select>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (autoPublishConfig) {
+                setScheduleEnabled(autoPublishConfig.is_enabled);
+                setScheduleTimes(autoPublishConfig.publish_times?.length > 0 ? autoPublishConfig.publish_times : ['06:00', '12:00', '18:00']);
+              }
+              setIsScheduleModalOpen(true);
+            }}
+            className={`px-3.5 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shadow-2xs ${
+              autoPublishConfig?.is_enabled
+                ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+            title="Cấu hình giờ tự động công bố bảng xếp hạng thi đua"
+          >
+            <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>
+              {autoPublishConfig?.is_enabled
+                ? autoPublishConfig.publish_times.length > 3
+                  ? `Tự động: ${autoPublishConfig.publish_times.length} khung giờ`
+                  : `Tự động: ${autoPublishConfig.publish_times.join(', ')}`
+                : 'Cấu hình tự động công bố'}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -1116,6 +1263,209 @@ export default function ProgramAndWeeksTab() {
             >
               Đóng
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Auto Publish Schedule Modal */}
+      {isScheduleModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Cài đặt giờ công bố bảng xếp hạng
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Năm học: <span className="font-semibold text-slate-700 dark:text-slate-300">{academicYears.find(y => y.id === selectedYearId)?.name || 'Hiện tại'}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsScheduleModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Toggle auto-publish */}
+            <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-4 flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <label htmlFor="auto-publish-toggle" className="text-sm font-bold text-slate-900 dark:text-white cursor-pointer">
+                  Bật tự động công bố
+                </label>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Hệ thống ghi nhận điểm ngay khi sự việc được duyệt. Trang công khai sẽ cập nhật bảng xếp hạng và Top 5 tại các khung giờ đã chọn.
+                </p>
+              </div>
+              <input
+                id="auto-publish-toggle"
+                type="checkbox"
+                checked={scheduleEnabled}
+                onChange={e => setScheduleEnabled(e.target.checked)}
+                className="w-5 h-5 accent-emerald-600 rounded-lg cursor-pointer shrink-0"
+              />
+            </div>
+
+            {/* Schedule Times Selection */}
+            {scheduleEnabled && (
+              <div className="space-y-4 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-900 dark:text-white">
+                    Khung giờ công bố trong ngày:
+                  </label>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllPresetTimes}
+                      className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                    >
+                      Chọn tất cả
+                    </button>
+                    <span className="text-slate-300 dark:text-slate-700">|</span>
+                    <button
+                      type="button"
+                      onClick={handleDeselectAllTimes}
+                      className="text-slate-500 dark:text-slate-400 font-medium hover:underline"
+                    >
+                      Bỏ chọn tất cả
+                    </button>
+                  </div>
+                </div>
+
+                {/* Preset Chips Grid */}
+                <div className="grid grid-cols-4 sm:grid-cols-4 gap-2">
+                  {PRESET_TIMES.map(t => {
+                    const isSelected = scheduleTimes.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => handleToggleScheduleTime(t)}
+                        className={`py-2 px-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                          isSelected
+                            ? 'bg-emerald-500 text-white border-emerald-600 shadow-2xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        <span>{t}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Time Add Form */}
+                <div className="pt-2 flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={customTimeInput}
+                    onChange={e => setCustomTimeInput(e.target.value)}
+                    className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomTime}
+                    className="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white text-xs font-bold transition-colors whitespace-nowrap"
+                  >
+                    Thêm khung giờ
+                  </button>
+                </div>
+
+                {/* Selected Times Summary */}
+                <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-3 border border-slate-100 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                    <span>Khung giờ đã chọn ({scheduleTimes.length}):</span>
+                  </div>
+                  {scheduleTimes.length === 0 ? (
+                    <p className="text-xs text-rose-500 font-medium italic">
+                      Chưa chọn khung giờ nào. Vui lòng chọn ít nhất 1 khung giờ.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {scheduleTimes.map(t => (
+                        <span
+                          key={t}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 text-xs font-bold"
+                        >
+                          {t}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleScheduleTime(t)}
+                            className="hover:text-rose-600 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Status Information Box */}
+            <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 rounded-2xl p-3.5 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+              <div className="flex items-center justify-between">
+                <span>Lần công bố gần nhất:</span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {formatDateTimeDisplay(autoPublishConfig?.last_published_at)}
+                </span>
+              </div>
+              {scheduleEnabled && (
+                <div className="flex items-center justify-between">
+                  <span>Lần công bố tiếp theo:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatDateTimeDisplay(autoPublishConfig?.next_publish_at)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handleTriggerImmediatePublish}
+                disabled={triggeringPublish}
+                className="px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 font-bold text-xs transition-colors flex items-center gap-1.5"
+                title="Tính toán và công bố điểm ngay lập tức"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${triggeringPublish ? 'animate-spin' : ''}`} />
+                <span>{triggeringPublish ? 'Đang công bố...' : 'Cập nhật ngay'}</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsScheduleModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAutoPublishSchedule}
+                  disabled={scheduleSaving}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  {scheduleSaving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <span>Lưu cấu hình</span>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

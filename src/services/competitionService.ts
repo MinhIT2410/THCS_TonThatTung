@@ -21,6 +21,7 @@ import {
   CompetitionReviewRequest,
   RewardItem,
   RewardRedemption,
+  CompetitionAutoPublishConfig,
 } from '../types/competition';
 
 export const competitionService = {
@@ -876,7 +877,7 @@ export const competitionService = {
       const { data, error } = await supabase
         .from('competition_weeks')
         .select('*, competition_programs(name), academic_years(name)')
-        .eq('status', 'PUBLISHED')
+        .in('status', ['ACTIVE', 'PUBLISHED'])
         .order('week_number', { ascending: false });
 
       if (error) {
@@ -901,37 +902,49 @@ export const competitionService = {
         .from('competition_weeks')
         .select('*, competition_programs(name), academic_years(name)')
         .eq('id', weekId)
-        .eq('status', 'PUBLISHED')
         .single();
 
       if (weekErr || !weekData) {
         return null;
       }
 
-      const { data: unitsData, error: unitsErr } = await supabase
-        .from('competition_week_units')
-        .select('starting_points, manual_bonus_points, manual_penalty_points, final_points_snapshot, rank_snapshot, comment, unit_id, class:classes!competition_week_units_unit_id_fkey(id, name, grade_level_id, grade_levels(name))')
+      // 1. Try reading from published snapshot table first
+      const { data: snapshotData, error: snapshotErr } = await supabase
+        .from('competition_public_unit_snapshots')
+        .select('*')
         .eq('week_id', weekId)
-        .order('rank_snapshot', { ascending: true });
+        .order('rank', { ascending: true });
 
-      if (unitsErr) {
-        console.error('Error fetching unitsData:', unitsErr);
-        return null;
+      if (!snapshotErr && snapshotData && snapshotData.length > 0) {
+        const publicLeaderboard = snapshotData.map((s: any) => ({
+          unit_id: s.unit_id,
+          unit_name: s.unit_name,
+          grade_level_id: s.grade_level_id,
+          grade_name: s.grade_name,
+          starting_points: s.starting_points,
+          manual_bonus_points: s.manual_bonus_points,
+          manual_penalty_points: s.manual_penalty_points,
+          final_points: s.final_points,
+          rank: s.rank,
+          published_at: s.published_at,
+        }));
+
+        return {
+          week: {
+            id: weekData.id,
+            name: weekData.name,
+            week_number: weekData.week_number,
+            starts_on: weekData.starts_on,
+            ends_on: weekData.ends_on,
+            program_name: weekData.competition_programs?.name,
+            academic_year_name: weekData.academic_years?.name,
+            published_at: snapshotData[0]?.published_at || weekData.published_at,
+          },
+          leaderboard: publicLeaderboard,
+        };
       }
 
-      const publicLeaderboard = (unitsData || []).map((u: any) => ({
-        unit_id: u.unit_id,
-        unit_name: u.class?.name || 'Chi đội',
-        grade_level_id: u.class?.grade_level_id,
-        grade_name: u.class?.grade_levels?.name,
-        starting_points: u.starting_points,
-        manual_bonus_points: u.manual_bonus_points,
-        manual_penalty_points: u.manual_penalty_points,
-        final_points: u.final_points_snapshot,
-        rank: u.rank_snapshot,
-        comment: u.comment,
-      }));
-
+      // If no published snapshot exists, return empty leaderboard for public view
       return {
         week: {
           id: weekData.id,
@@ -943,7 +956,7 @@ export const competitionService = {
           academic_year_name: weekData.academic_years?.name,
           published_at: weekData.published_at,
         },
-        leaderboard: publicLeaderboard,
+        leaderboard: [],
       };
     } catch (err) {
       console.error('Exception fetching public week leaderboard:', err);
@@ -1375,7 +1388,7 @@ export const competitionService = {
     id: string;
     full_name: string;
     unit_name: string;
-    available_reward_points: number;
+    total_reward_points: number;
   }[]> {
     try {
       const { data, error } = await supabase.rpc('get_top_student_rewards', { p_limit: limit });
@@ -1383,12 +1396,12 @@ export const competitionService = {
         console.error('Error calling get_top_student_rewards RPC:', error);
         return [];
       }
-      return (data || []) as {
-        id: string;
-        full_name: string;
-        unit_name: string;
-        available_reward_points: number;
-      }[];
+      return (data || []).map((s: any) => ({
+        id: s.id,
+        full_name: s.full_name,
+        unit_name: s.unit_name,
+        total_reward_points: s.total_reward_points ?? s.available_reward_points ?? 0,
+      }));
     } catch (err) {
       console.error('Exception calling get_top_student_rewards:', err);
       return [];
@@ -1557,6 +1570,42 @@ export const competitionService = {
       current_class_name: string | null;
       total_count: number;
     }>;
+  },
+
+  // --- AUTO PUBLISH SCHEDULE CONFIG ---
+  async getAutoPublishConfig(academicYearId: string) {
+    const { data, error } = await supabase.rpc('get_competition_auto_publish_config', {
+      p_academic_year_id: academicYearId,
+    });
+    if (error) {
+      console.error('Error getting auto publish config:', error);
+      return null;
+    }
+    return data as CompetitionAutoPublishConfig;
+  },
+
+  async saveAutoPublishConfig(academicYearId: string, isEnabled: boolean, publishTimes: string[]) {
+    const { data, error } = await supabase.rpc('save_competition_auto_publish_config', {
+      p_academic_year_id: academicYearId,
+      p_is_enabled: isEnabled,
+      p_publish_times: publishTimes,
+    });
+    if (error) {
+      console.error('Error saving auto publish config:', error);
+      throw error;
+    }
+    return data;
+  },
+
+  async triggerAutoPublish(academicYearId: string) {
+    const { data, error } = await supabase.rpc('trigger_auto_publish_competition', {
+      p_academic_year_id: academicYearId,
+    });
+    if (error) {
+      console.error('Error triggering auto publish:', error);
+      throw error;
+    }
+    return data;
   },
 };
 

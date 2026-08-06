@@ -135,7 +135,7 @@ interface TopStudent {
   id: string;
   full_name: string;
   unit_name: string;
-  available_reward_points: number;
+  total_reward_points: number;
 }
 
 export default function CompetitionOverviewPage() {
@@ -513,7 +513,7 @@ export default function CompetitionOverviewPage() {
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
                         <span className="font-mono font-black text-sm sm:text-base text-amber-600 dark:text-amber-400 block">
-                          {st.available_reward_points}
+                          {st.total_reward_points}
                         </span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                           điểm thưởng
