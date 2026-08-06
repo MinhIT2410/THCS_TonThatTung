@@ -917,11 +917,26 @@ export const competitionService = {
   // --- PUBLIC WEEK SUMMARY ---
   async getPublicPublishedWeeks(): Promise<CompetitionWeek[]> {
     try {
+      // 1. Determine published weeks by distinct week_ids in competition_public_unit_snapshots
+      const { data: snapshotWeeks, error: snapErr } = await supabase
+        .from('competition_public_unit_snapshots')
+        .select('week_id');
+
+      if (snapErr || !snapshotWeeks || snapshotWeeks.length === 0) {
+        return [];
+      }
+
+      const publishedWeekIds = Array.from(new Set(snapshotWeeks.map((s: any) => s.week_id).filter(Boolean)));
+      if (publishedWeekIds.length === 0) {
+        return [];
+      }
+
+      // 2. Fetch week details for all weeks with public snapshots (regardless of week status or lock)
       const { data, error } = await supabase
         .from('competition_weeks')
         .select('*, competition_programs(name), academic_years(name)')
-        .in('status', ['ACTIVE', 'PUBLISHED'])
-        .order('week_number', { ascending: false });
+        .in('id', publishedWeekIds)
+        .order('starts_on', { ascending: false });
 
       if (error) {
         console.error('Error fetching public published weeks:', error);

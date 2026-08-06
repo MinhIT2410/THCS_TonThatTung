@@ -320,6 +320,22 @@ BEGIN
     v_start_ts := v_week.starts_on::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh';
     v_end_ts := ((v_week.ends_on + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh') - interval '1 microsecond';
 
+    -- Ensure units exist in competition_week_units for this week
+    IF NOT EXISTS (SELECT 1 FROM public.competition_week_units WHERE week_id = v_week.id) THEN
+      INSERT INTO public.competition_week_units (
+        week_id, unit_id, starting_points, status
+      )
+      SELECT
+        v_week.id,
+        c.id,
+        COALESCE(v_week.default_starting_points, 100),
+        'ACTIVE'
+      FROM public.classes c
+      WHERE (p_academic_year_id IS NULL OR c.academic_year_id = p_academic_year_id)
+        AND c.is_active = true
+      ON CONFLICT (week_id, unit_id) DO NOTHING;
+    END IF;
+
     -- Delete old snapshot for this week
     DELETE FROM public.competition_public_unit_snapshots
     WHERE week_id = v_week.id;
