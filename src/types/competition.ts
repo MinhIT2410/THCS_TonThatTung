@@ -3,6 +3,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export type CommentType = 'PRAISE' | 'VIOLATION' | 'NEUTRAL';
+
+export const COMMENT_TYPE_LABELS: Record<CommentType, string> = {
+  PRAISE: 'Tuyên dương',
+  VIOLATION: 'Vi phạm',
+  NEUTRAL: 'Trung tính',
+};
+
+export interface CompetitionCommentTemplate {
+  id: string;
+  code: string;
+  title: string;
+  content: string;
+  comment_type: CommentType;
+  display_order: number;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type CompetitionAssignmentType = 'SUPERVISOR' | 'LIEN_DOI_COMMAND' | 'RED_STAR';
 
 export const COMPETITION_ASSIGNMENT_TYPE_LABELS: Record<CompetitionAssignmentType, string> = {

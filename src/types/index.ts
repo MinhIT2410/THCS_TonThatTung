@@ -101,10 +101,13 @@ export type {
   RewardItem,
   RewardRedemption,
   StudentCompetitionProfile,
+  CommentType,
+  CompetitionCommentTemplate,
 } from './competition';
 export {
   WEEK_STATUS_LABELS,
   COMPETITION_CATEGORY_LABELS,
   REVIEW_REQUEST_STATUS_LABELS,
   REDEMPTION_STATUS_LABELS,
+  COMMENT_TYPE_LABELS,
 } from './competition';

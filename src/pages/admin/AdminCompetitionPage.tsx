@@ -14,7 +14,8 @@ import {
   Users,
   Gift,
   PackageCheck,
-  HelpCircle
+  HelpCircle,
+  MessageSquare
 } from 'lucide-react';
 import ProgramsAndRulesTab from '../../components/admin/competition/ProgramsAndRulesTab';
 import ProgramAndWeeksTab from '../../components/admin/competition/ProgramAndWeeksTab';
@@ -23,6 +24,7 @@ import { RedemptionsTab } from '../../components/admin/competition/RedemptionsTa
 import { RewardsTab } from '../../components/admin/competition/RewardsTab';
 import { ReviewRequestsTab } from '../../components/admin/competition/ReviewRequestsTab';
 import ActorAssignmentsTab from '../../components/admin/competition/ActorAssignmentsTab';
+import CommentTemplatesTab from '../../components/admin/competition/CommentTemplatesTab';
 import { ROUTES } from '../../config/routes';
 
 type AdminCompetitionSubTab =
@@ -33,6 +35,7 @@ type AdminCompetitionSubTab =
   | 'rewards'
   | 'reviews'
   | 'rules'
+  | 'comment_templates'
   | 'programs'
   | 'assignments';
 
@@ -80,9 +83,10 @@ export default function AdminCompetitionPage() {
     }
     if (
       tabParam &&
-      ['programs', 'rules', 'units', 'history', 'reviews', 'assignments', 'programs_rules'].includes(tabParam)
+      ['programs', 'rules', 'comment_templates', 'comments', 'units', 'history', 'rewards', 'reviews', 'assignments', 'programs_rules'].includes(tabParam)
     ) {
-      return { mainTab: (tabParam === 'units' ? 'programs' : tabParam) as AdminCompetitionSubTab, subTab: 'catalog' };
+      const mappedTab = tabParam === 'comments' ? 'comment_templates' : tabParam === 'units' ? 'programs' : tabParam;
+      return { mainTab: mappedTab as AdminCompetitionSubTab, subTab: 'catalog' };
     }
 
     return { mainTab: 'programs', subTab: 'catalog' };
@@ -154,6 +158,18 @@ export default function AdminCompetitionPage() {
           >
             <FileCheck className="w-4 h-4" />
             <span>Quy tắc</span>
+          </button>
+
+          <button
+            onClick={() => handleMainTabChange('comment_templates')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-2 ${
+              activeTab === 'comment_templates'
+                ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
+                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-transparent'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Nhận xét</span>
           </button>
 
           <button
@@ -249,6 +265,7 @@ export default function AdminCompetitionPage() {
         {activeTab === 'reviews' && <ReviewRequestsTab />}
         {activeTab === 'assignments' && <ActorAssignmentsTab />}
         {activeTab === 'rules' && <ProgramsAndRulesTab initialSubTab="rules" />}
+        {activeTab === 'comment_templates' && <CommentTemplatesTab />}
       </div>
     </div>
   );

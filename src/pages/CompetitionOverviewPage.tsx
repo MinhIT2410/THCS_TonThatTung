@@ -152,6 +152,7 @@ export default function CompetitionOverviewPage() {
     'TEACHER',
   ]);
 
+  const [privacyToast, setPrivacyToast] = useState<string | null>(null);
   const [loadingUnits, setLoadingUnits] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(true);
 

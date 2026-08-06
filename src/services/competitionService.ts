@@ -22,6 +22,7 @@ import {
   RewardItem,
   RewardRedemption,
   CompetitionAutoPublishConfig,
+  CompetitionCommentTemplate,
 } from '../types/competition';
 
 export const competitionService = {
@@ -1664,6 +1665,148 @@ export const competitionService = {
       throw error;
     }
     return data;
+  },
+
+  // --- COMPETITION COMMENT TEMPLATES ---
+  async getCommentTemplates(commentType?: string, search?: string): Promise<CompetitionCommentTemplate[]> {
+    let query = supabase
+      .from('competition_comment_templates')
+      .select('*')
+      .order('display_order', { ascending: true })
+      .order('title', { ascending: true });
+
+    if (commentType && commentType !== 'ALL') {
+      query = query.eq('comment_type', commentType);
+    }
+
+    if (search && search.trim()) {
+      const term = search.trim();
+      query = query.or(`title.ilike.%${term}%,content.ilike.%${term}%,code.ilike.%${term}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error fetching comment templates:', error);
+      throw error;
+    }
+
+    return (data || []) as CompetitionCommentTemplate[];
+  },
+
+  async createCommentTemplate(template: Partial<CompetitionCommentTemplate>): Promise<CompetitionCommentTemplate> {
+    const codeFormatted = (template.code || '').trim().toUpperCase();
+    if (!codeFormatted) {
+      throw new Error('Mã nhận xét là bắt buộc.');
+    }
+    if (!/^[A-Z0-9_]+$/.test(codeFormatted)) {
+      throw new Error('Mã nhận xét chỉ được chứa các ký tự IN HOA (A-Z), số (0-9) và dấu gạch dưới (_).');
+    }
+    if (!template.title?.trim()) {
+      throw new Error('Tiêu đề nhận xét là bắt buộc.');
+    }
+    if (!template.content?.trim()) {
+      throw new Error('Nội dung nhận xét là bắt buộc.');
+    }
+    if (!template.comment_type || !['PRAISE', 'VIOLATION', 'NEUTRAL'].includes(template.comment_type)) {
+      throw new Error('Loại nhận xét không hợp lệ.');
+    }
+    const displayOrder = typeof template.display_order === 'number' && template.display_order >= 0 ? Math.floor(template.display_order) : 0;
+
+    const { data, error } = await supabase
+      .from('competition_comment_templates')
+      .insert({
+        code: codeFormatted,
+        title: template.title.trim(),
+        content: template.content.trim(),
+        comment_type: template.comment_type,
+        display_order: displayOrder,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating comment template:', error);
+      if (error.code === '23505') {
+        throw new Error(`Mã nhận xét "${codeFormatted}" đã tồn tại. Vui lòng chọn mã khác.`);
+      }
+      throw new Error(error.message || 'Lỗi khi thêm mẫu nhận xét.');
+    }
+
+    return data as CompetitionCommentTemplate;
+  },
+
+  async updateCommentTemplate(id: string, template: Partial<CompetitionCommentTemplate>): Promise<CompetitionCommentTemplate> {
+    const payload: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (template.code !== undefined) {
+      const codeFormatted = template.code.trim().toUpperCase();
+      if (!codeFormatted) {
+        throw new Error('Mã nhận xét là bắt buộc.');
+      }
+      if (!/^[A-Z0-9_]+$/.test(codeFormatted)) {
+        throw new Error('Mã nhận xét chỉ được chứa các ký tự IN HOA (A-Z), số (0-9) và dấu gạch dưới (_).');
+      }
+      payload.code = codeFormatted;
+    }
+
+    if (template.title !== undefined) {
+      if (!template.title.trim()) {
+        throw new Error('Tiêu đề nhận xét là bắt buộc.');
+      }
+      payload.title = template.title.trim();
+    }
+
+    if (template.content !== undefined) {
+      if (!template.content.trim()) {
+        throw new Error('Nội dung nhận xét là bắt buộc.');
+      }
+      payload.content = template.content.trim();
+    }
+
+    if (template.comment_type !== undefined) {
+      if (!['PRAISE', 'VIOLATION', 'NEUTRAL'].includes(template.comment_type)) {
+        throw new Error('Loại nhận xét không hợp lệ.');
+      }
+      payload.comment_type = template.comment_type;
+    }
+
+    if (template.display_order !== undefined) {
+      if (typeof template.display_order !== 'number' || template.display_order < 0) {
+        throw new Error('Thứ tự hiển thị phải là số nguyên không âm.');
+      }
+      payload.display_order = Math.floor(template.display_order);
+    }
+
+    const { data, error } = await supabase
+      .from('competition_comment_templates')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating comment template:', error);
+      if (error.code === '23505') {
+        throw new Error('Mã nhận xét đã tồn tại. Vui lòng chọn mã khác.');
+      }
+      throw new Error(error.message || 'Lỗi khi cập nhật mẫu nhận xét.');
+    }
+
+    return data as CompetitionCommentTemplate;
+  },
+
+  async deleteCommentTemplate(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('competition_comment_templates')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting comment template:', error);
+      throw new Error(error.message || 'Lỗi khi xóa mẫu nhận xét.');
+    }
   },
 };
 
