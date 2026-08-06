@@ -260,9 +260,20 @@ export interface CompetitionWeekUnit {
 
   // Calculated or joined fields
   unit_name?: string;
+  grade_level_id?: string | null;
+  grade_name?: string | null;
   current_points?: number;
   total_bonus?: number;
   total_penalty?: number;
+  bonus_points?: number;
+  deduction_points?: number;
+  final_score?: number;
+  incident_bonus_points?: number;
+  incident_penalty_points?: number;
+  total_bonus_points?: number;
+  total_penalty_points?: number;
+  total_points?: number;
+  rank?: number | null;
   incident_count?: number;
 }
 

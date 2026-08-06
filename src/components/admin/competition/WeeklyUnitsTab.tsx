@@ -574,17 +574,17 @@ export default function WeeklyUnitsTab() {
                             {unit.unit_name}
                           </td>
                           <td className="py-3.5 px-4 text-center font-mono text-slate-500">
-                            {unit.starting_points}
+                            {unit.starting_points ?? 100}
                           </td>
                           <td className="py-3.5 px-4 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                            +{unit.total_bonus || 0}
+                            {unit.total_bonus ? `+${unit.total_bonus}` : 0}
                           </td>
                           <td className="py-3.5 px-4 text-center font-mono font-bold text-rose-600 dark:text-rose-400">
-                            -{unit.total_penalty || 0}
+                            {unit.total_penalty ? `-${unit.total_penalty}` : 0}
                           </td>
                           <td className="py-3.5 px-4 text-center">
                             <span className="font-mono font-black text-sm px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200/60 dark:border-slate-700">
-                              {unit.current_points}
+                              {unit.current_points ?? unit.starting_points ?? 100}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">

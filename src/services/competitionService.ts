@@ -762,13 +762,13 @@ export const competitionService = {
 
     if (unitsError) throw unitsError;
 
-    const startTs = new Date(`${week.starts_on}T00:00:00.000Z`).toISOString();
-    const endTs = new Date(`${week.ends_on}T23:59:59.999Z`).toISOString();
+    const startTs = new Date(`${week.starts_on}T00:00:00+07:00`).toISOString();
+    const endTs = new Date(`${week.ends_on}T23:59:59.999+07:00`).toISOString();
 
-    // Fetch transactions in range
+    // Fetch transactions in range with program reference
     const { data: txData, error: txError } = await supabase
       .from('competition_point_transactions')
-      .select('unit_id, points, transaction_type')
+      .select('unit_id, points, transaction_type, program_id, incident_id, incident:competition_incidents(program_id)')
       .eq('ledger_type', 'UNIT_COMPETITION')
       .eq('status', 'POSTED')
       .gte('effective_at', startTs)
@@ -776,76 +776,100 @@ export const competitionService = {
 
     if (txError) throw txError;
 
-    // Aggregate point transactions per unit
-    const txMap = new Map<string, { bonus: number; penalty: number; net: number; count: number }>();
-    (txData || []).forEach(tx => {
+    // Aggregate point transactions per unit, filtering by week program_id
+    const txMap = new Map<string, { bonus: number; penalty: number; count: number }>();
+    (txData || []).forEach((tx: any) => {
       if (!tx.unit_id) return;
-      const current = txMap.get(tx.unit_id) || { bonus: 0, penalty: 0, net: 0, count: 0 };
+
+      let txProgId = tx.program_id;
+      if (!txProgId && tx.incident) {
+        if (Array.isArray(tx.incident)) {
+          txProgId = tx.incident[0]?.program_id;
+        } else {
+          txProgId = tx.incident.program_id;
+        }
+      }
+
+      if (week.program_id && txProgId && txProgId !== week.program_id) {
+        return;
+      }
+
+      const current = txMap.get(tx.unit_id) || { bonus: 0, penalty: 0, count: 0 };
       const pts = tx.points || 0;
       if (pts > 0) current.bonus += pts;
       if (pts < 0) current.penalty += Math.abs(pts);
-      current.net += pts;
       current.count += 1;
       txMap.set(tx.unit_id, current);
     });
 
     const processedUnits: CompetitionWeekUnit[] = (unitsData || []).map((u: any) => {
-      const stats = txMap.get(u.unit_id) || { bonus: 0, penalty: 0, net: 0, count: 0 };
-      const isPublished = week.status === 'PUBLISHED';
-      
-      const current_points = isPublished && u.final_points_snapshot != null 
-        ? u.final_points_snapshot 
-        : u.starting_points + stats.net;
+      const stats = txMap.get(u.unit_id) || { bonus: 0, penalty: 0, count: 0 };
 
-      const total_bonus = isPublished ? u.manual_bonus_points : stats.bonus;
-      const total_penalty = isPublished ? u.manual_penalty_points : stats.penalty;
+      const starting_points = u.starting_points ?? 100;
+      const manual_bonus_points = u.manual_bonus_points ?? 0;
+      const manual_penalty_points = u.manual_penalty_points ?? 0;
+      const incident_bonus_points = stats.bonus;
+      const incident_penalty_points = stats.penalty;
+
+      const total_bonus_points = manual_bonus_points + incident_bonus_points;
+      const total_penalty_points = manual_penalty_points + incident_penalty_points;
+      const total_points = starting_points + total_bonus_points - total_penalty_points;
+
+      const unit_name = u.class?.name || 'Chi đội';
 
       return {
         ...u,
-        unit_name: u.class?.name || 'Chi đội',
-        current_points,
-        total_bonus,
-        total_penalty,
+        unit_name,
+        grade_level_id: u.class?.grade_level_id,
+        starting_points,
+        manual_bonus_points,
+        manual_penalty_points,
+        incident_bonus_points,
+        incident_penalty_points,
+        total_bonus_points,
+        total_penalty_points,
+        total_points,
+
+        // Aliases for various UI components:
+        total_bonus: total_bonus_points,
+        total_penalty: total_penalty_points,
+        bonus_points: total_bonus_points,
+        deduction_points: total_penalty_points,
+        current_points: total_points,
+        final_score: total_points,
         incident_count: stats.count,
       };
     });
 
-    // If NOT published yet, compute dynamic temporary rank
-    if (week.status !== 'PUBLISHED') {
-      processedUnits.sort((a, b) => {
-        if ((b.current_points ?? 0) !== (a.current_points ?? 0)) {
-          return (b.current_points ?? 0) - (a.current_points ?? 0);
-        }
-        if ((a.total_penalty ?? 0) !== (b.total_penalty ?? 0)) {
-          return (a.total_penalty ?? 0) - (b.total_penalty ?? 0);
-        }
-        return compareClassNames(a.unit_name, b.unit_name);
-      });
+    // Compute dynamic real-time rank for admin views
+    processedUnits.sort((a, b) => {
+      if ((b.total_points ?? 0) !== (a.total_points ?? 0)) {
+        return (b.total_points ?? 0) - (a.total_points ?? 0);
+      }
+      if ((a.total_penalty_points ?? 0) !== (b.total_penalty_points ?? 0)) {
+        return (a.total_penalty_points ?? 0) - (b.total_penalty_points ?? 0);
+      }
+      return compareClassNames(a.unit_name, b.unit_name);
+    });
 
-      let currentRank = 1;
-      processedUnits.forEach((u, idx) => {
-        if (idx > 0) {
-          const prev = processedUnits[idx - 1];
-          if (
-            prev.current_points === u.current_points &&
-            prev.total_penalty === u.total_penalty
-          ) {
-            u.rank_snapshot = prev.rank_snapshot;
-          } else {
-            u.rank_snapshot = idx + 1;
-          }
+    processedUnits.forEach((u, idx) => {
+      if (idx > 0) {
+        const prev = processedUnits[idx - 1];
+        if (
+          prev.total_points === u.total_points &&
+          prev.total_penalty_points === u.total_penalty_points
+        ) {
+          u.rank = prev.rank;
+          u.rank_snapshot = prev.rank;
         } else {
-          u.rank_snapshot = 1;
+          u.rank = idx + 1;
+          u.rank_snapshot = idx + 1;
         }
-      });
-    } else {
-      // Sort by snapshot rank
-      processedUnits.sort((a, b) => {
-        const rankDiff = (a.rank_snapshot || 999) - (b.rank_snapshot || 999);
-        if (rankDiff !== 0) return rankDiff;
-        return compareClassNames(a.unit_name, b.unit_name);
-      });
-    }
+      } else {
+        u.rank = 1;
+        u.rank_snapshot = 1;
+      }
+    });
 
     // Fetch total incidents stats for the week
     const { count: pendingCount } = await supabase

@@ -931,19 +931,19 @@ export default function ProgramAndWeeksTab() {
                           </td>
 
                           <td className="py-3 px-4 text-center text-slate-600 dark:text-slate-400">
-                            {u.starting_points}
+                            {u.starting_points ?? 100}
                           </td>
 
                           <td className="py-3 px-4 text-center text-rose-600 font-bold">
-                            -{u.deduction_points}
+                            {u.deduction_points ? `-${u.deduction_points}` : 0}
                           </td>
 
                           <td className="py-3 px-4 text-center text-emerald-600 font-bold">
-                            +{u.bonus_points}
+                            {u.bonus_points ? `+${u.bonus_points}` : 0}
                           </td>
 
                           <td className="py-3 px-4 text-center font-extrabold text-slate-900 dark:text-white text-sm">
-                            {u.final_score}
+                            {u.final_score ?? u.starting_points ?? 100}
                           </td>
 
                           <td className="py-3 px-4 text-right">
@@ -1187,15 +1187,15 @@ export default function ProgramAndWeeksTab() {
               <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold">
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
                   <span className="text-slate-500 block text-[10px] uppercase">Khởi đầu</span>
-                  <span className="text-slate-900 dark:text-white text-base">{selectedUnitForDetail.starting_points}</span>
+                  <span className="text-slate-900 dark:text-white text-base">{selectedUnitForDetail.starting_points ?? 100}</span>
                 </div>
                 <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900 text-rose-600">
                   <span className="block text-[10px] uppercase">Trừ điểm</span>
-                  <span className="text-base">-{selectedUnitForDetail.deduction_points}</span>
+                  <span className="text-base">{selectedUnitForDetail.deduction_points ? `-${selectedUnitForDetail.deduction_points}` : 0}</span>
                 </div>
                 <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900 text-emerald-600">
                   <span className="block text-[10px] uppercase">Tổng điểm</span>
-                  <span className="text-base">{selectedUnitForDetail.final_score}</span>
+                  <span className="text-base">{selectedUnitForDetail.final_score ?? selectedUnitForDetail.starting_points ?? 100}</span>
                 </div>
               </div>
 
