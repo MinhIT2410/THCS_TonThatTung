@@ -49,6 +49,7 @@ import CompetitionReportPage from './pages/CompetitionReportPage';
 import AdminCompetitionPage from './pages/admin/AdminCompetitionPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { RoleGuard } from './components/auth/RoleGuard';
+import { CompetitionDetailGuard } from './components/auth/CompetitionDetailGuard';
 import { AccessDenied } from './components/auth/AccessDenied';
 
 import { newsService } from './services/newsService';
@@ -315,13 +316,48 @@ function AppContent() {
           <Route path={`${ROUTES.GALLERY}/:id`} element={<AlbumDetailPage />} />
           <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
           <Route path={ROUTES.COMPETITION} element={<CompetitionOverviewPage />} />
-          <Route path={ROUTES.COMPETITION_UNITS} element={<PublicUnitCompetitionPage />} />
-          <Route path={ROUTES.COMPETITION_STUDENT} element={<StudentCompetitionPage />} />
+          <Route
+            path={ROUTES.COMPETITION_UNITS}
+            element={
+              <CompetitionDetailGuard>
+                <PublicUnitCompetitionPage />
+              </CompetitionDetailGuard>
+            }
+          />
+          <Route
+            path={ROUTES.COMPETITION_STUDENT}
+            element={
+              <CompetitionDetailGuard>
+                <StudentCompetitionPage />
+              </CompetitionDetailGuard>
+            }
+          />
           <Route path={ROUTES.COMPETITION_GOOD_DEEDS} element={<PublicGoodDeedsPage />} />
           <Route path={ROUTES.COMPETITION_REWARDS} element={<PublicRewardShopPage />} />
-          <Route path={ROUTES.COMPETITION_RECORD} element={<RecordIncidentPage />} />
-          <Route path={ROUTES.COMPETITION_PENDING} element={<CompetitionPendingPage />} />
-          <Route path={ROUTES.COMPETITION_REPORT} element={<CompetitionReportPage />} />
+          <Route
+            path={ROUTES.COMPETITION_RECORD}
+            element={
+              <CompetitionDetailGuard>
+                <RecordIncidentPage />
+              </CompetitionDetailGuard>
+            }
+          />
+          <Route
+            path={ROUTES.COMPETITION_PENDING}
+            element={
+              <CompetitionDetailGuard>
+                <CompetitionPendingPage />
+              </CompetitionDetailGuard>
+            }
+          />
+          <Route
+            path={ROUTES.COMPETITION_REPORT}
+            element={
+              <CompetitionDetailGuard>
+                <CompetitionReportPage />
+              </CompetitionDetailGuard>
+            }
+          />
           <Route path={ROUTES.CONTACT} element={<ContactPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />

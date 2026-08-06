@@ -25,6 +25,7 @@ import { competitionService } from '../services/competitionService';
 import { ROUTES } from '../config/routes';
 import { supabase } from '../lib/supabase/client';
 import CompetitionQuickActions from '../components/competition/CompetitionQuickActions';
+import { useAuth } from '../features/auth/AuthContext';
 
 interface GradeTopClasses {
   grade: string;
@@ -140,6 +141,16 @@ interface TopStudent {
 
 export default function CompetitionOverviewPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, hasAnyRole } = useAuth();
+
+  const canViewDetails = isAuthenticated && hasAnyRole([
+    'SUPER_ADMIN',
+    'PRINCIPAL',
+    'VICE_PRINCIPAL',
+    'CONTENT_EDITOR',
+    'STAFF',
+    'TEACHER',
+  ]);
 
   const [loadingUnits, setLoadingUnits] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(true);
@@ -155,22 +166,10 @@ export default function CompetitionOverviewPage() {
   const [topStudents, setTopStudents] = useState<TopStudent[]>([]);
   const [goodDeeds, setGoodDeeds] = useState<any[]>([]);
   const [loadingGoodDeeds, setLoadingGoodDeeds] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [privacyToast, setPrivacyToast] = useState<string | null>(null);
 
   useEffect(() => {
-    checkCurrentUser();
     loadOverviewData();
   }, []);
-
-  async function checkCurrentUser() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUserId(user?.id || null);
-    } catch {
-      setCurrentUserId(null);
-    }
-  }
 
   async function loadOverviewData() {
     // 1. Fetch latest published week & unit competition leaderboard
@@ -258,17 +257,11 @@ export default function CompetitionOverviewPage() {
   }
 
   const handleStudentClick = (student: TopStudent) => {
-    if (!currentUserId) {
-      setPrivacyToast('Đăng nhập bằng tài khoản phù hợp để xem hồ sơ thi đua cá nhân.');
-      setTimeout(() => setPrivacyToast(null), 4000);
-      return;
-    }
-
-    if (currentUserId === student.id) {
-      navigate(ROUTES.COMPETITION_STUDENT);
+    if (!canViewDetails) return;
+    if (student.id) {
+      navigate(`${ROUTES.COMPETITION_STUDENT}?studentId=${student.id}`);
     } else {
-      setPrivacyToast('Đăng nhập bằng tài khoản phù hợp để xem hồ sơ thi đua cá nhân.');
-      setTimeout(() => setPrivacyToast(null), 4000);
+      navigate(ROUTES.COMPETITION_STUDENT);
     }
   };
 
@@ -320,13 +313,15 @@ export default function CompetitionOverviewPage() {
             )}
           </div>
 
-          <Link
-            to={ROUTES.COMPETITION_UNITS}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 font-bold text-xs transition-colors shrink-0"
-          >
-            <span>Xem bảng xếp hạng chi đội</span>
-            <ChevronRight className="w-4 h-4" />
-          </Link>
+          {canViewDetails && (
+            <Link
+              to={ROUTES.COMPETITION_UNITS}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 font-bold text-xs transition-colors shrink-0"
+            >
+              <span>Xem bảng xếp hạng chi đội</span>
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          )}
         </div>
 
         {/* Grade Cards Grid (4 cards: Khối 6, Khối 7, Khối 8, Khối 9) */}
@@ -408,15 +403,17 @@ export default function CompetitionOverviewPage() {
                     </div>
 
                     {/* Card Footer Link */}
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 mt-4">
-                      <Link
-                        to={`${ROUTES.COMPETITION_UNITS}?grade=${g.grade}`}
-                        className={`flex items-center justify-between text-xs font-bold ${theme.footerTextClass} ${theme.footerHoverTextClass}`}
-                      >
-                        <span>Bảng xếp hạng {g.gradeLabel}</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                      </Link>
-                    </div>
+                    {canViewDetails && (
+                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 mt-4">
+                        <Link
+                          to={`${ROUTES.COMPETITION_UNITS}?grade=${g.grade}`}
+                          className={`flex items-center justify-between text-xs font-bold ${theme.footerTextClass} ${theme.footerHoverTextClass}`}
+                        >
+                          <span>Bảng xếp hạng {g.gradeLabel}</span>
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -440,13 +437,15 @@ export default function CompetitionOverviewPage() {
             </p>
           </div>
 
-          <Link
-            to={ROUTES.COMPETITION_STUDENT}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-xs transition-colors shrink-0"
-          >
-            <span>Xem hồ sơ thi đua</span>
-            <ChevronRight className="w-4 h-4" />
-          </Link>
+          {canViewDetails && (
+            <Link
+              to={ROUTES.COMPETITION_STUDENT}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-xs transition-colors shrink-0"
+            >
+              <span>Xem hồ sơ thi đua</span>
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          )}
         </div>
 
         {/* Top 5 Students List Container */}
@@ -474,7 +473,9 @@ export default function CompetitionOverviewPage() {
                   <div
                     key={st.id}
                     onClick={() => handleStudentClick(st)}
-                    className={`group cursor-pointer p-3.5 sm:p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                    className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      canViewDetails ? 'group cursor-pointer' : ''
+                    } ${
                       isTop1
                         ? 'bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-transparent border-amber-300/80 dark:border-amber-800/60'
                         : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800/80 hover:border-amber-400/40'
@@ -496,7 +497,9 @@ export default function CompetitionOverviewPage() {
                       </span>
 
                       <div className="min-w-0">
-                        <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                        <div className={`font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2 truncate ${
+                          canViewDetails ? 'group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors' : ''
+                        }`}>
                           <span className="truncate">{st.full_name}</span>
                           {isTop1 && (
                             <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold shrink-0">
@@ -519,7 +522,9 @@ export default function CompetitionOverviewPage() {
                           điểm thưởng
                         </span>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                      {canViewDetails && (
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                      )}
                     </div>
                   </div>
                 );
@@ -656,17 +661,19 @@ export default function CompetitionOverviewPage() {
                       {new Date(item.occurred_at).toLocaleDateString('vi-VN')}
                     </span>
 
-                    <Link
-                      to={
-                        item.student_id
-                          ? `${ROUTES.COMPETITION_STUDENT}?studentId=${item.student_id}`
-                          : ROUTES.COMPETITION_STUDENT
-                      }
-                      className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors py-1 px-2.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/60"
-                    >
-                      <span>Xem hồ sơ</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </Link>
+                    {canViewDetails && (
+                      <Link
+                        to={
+                          item.student_id
+                            ? `${ROUTES.COMPETITION_STUDENT}?studentId=${item.student_id}`
+                            : ROUTES.COMPETITION_STUDENT
+                        }
+                        className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors py-1 px-2.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/60"
+                      >
+                        <span>Xem hồ sơ</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
                   </div>
                 </div>
               ))}
