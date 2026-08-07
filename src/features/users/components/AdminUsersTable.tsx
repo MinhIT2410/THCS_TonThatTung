@@ -416,25 +416,25 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                   </button>
                 </th>
 
-                <th className="pr-6 pl-2 py-4 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <th className="pr-6 pl-2 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Họ và tên
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Email đăng nhập
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">
                   Vai trò
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">
                   Trạng thái
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Tham gia
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Cập nhật
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">
                   Thao tác
                 </th>
               </tr>

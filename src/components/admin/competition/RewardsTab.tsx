@@ -250,8 +250,8 @@ export const RewardsTab: React.FC = () => {
       {/* Item Create/Edit Modal */}
       {showItemModal && editingItem && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 border border-slate-100">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
               <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
                 <Gift className="w-5 h-5 text-amber-600" />
                 {editingItem.id ? 'Chỉnh Sửa Phần Thưởng' : 'Thêm Phần Thưởng Mới'}
@@ -264,97 +264,99 @@ export const RewardsTab: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveItem} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tên phần thưởng <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Vở học sinh 96 trang, Bút mực, Cờ thưởng..."
-                  value={editingItem.name || ''}
-                  onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Mô tả ngắn</label>
-                <textarea
-                  rows={2}
-                  placeholder="Mô tả quà tặng..."
-                  value={editingItem.description || ''}
-                  onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Link ảnh (URL)</label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={editingItem.image_url || ''}
-                  onChange={(e) => setEditingItem({ ...editingItem, image_url: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSaveItem} className="flex-1 flex flex-col overflow-hidden min-h-0">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Điểm cần đổi <span className="text-rose-500">*</span>
+                    Tên phần thưởng <span className="text-rose-500">*</span>
                   </label>
                   <input
-                    type="number"
-                    min={1}
+                    type="text"
                     required
-                    value={editingItem.points_required ?? 50}
-                    onChange={(e) =>
-                      setEditingItem({
-                        ...editingItem,
-                        points_required: parseInt(e.target.value) || 1,
-                      })
-                    }
+                    placeholder="Ví dụ: Vở học sinh 96 trang, Bút mực, Cờ thưởng..."
+                    value={editingItem.name || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
                     className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Số lượng quà <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    required
-                    value={editingItem.quantity ?? 10}
-                    onChange={(e) =>
-                      setEditingItem({
-                        ...editingItem,
-                        quantity: parseInt(e.target.value) || 0,
-                      })
-                    }
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Mô tả ngắn</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Mô tả quà tặng..."
+                    value={editingItem.description || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
                     className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Link ảnh (URL)</label>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    value={editingItem.image_url || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, image_url: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Điểm cần đổi <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      required
+                      value={editingItem.points_required ?? 50}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          points_required: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Số lượng quà <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      required
+                      value={editingItem.quantity ?? 10}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          quantity: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={editingItem.is_active ?? true}
+                    onChange={(e) => setEditingItem({ ...editingItem, is_active: e.target.checked })}
+                    className="w-4 h-4 text-amber-600 rounded-xs focus:ring-amber-500"
+                  />
+                  <label htmlFor="is_active" className="text-xs font-medium text-slate-700 cursor-pointer">
+                    Mở cho phép đổi quà này trên hệ thống
+                  </label>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={editingItem.is_active ?? true}
-                  onChange={(e) => setEditingItem({ ...editingItem, is_active: e.target.checked })}
-                  className="w-4 h-4 text-amber-600 rounded-xs focus:ring-amber-500"
-                />
-                <label htmlFor="is_active" className="text-xs font-medium text-slate-700 cursor-pointer">
-                  Mở cho phép đổi quà này trên hệ thống
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowItemModal(false)}

@@ -116,7 +116,7 @@ export default function PublicUnitCompetitionPage() {
             <Sparkles className="w-3 h-3" />
             Bảng cờ thi đua chi đội
           </div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight font-display leading-tight">
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
             Kết quả thi đua chi đội hàng tuần
           </h1>
           <p className="text-xs text-red-50 dark:text-red-200 leading-relaxed line-clamp-2">
@@ -206,7 +206,7 @@ export default function PublicUnitCompetitionPage() {
               <div className="text-[11px] font-mono font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
                 {currentWeekInfo.program_name || 'Chương trình thi đua năm học'}
               </div>
-              <h2 className="text-xl sm:text-2xl font-black font-display text-slate-900 dark:text-white mt-0.5">
+              <h2 className="font-display text-xl font-bold text-slate-900 dark:text-white mt-0.5">
                 {currentWeekInfo.name}
               </h2>
             </div>
@@ -217,7 +217,7 @@ export default function PublicUnitCompetitionPage() {
           </div>
 
           {/* Desktop Leaderboard Table (Hidden on mobile) */}
-          <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+          <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-x-auto shadow-xs">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 text-slate-500 font-bold uppercase tracking-wider">
@@ -309,7 +309,7 @@ export default function PublicUnitCompetitionPage() {
                 return (
                   <div
                     key={item.unit_name}
-                    className={`bg-white dark:bg-slate-900 border rounded-3xl p-5 shadow-sm space-y-3 ${
+                    className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-sm space-y-3 ${
                       rank === 1
                         ? 'border-amber-300 dark:border-amber-800 bg-amber-500/5'
                         : 'border-slate-200/80 dark:border-slate-800'

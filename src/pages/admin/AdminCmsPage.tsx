@@ -196,7 +196,7 @@ export default function AdminCmsPage() {
             )}
 
             {/* Basic Info block */}
-            <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4">
+            <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
               <div className="flex items-center space-x-2 border-b border-slate-100 dark:border-slate-900 pb-3">
                 <Info className="h-4.5 w-4.5 text-indigo-500" />
                 <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">Thông tin liên lạc cơ bản</h3>
@@ -214,7 +214,7 @@ export default function AdminCmsPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Ví dụ: liendoitonthattung@gmail.com"
-                    className="w-full px-3.5 py-2.5 text-xs border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                    className="w-full h-10 px-3.5 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                   />
                 </div>
 
@@ -229,7 +229,7 @@ export default function AdminCmsPage() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Ví dụ: 028.3845.2410"
-                    className="w-full px-3.5 py-2.5 text-xs border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                    className="w-full h-10 px-3.5 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                   />
                 </div>
               </div>
@@ -260,13 +260,13 @@ export default function AdminCmsPage() {
                   value={receptionHours}
                   onChange={(e) => setReceptionHours(e.target.value)}
                   placeholder="Ví dụ: Giờ ra chơi các ngày từ Thứ Hai đến Thứ Bảy"
-                  className="w-full px-3.5 py-2.5 text-xs border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                  className="w-full h-10 px-3.5 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />
               </div>
             </div>
 
             {/* Intro & Map block */}
-            <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4">
+            <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
               <div className="flex items-center space-x-2 border-b border-slate-100 dark:border-slate-900 pb-3">
                 <Map className="h-4.5 w-4.5 text-indigo-500" />
                 <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">Lời giới thiệu & Bản đồ nhúng</h3>
@@ -313,7 +313,7 @@ export default function AdminCmsPage() {
             </div>
 
             {/* FAQs editor block */}
-            <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4">
+            <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-900 pb-3">
                 <div className="flex items-center space-x-2">
                   <HelpCircle className="h-4.5 w-4.5 text-indigo-500" />
@@ -411,7 +411,7 @@ export default function AdminCmsPage() {
             </div>
 
             {/* Card preview box */}
-            <div className="border border-slate-200 dark:border-slate-850 rounded-[2rem] overflow-hidden bg-slate-50/50 dark:bg-slate-900/30 p-4 space-y-4 shadow-sm">
+            <div className="border border-slate-200 dark:border-slate-850 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/30 p-4 space-y-4 shadow-sm">
               <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl space-y-3.5 shadow-sm">
                 <span className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full border border-blue-200/30 inline-block uppercase tracking-wider">
                   Xem trước thẻ thông tin
@@ -492,7 +492,7 @@ export default function AdminCmsPage() {
         </div>
       ) : (
         /* Home page tab content */
-        <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6">
+        <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6">
           <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto shadow-sm border border-indigo-100/40 dark:border-indigo-900/30">
             <Home className="h-8 w-8" />
           </div>

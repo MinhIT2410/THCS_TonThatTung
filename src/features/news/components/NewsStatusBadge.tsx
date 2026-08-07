@@ -35,7 +35,7 @@ export const NewsStatusBadge: React.FC<NewsStatusBadgeProps> = ({ status }) => {
   }
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${bg} ${text}`}>
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${bg} ${text}`}>
       {label}
     </span>
   );

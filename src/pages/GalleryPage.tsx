@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Folder, Calendar, Sparkles, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
+import EmptyState from '../components/common/EmptyState';
 import { albumApi } from '../features/albums/albumApi';
 import { Album } from '../features/albums/albumTypes';
 
@@ -70,11 +71,10 @@ export default function GalleryPage() {
           </button>
         </div>
       ) : albums.length === 0 ? (
-        <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/30 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl max-w-md mx-auto p-8 space-y-3">
-          <Folder className="h-10 w-10 text-slate-300 dark:text-slate-700 mx-auto" />
-          <h3 className="font-bold text-slate-700 dark:text-slate-300">Chưa có album ảnh nào</h3>
-          <p className="text-xs text-slate-400 font-medium">Hình ảnh hoạt động Liên đội đang được tổng hợp và cập nhật sớm nhất.</p>
-        </div>
+        <EmptyState 
+          message="Chưa có album ảnh nào" 
+          description="Hình ảnh hoạt động Liên đội đang được tổng hợp và cập nhật sớm nhất." 
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pt-4">
           {albums.map((album) => (

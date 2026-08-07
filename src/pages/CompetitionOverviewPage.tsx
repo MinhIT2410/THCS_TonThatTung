@@ -298,7 +298,7 @@ export default function CompetitionOverviewPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-red-600" />
-              <h2 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+              <h2 className="font-display text-xl font-bold text-slate-900 dark:text-white">
                 Thi đua chi đội
               </h2>
             </div>
@@ -429,7 +429,7 @@ export default function CompetitionOverviewPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Award className="w-5 h-5 text-amber-500" />
-              <h2 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+              <h2 className="font-display text-xl font-bold text-slate-900 dark:text-white">
                 Thi đua Đội viên
               </h2>
             </div>
@@ -540,10 +540,8 @@ export default function CompetitionOverviewPage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-emerald-200/80 dark:border-emerald-800/80 pb-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-200/80 dark:border-emerald-800/80">
-                <HeartHandshake className="w-4 h-4" />
-              </div>
-              <h2 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+              <HeartHandshake className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <h2 className="font-display text-xl font-bold text-slate-900 dark:text-white">
                 Bảng vinh danh Người tốt - Việc tốt
               </h2>
             </div>

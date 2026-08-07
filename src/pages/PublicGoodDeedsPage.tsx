@@ -18,6 +18,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { competitionService } from '../services/competitionService';
+import LoadingState from '../components/common/LoadingState';
+import EmptyState from '../components/common/EmptyState';
 
 export default function PublicGoodDeedsPage() {
   const [goodDeeds, setGoodDeeds] = useState<any[]>([]);
@@ -50,7 +52,7 @@ export default function PublicGoodDeedsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/60 pb-16 pt-8 font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 sm:space-y-12">
         {/* Banner */}
         <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-800 rounded-3xl text-white p-8 shadow-xl relative overflow-hidden">
           <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
@@ -92,15 +94,12 @@ export default function PublicGoodDeedsPage() {
 
         {/* List Grid */}
         {loading ? (
-          <div className="py-16 text-center text-slate-500 flex flex-col items-center gap-2">
-            <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
-            <span className="text-sm">Đang tải danh sách vinh danh...</span>
-          </div>
+          <LoadingState message="Đang tải danh sách vinh danh..." />
         ) : filteredDeeds.length === 0 ? (
-          <div className="py-16 bg-white rounded-3xl border border-dashed border-slate-200 text-center text-slate-400">
-            <HeartHandshake className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="font-medium text-slate-600">Chưa có thông tin phù hợp</p>
-          </div>
+          <EmptyState 
+            message="Chưa có thông tin vinh danh" 
+            description="Danh sách người tốt việc tốt sẽ được cập nhật khi có tuyên dương mới." 
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredDeeds.map((deed) => (

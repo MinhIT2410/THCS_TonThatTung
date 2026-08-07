@@ -82,23 +82,23 @@ export default function AboutPage() {
         <h1 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-4xl">
           Đội TNTP Hồ Chí Minh & Liên đội
         </h1>
-        <p className="font-sans text-sm text-slate-500 dark:text-slate-400">
+        <p className="font-sans text-slate-600 dark:text-slate-400 text-sm sm:text-base">
           Thông tin, lịch sử về tổ chức Đội TNTP Hồ Chí Minh, Liên đội THCS Tôn Thất Tùng, các Đội nhóm măng non
         </p>
       </div>
 
       {loading ? (
         <div className="space-y-12 max-w-4xl mx-auto animate-pulse">
-          <div className="h-48 bg-slate-100 dark:bg-slate-900 rounded-[2rem] w-full max-w-2xl mx-auto" />
-          <div className="h-40 bg-slate-100 dark:bg-slate-900 rounded-[2rem] w-full max-w-xl mx-auto" />
+          <div className="h-48 bg-slate-100 dark:bg-slate-900 rounded-2xl w-full max-w-2xl mx-auto" />
+          <div className="h-40 bg-slate-100 dark:bg-slate-900 rounded-2xl w-full max-w-xl mx-auto" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-32 bg-slate-100 dark:bg-slate-900 rounded-3xl" />
+              <div key={i} className="h-32 bg-slate-100 dark:bg-slate-900 rounded-2xl" />
             ))}
           </div>
         </div>
       ) : error ? (
-        <div className="text-center py-20 border border-dashed border-red-300 dark:border-red-900 rounded-[2.5rem] max-w-xl mx-auto space-y-4 bg-red-50/10">
+        <div className="text-center py-20 border border-dashed border-red-300 dark:border-red-900 rounded-2xl max-w-xl mx-auto space-y-4 bg-red-50/10">
           <Icons.AlertCircle className="h-12 w-12 mx-auto text-red-500 opacity-80" />
           <h3 className="font-display text-lg font-bold text-red-800 dark:text-red-400">{error}</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -112,7 +112,7 @@ export default function AboutPage() {
              ================================================== */}
           <div className="relative flex flex-col items-center">
             {tier1.length === 0 ? (
-              <div className="max-w-2xl w-full border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl p-6 text-center text-slate-400 dark:text-slate-500 text-sm">
+              <div className="max-w-2xl w-full border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-6 text-center text-slate-400 dark:text-slate-500 text-sm">
                 Chưa thiết lập tổ chức cấp trên.
               </div>
             ) : (
@@ -121,7 +121,7 @@ export default function AboutPage() {
                   <motion.div
                     key={item.id}
                     whileHover={{ y: -4 }}
-                    className="max-w-2xl w-full bg-white dark:bg-slate-900 border-2 border-red-500/30 rounded-[2rem] shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative group"
+                    className="max-w-2xl w-full bg-white dark:bg-slate-900 border-2 border-red-500/30 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative group"
                   >
                     <Link to={`${ROUTES.ABOUT}/${item.slug}`} className="block h-full p-6 md:p-8">
                       <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
@@ -180,7 +180,7 @@ export default function AboutPage() {
              ================================================== */}
           <div className="relative flex flex-col items-center">
             {tier2.length === 0 ? (
-              <div className="max-w-xl w-full border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl p-6 text-center text-slate-400 dark:text-slate-500 text-sm">
+              <div className="max-w-xl w-full border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-6 text-center text-slate-400 dark:text-slate-500 text-sm">
                 Chưa thiết lập đơn vị Liên đội.
               </div>
             ) : (
@@ -189,7 +189,7 @@ export default function AboutPage() {
                   <motion.div
                     key={item.id}
                     whileHover={{ y: -4 }}
-                    className="max-w-xl w-full bg-white dark:bg-slate-900 border-2 border-indigo-500/20 dark:border-indigo-500/30 rounded-[2.5rem] shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group"
+                    className="max-w-xl w-full bg-white dark:bg-slate-900 border-2 border-indigo-500/20 dark:border-indigo-500/30 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group"
                   >
                     <Link to={`${ROUTES.ABOUT}/${item.slug}`} className="block h-full p-6 md:p-7">
                       <div className="flex flex-col md:flex-row items-center md:items-start gap-5">
@@ -256,7 +256,7 @@ export default function AboutPage() {
             )}
 
             {tier3.length === 0 ? (
-              <div className="max-w-xl mx-auto border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl p-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+              <div className="max-w-xl mx-auto border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-400 dark:text-slate-500 text-sm">
                 Các đội nhóm trực thuộc đang được cập nhật.
               </div>
             ) : (
@@ -265,7 +265,7 @@ export default function AboutPage() {
                   <motion.div
                     key={item.id}
                     whileHover={{ y: -4 }}
-                    className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-lg hover:border-indigo-500/30 transition-all duration-300 relative flex flex-col justify-between h-full"
+                    className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-lg hover:border-indigo-500/30 transition-all duration-300 relative flex flex-col justify-between h-full"
                   >
                     <Link to={`${ROUTES.ABOUT}/${item.slug}`} className="flex flex-col justify-between h-full p-6 space-y-4">
                       <div className="space-y-3">

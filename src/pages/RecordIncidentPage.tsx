@@ -136,7 +136,7 @@ export default function RecordIncidentPage() {
 
   // Has permission -> Render Form
   return (
-    <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-5 sm:space-y-8 font-sans pb-16">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-4 sm:py-8 space-y-5 sm:space-y-8 font-sans pb-16">
       {/* Header Banner */}
       <div className="flex flex-col items-center text-center justify-center gap-3 sm:gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-4 sm:pb-5">
         <div>
@@ -149,7 +149,7 @@ export default function RecordIncidentPage() {
               <span>Thi đua & Khen thưởng</span>
             </Link>
           </div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight font-display text-slate-900 dark:text-white flex items-center justify-center gap-2.5 sm:gap-3">
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center justify-center gap-2.5 sm:gap-3">
             <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-red-600 text-white shadow-md shadow-red-600/20">
               <Award className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>

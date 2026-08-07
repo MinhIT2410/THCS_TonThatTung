@@ -61,7 +61,7 @@ export default function PublicRewardShopPage() {
                 <Gift className="w-3.5 h-3.5" /> Đổi Điểm Nhận Quà
               </span>
 
-              <h1 className="text-3xl sm:text-4xl font-extrabold font-display tracking-tight">
+              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Cửa Hàng Phần Thưởng Đội Viên
               </h1>
 

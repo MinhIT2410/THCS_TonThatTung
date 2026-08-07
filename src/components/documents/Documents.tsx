@@ -7,6 +7,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FileText, Search, Download, Calendar, FolderOpen, ArrowRight, CheckCircle, Sparkles, Building, AlertCircle, Eye } from 'lucide-react';
 import { DocumentItem } from '../../types';
+import EmptyState from '../common/EmptyState';
 
 interface DocumentsProps {
   documents: DocumentItem[];
@@ -86,7 +87,7 @@ export default function Documents({
         <h1 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-4xl">
           Văn Bản - Hướng Dẫn
         </h1>
-        <p className="font-sans text-sm text-slate-500 dark:text-slate-400">
+        <p className="font-sans text-slate-600 dark:text-slate-400 text-sm sm:text-base">
           Tra cứu, khai thác hệ thống văn bản chỉ đạo của Hội đồng Đội, kế hoạch Liên đội và tài liệu rèn luyện Đội viên.
         </p>
       </div>
@@ -148,13 +149,12 @@ export default function Documents({
           )}
         </div>
       ) : filteredDocs.length === 0 ? (
-        <div className="text-center py-16 space-y-3 max-w-sm mx-auto">
-          <AlertCircle className="h-10 w-10 text-slate-400 mx-auto" />
-          <h3 className="font-display font-bold text-slate-800 dark:text-slate-200">Không tìm thấy tài liệu nào</h3>
-          <p className="text-xs text-slate-500">Em hãy thử nhập mã số hiệu hoặc xem kỹ lại bộ lọc loại văn bản nhé.</p>
-        </div>
+        <EmptyState 
+          message="Không tìm thấy tài liệu nào" 
+          description="Em hãy thử nhập mã số hiệu hoặc xem kỹ lại bộ lọc loại văn bản nhé." 
+        />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm">
           
           {/* Table wrapper for desktop */}
           <div className="hidden md:block overflow-x-auto">

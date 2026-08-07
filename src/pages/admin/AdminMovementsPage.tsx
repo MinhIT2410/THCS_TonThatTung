@@ -523,13 +523,13 @@ export default function AdminMovementsPage() {
             <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-left">
               <thead className="bg-slate-50/70 dark:bg-slate-900/40">
                 <tr>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phong trào / Ảnh</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phân loại</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thời gian</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Trạng thái</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Hoạt động / Minh chứng</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Hiển thị</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Thao tác</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phong trào / Ảnh</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phân loại</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thời gian</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Trạng thái</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Hoạt động / Minh chứng</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Hiển thị</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-transparent text-slate-700 dark:text-slate-300 font-sans">
@@ -674,9 +674,9 @@ export default function AdminMovementsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-3xl overflow-hidden my-8"
+              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             >
-              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Flag className="w-5 h-5 text-red-600" />
                   {editingCampaign ? 'Chỉnh Sửa Phong Trào' : 'Thêm Phong Trào Mới'}
@@ -689,7 +689,8 @@ export default function AdminMovementsPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSaveCampaign} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <form onSubmit={handleSaveCampaign} className="flex-1 flex flex-col overflow-hidden min-h-0">
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
                 {/* Title */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -851,11 +852,13 @@ export default function AdminMovementsPage() {
                   </label>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-end gap-3">
+                </div>
+
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-end gap-3 shrink-0">
                   <button
                     type="button"
                     onClick={() => setIsFormOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs"
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-xs"
                   >
                     Hủy
                   </button>
@@ -881,9 +884,9 @@ export default function AdminMovementsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-2xl overflow-hidden my-8"
+              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
             >
-              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Layers className="w-5 h-5 text-blue-600" />
                   Quản lý Hoạt động con - {activeEventsCampaign.title}
@@ -893,7 +896,7 @@ export default function AdminMovementsPage() {
                 </button>
               </div>
 
-              <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1">
                 {/* Form add/edit event */}
                 <form onSubmit={handleSaveEvent} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-3">
                   <div className="font-bold text-xs text-blue-700 dark:text-blue-400 uppercase">
@@ -1033,9 +1036,9 @@ export default function AdminMovementsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-2xl overflow-hidden my-8"
+              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
             >
-              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <FileCheck className="w-5 h-5 text-emerald-600" />
                   Quản lý Minh chứng - {activeEvidenceCampaign.title}
@@ -1045,7 +1048,7 @@ export default function AdminMovementsPage() {
                 </button>
               </div>
 
-              <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1">
                 {/* Form add evidence */}
                 <form onSubmit={handleAddEvidence} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-3">
                   <div className="font-bold text-xs text-emerald-700 dark:text-emerald-400 uppercase">Thêm minh chứng phong trào</div>

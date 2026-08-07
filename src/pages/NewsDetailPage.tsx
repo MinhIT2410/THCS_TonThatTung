@@ -62,7 +62,7 @@ export default function NewsDetailPage() {
 
   if (!post) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <EmptyState 
           message="Không tìm thấy bài viết" 
           description="Bài viết này không tồn tại hoặc đã được chuyển sang chế độ nháp."

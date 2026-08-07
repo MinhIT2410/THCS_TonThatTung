@@ -74,7 +74,7 @@ export default function Contact({ onSubmitContact }: ContactProps) {
         <h1 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-4xl">
           Hộp thư "Điều em muốn nói"
         </h1>
-        <p className="font-sans text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+        <p className="font-sans text-slate-600 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
           {siteSettings.contact_intro || "Hãy gửi thắc mắc, hiến kế hoạt động Đội hoặc báo cáo sự cố để Liên đội hỗ trợ em nhanh nhất."}
         </p>
       </div>

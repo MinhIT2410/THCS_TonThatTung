@@ -38,6 +38,8 @@ import {
 } from '../types/competition';
 import { useAuth } from '../features/auth/AuthContext';
 import { ROUTES } from '../config/routes';
+import LoadingState from '../components/common/LoadingState';
+import EmptyState from '../components/common/EmptyState';
 
 type StudentTab = 'overview' | 'ledger' | 'shop' | 'redemptions' | 'reviews';
 
@@ -220,9 +222,7 @@ export default function StudentCompetitionPage() {
 
         {/* Auth Loading State */}
         {(authLoading || (!isUserAuthenticated && profileLoading)) ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center text-xs text-slate-400 animate-pulse">
-            Đang kiểm tra thông tin tài khoản...
-          </div>
+          <LoadingState message="Đang kiểm tra thông tin tài khoản..." />
         ) : !isUserAuthenticated ? (
           /* Unauthenticated State */
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center space-y-4 max-w-lg mx-auto shadow-xs my-6">
@@ -754,14 +754,14 @@ export default function StudentCompetitionPage() {
 
                     <div className="flex items-center gap-3 justify-between sm:justify-end">
                       <span
-                        className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                        className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${
                           red.status === 'PENDING'
-                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/80'
                             : red.status === 'APPROVED'
-                            ? 'bg-blue-100 text-blue-800 border-blue-300'
+                            ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200/80 dark:border-sky-800/80'
                             : red.status === 'ISSUED'
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                            : 'bg-rose-100 text-rose-800 border-rose-300'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/80'
+                            : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200/80 dark:border-rose-800/80'
                         }`}
                       >
                         {REDEMPTION_STATUS_LABELS[red.status] || red.status}
@@ -802,12 +802,12 @@ export default function StudentCompetitionPage() {
                         {new Date(rev.submitted_at).toLocaleString('vi-VN')}
                       </span>
                       <span
-                        className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                        className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${
                           rev.status === 'PENDING'
-                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/80'
                             : rev.status === 'ACCEPTED'
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                            : 'bg-rose-100 text-rose-800 border-rose-300'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/80'
+                            : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200/80 dark:border-rose-800/80'
                         }`}
                       >
                         {REVIEW_REQUEST_STATUS_LABELS[rev.status] || rev.status}
