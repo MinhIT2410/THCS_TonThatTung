@@ -173,7 +173,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="example@domain.com hoặc HS000001"
                   disabled={submitting}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white disabled:opacity-55"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-base sm:text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white disabled:opacity-55"
                   required
                 />
               </div>
@@ -198,7 +198,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={submitting}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white disabled:opacity-55"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-base sm:text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white disabled:opacity-55"
                   required
                 />
               </div>
@@ -239,7 +239,7 @@ export default function LoginPage() {
                   onChange={(e) => setForgotEmail(e.target.value)}
                   placeholder="example@domain.com"
                   disabled={submittingForgot}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white disabled:opacity-55"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-base sm:text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white disabled:opacity-55"
                   required
                 />
               </div>
