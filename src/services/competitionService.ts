@@ -1209,7 +1209,7 @@ export const competitionService = {
 
   async getGoodDeeds(limit = 20) {
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('competition_incidents')
         .select(`
           *,
@@ -1224,23 +1224,8 @@ export const competitionService = {
         .limit(limit);
 
       if (error) {
-        const fallbackRes = await supabase
-          .from('competition_incidents')
-          .select(`
-            *,
-            rule:competition_rules!inner(name, category, student_merit_points),
-            evidence_items:competition_incident_evidence(*)
-          `)
-          .eq('status', 'APPROVED')
-          .eq('rule.category', 'GOOD_DEED')
-          .order('occurred_at', { ascending: false })
-          .limit(limit);
-
-        if (fallbackRes.error) {
-          console.error('Error fetching good deeds:', fallbackRes.error);
-          return [];
-        }
-        data = fallbackRes.data;
+        console.error('Error fetching good deeds:', error);
+        return [];
       }
 
       return (data || []).map((g: any) => ({
@@ -1264,65 +1249,32 @@ export const competitionService = {
 
   async getPublicGoodDeeds(limit = 6, offset = 0) {
     try {
-      let query = supabase
-        .from('competition_incidents')
-        .select(`
-          *,
-          rule:competition_rules!inner(name, category, student_merit_points),
-          student:profiles!competition_incidents_student_id_fkey(full_name, student_code, avatar_url),
-          unit:classes!competition_incidents_unit_id_fkey(name),
-          evidence_items:competition_incident_evidence(*)
-        `)
-        .eq('status', 'APPROVED')
-        .eq('rule.category', 'GOOD_DEED')
-        .order('occurred_at', { ascending: false });
-
-      if (offset > 0) {
-        query = query.range(offset, offset + limit - 1);
-      } else {
-        query = query.limit(limit);
-      }
-
-      let { data, error } = await query;
+      const { data, error } = await supabase.rpc('get_public_good_deeds', {
+        p_limit: limit,
+        p_offset: offset || 0,
+      });
 
       if (error) {
-        let fallbackQuery = supabase
-          .from('competition_incidents')
-          .select(`
-            *,
-            rule:competition_rules!inner(name, category, student_merit_points),
-            evidence_items:competition_incident_evidence(*)
-          `)
-          .eq('status', 'APPROVED')
-          .eq('rule.category', 'GOOD_DEED')
-          .order('occurred_at', { ascending: false });
-
-        if (offset > 0) {
-          fallbackQuery = fallbackQuery.range(offset, offset + limit - 1);
-        } else {
-          fallbackQuery = fallbackQuery.limit(limit);
-        }
-
-        const fallbackRes = await fallbackQuery;
-        if (fallbackRes.error) {
-          console.error('Error fetching public good deeds:', fallbackRes.error);
-          return [];
-        }
-        data = fallbackRes.data;
+        console.error('Error fetching public good deeds:', error);
+        return [];
       }
 
-      return (data || []).map((g: any) => ({
-        id: g.id,
+      const list = typeof data === 'string' ? JSON.parse(data) : data;
+      if (!Array.isArray(list)) return [];
+
+      return list.map((g: any) => ({
+        id: g.incident_id || g.id,
         title: g.title,
         description: g.description,
         occurred_at: g.occurred_at,
         student_id: g.student_id,
-        student_name: g.student?.full_name || 'Đội viên',
-        student_code: g.student?.student_code,
-        avatar_url: g.student?.avatar_url,
-        unit_name: g.unit?.name || 'Chi đội',
-        merit_points: g.rule?.student_merit_points || 0,
-        evidence_items: g.evidence_items || [],
+        student_name: g.student_name || 'Đội viên',
+        student_code: g.student_code || undefined,
+        avatar_url: g.avatar_url || undefined,
+        unit_id: g.unit_id,
+        unit_name: g.unit_name || 'Chi đội',
+        merit_points: g.reward_points ?? 0,
+        evidence_items: g.evidence || g.evidence_items || [],
       }));
     } catch (err) {
       console.error('Exception fetching public good deeds:', err);
