@@ -25,7 +25,9 @@ import {
   ShieldCheck,
   Users,
   Clock,
-  Check
+  Check,
+  Save,
+  Loader2
 } from 'lucide-react';
 import { competitionService } from '../../../services/competitionService';
 import { 
@@ -34,6 +36,7 @@ import {
   CompetitionWeekUnit, 
   WEEK_STATUS_LABELS,
   CompetitionAutoPublishConfig,
+  CompetitionCommentTemplate,
 } from '../../../types/competition';
 import { formatCode } from './ProgramsAndRulesTab';
 
@@ -110,6 +113,15 @@ export default function ProgramAndWeeksTab() {
   const [unitDetails, setUnitDetails] = useState<any[]>([]);
   const [loadingUnitDetails, setLoadingUnitDetails] = useState(false);
   const [unitCommentInput, setUnitCommentInput] = useState('');
+
+  // Comment Templates & Unit Comment state
+  const [commentTemplates, setCommentTemplates] = useState<CompetitionCommentTemplate[]>([]);
+  const [unitComments, setUnitComments] = useState<Record<string, string>>({});
+  const [savingCommentUnitId, setSavingCommentUnitId] = useState<string | null>(null);
+
+  useEffect(() => {
+    competitionService.getCommentTemplates().then(setCommentTemplates).catch(console.error);
+  }, []);
 
   // Auto Publish Schedule State
   const PRESET_TIMES = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
@@ -356,6 +368,12 @@ export default function ProgramAndWeeksTab() {
         setUnits(summary.units);
         setPendingIncidentsCount(summary.pendingIncidentsCount);
         setTotalIncidentsCount(summary.totalIncidentsCount);
+
+        const initialComments: Record<string, string> = {};
+        (summary.units || []).forEach(u => {
+          initialComments[u.id] = u.comment || '';
+        });
+        setUnitComments(initialComments);
       } catch (err: any) {
         console.error('Error loading week summary:', err);
       }
@@ -631,10 +649,29 @@ export default function ProgramAndWeeksTab() {
 
       const summary = await competitionService.getWeekSummary(currentWeek.id);
       setUnits(summary.units);
+      setUnitComments(prev => ({ ...prev, [selectedUnitForDetail.id]: unitCommentInput }));
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Không thể lưu nhận xét.' });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleUnitCommentChange = (unitWeekId: string, val: string) => {
+    setUnitComments(prev => ({ ...prev, [unitWeekId]: val }));
+  };
+
+  const handleSaveInlineComment = async (unit: CompetitionWeekUnit) => {
+    const textToSave = unitComments[unit.id] ?? (unit.comment || '');
+    try {
+      setSavingCommentUnitId(unit.id);
+      await competitionService.updateUnitWeekComment(unit.id, textToSave);
+      setMessage({ type: 'success', text: `Đã lưu nhận xét cho ${unit.unit_name || 'chi đội'}.` });
+      setUnits(prev => prev.map(u => u.id === unit.id ? { ...u, comment: textToSave } : u));
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Không thể lưu nhận xét.' });
+    } finally {
+      setSavingCommentUnitId(null);
     }
   };
 
@@ -899,13 +936,14 @@ export default function ProgramAndWeeksTab() {
                       <th className="py-3 px-4 text-center">Trừ điểm</th>
                       <th className="py-3 px-4 text-center">Cộng điểm</th>
                       <th className="py-3 px-4 text-center">Tổng điểm</th>
+                      <th className="py-3 px-4 min-w-[240px]">Nhận xét thi đua (Nội bộ)</th>
                       <th className="py-3 px-4 text-right">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                     {filteredUnits.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                        <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
                           Chưa có dữ liệu chi đội cho {selectedGrade === 'ALL' ? 'tuần này' : `Khối ${selectedGrade}`}.
                         </td>
                       </tr>
@@ -944,6 +982,47 @@ export default function ProgramAndWeeksTab() {
 
                           <td className="py-3 px-4 text-center font-extrabold text-slate-900 dark:text-white text-sm">
                             {u.final_score ?? u.starting_points ?? 100}
+                          </td>
+
+                          <td className="py-3 px-4 min-w-[240px]">
+                            <div className="space-y-1.5">
+                              <select
+                                className="w-full text-[11px] font-medium py-1 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500 cursor-pointer"
+                                value=""
+                                onChange={e => {
+                                  const tpl = commentTemplates.find(t => t.id === e.target.value);
+                                  if (tpl) {
+                                    handleUnitCommentChange(u.id, tpl.content);
+                                  }
+                                }}
+                              >
+                                <option value="">-- Chọn mẫu nhận xét --</option>
+                                {commentTemplates.map(tpl => (
+                                  <option key={tpl.id} value={tpl.id}>
+                                    [{tpl.comment_type === 'PRAISE' ? 'Tuyên dương' : tpl.comment_type === 'VIOLATION' ? 'Vi phạm' : 'Chung'}] {tpl.title}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  value={unitComments[u.id] ?? (u.comment || '')}
+                                  onChange={e => handleUnitCommentChange(u.id, e.target.value)}
+                                  placeholder="Nhập nhận xét tuần..."
+                                  className="w-full text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-500 font-medium"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveInlineComment(u)}
+                                  disabled={savingCommentUnitId === u.id}
+                                  className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs shrink-0 cursor-pointer disabled:opacity-50"
+                                  title="Lưu nhận xét nội bộ"
+                                >
+                                  {savingCommentUnitId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
+                            </div>
                           </td>
 
                           <td className="py-3 px-4 text-right">
@@ -1240,19 +1319,37 @@ export default function ProgramAndWeeksTab() {
                 <label className="block text-xs font-bold text-slate-900 dark:text-white">
                   Nhận xét tuần cho chi đội:
                 </label>
+                <select
+                  className="w-full text-xs py-1.5 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer"
+                  value=""
+                  onChange={e => {
+                    const tpl = commentTemplates.find(t => t.id === e.target.value);
+                    if (tpl) {
+                      setUnitCommentInput(tpl.content);
+                    }
+                  }}
+                >
+                  <option value="">-- Chọn mẫu nhận xét --</option>
+                  {commentTemplates.map(tpl => (
+                    <option key={tpl.id} value={tpl.id}>
+                      [{tpl.comment_type === 'PRAISE' ? 'Tuyên dương' : tpl.comment_type === 'VIOLATION' ? 'Vi phạm' : 'Chung'}] {tpl.title}
+                    </option>
+                  ))}
+                </select>
                 <textarea
                   rows={3}
                   value={unitCommentInput}
                   onChange={e => setUnitCommentInput(e.target.value)}
                   placeholder="Nhập tuyên dương hoặc nhắc nhở chi đội trong tuần này..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 font-medium"
                 />
                 <button
                   onClick={handleSaveComment}
                   disabled={actionLoading}
-                  className="w-full py-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs shadow-sm hover:opacity-90"
+                  className="w-full py-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs shadow-sm hover:opacity-90 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  Lưu nhận xét
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Lưu nhận xét</span>
                 </button>
               </div>
             </div>

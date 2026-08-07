@@ -932,16 +932,25 @@ export const competitionService = {
         return [];
       }
 
-      // 2. Fetch week details for all weeks with public snapshots (regardless of week status or lock)
-      const { data, error } = await supabase
+      // 2. Fetch week details for all weeks with public snapshots
+      let { data, error } = await supabase
         .from('competition_weeks')
         .select('*, competition_programs(name), academic_years(name)')
         .in('id', publishedWeekIds)
         .order('starts_on', { ascending: false });
 
       if (error) {
-        console.error('Error fetching public published weeks:', error);
-        return [];
+        // Fallback without joins if join fails
+        const fallback = await supabase
+          .from('competition_weeks')
+          .select('*')
+          .in('id', publishedWeekIds)
+          .order('starts_on', { ascending: false });
+        
+        if (fallback.error) {
+          return [];
+        }
+        data = fallback.data;
       }
 
       return (data || []).map((w: any) => ({
@@ -986,6 +995,7 @@ export const competitionService = {
           final_points: s.final_points,
           rank: s.rank,
           published_at: s.published_at,
+          comment_text: s.comment_text || 'Chưa có nhận xét',
         }));
 
         return {
@@ -1051,10 +1061,23 @@ export const competitionService = {
       .from('competition_week_units')
       .update({ comment, updated_at: new Date().toISOString() })
       .eq('id', weekUnitId)
-      .select()
+      .select('*, competition_weeks(status, competition_programs(academic_year_id))')
       .single();
 
     if (error) throw error;
+
+    if (data && data.competition_weeks) {
+      const weekStatus = (data.competition_weeks as any)?.status;
+      const academicYearId = (data.competition_weeks as any)?.competition_programs?.academic_year_id;
+      if (['LOCKED', 'PUBLISHED', 'ARCHIVED'].includes(weekStatus) && academicYearId) {
+        try {
+          await this.publishSnapshots(academicYearId);
+        } catch (err) {
+          console.error('Error auto-syncing snapshot after comment update:', err);
+        }
+      }
+    }
+
     return data;
   },
 
@@ -1201,8 +1224,8 @@ export const competitionService = {
         .limit(limit);
 
       if (error) {
-        console.error('Error fetching good deeds:', error);
-        return [];
+        // Fallback to RPC if direct table fetch is blocked by RLS for public/anon users
+        return this.getPublicGoodDeeds(limit);
       }
 
       return (data || []).map((g: any) => ({

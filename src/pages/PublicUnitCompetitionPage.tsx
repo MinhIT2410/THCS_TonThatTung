@@ -286,8 +286,8 @@ export default function PublicUnitCompetitionPage() {
                             {item.final_points}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
-                          {item.comment || <span className="italic text-slate-400">Tuyên dương nề nếp thi đua</span>}
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium">
+                          {item.comment_text || 'Chưa có nhận xét'}
                         </td>
                       </tr>
                     );
@@ -355,11 +355,10 @@ export default function PublicUnitCompetitionPage() {
                       </div>
                     </div>
 
-                    {item.comment && (
-                      <div className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl italic">
-                        "{item.comment}"
-                      </div>
-                    )}
+                    <div className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl font-medium">
+                      <span className="font-bold text-slate-500 mr-1">Nhận xét:</span>
+                      {item.comment_text || 'Chưa có nhận xét'}
+                    </div>
                   </div>
                 );
               })
