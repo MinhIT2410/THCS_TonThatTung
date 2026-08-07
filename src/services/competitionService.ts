@@ -1209,7 +1209,7 @@ export const competitionService = {
 
   async getGoodDeeds(limit = 20) {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('competition_incidents')
         .select(`
           *,
@@ -1224,8 +1224,23 @@ export const competitionService = {
         .limit(limit);
 
       if (error) {
-        // Fallback to RPC if direct table fetch is blocked by RLS for public/anon users
-        return this.getPublicGoodDeeds(limit);
+        const fallbackRes = await supabase
+          .from('competition_incidents')
+          .select(`
+            *,
+            rule:competition_rules!inner(name, category, student_merit_points),
+            evidence_items:competition_incident_evidence(*)
+          `)
+          .eq('status', 'APPROVED')
+          .eq('rule.category', 'GOOD_DEED')
+          .order('occurred_at', { ascending: false })
+          .limit(limit);
+
+        if (fallbackRes.error) {
+          console.error('Error fetching good deeds:', fallbackRes.error);
+          return [];
+        }
+        data = fallbackRes.data;
       }
 
       return (data || []).map((g: any) => ({
@@ -1249,34 +1264,70 @@ export const competitionService = {
 
   async getPublicGoodDeeds(limit = 6, offset = 0) {
     try {
-      const { data, error } = await supabase.rpc('get_public_good_deeds', {
-        p_limit: limit,
-        p_offset: offset,
-      });
+      let query = supabase
+        .from('competition_incidents')
+        .select(`
+          *,
+          rule:competition_rules!inner(name, category, student_merit_points),
+          student:profiles!competition_incidents_student_id_fkey(full_name, student_code, avatar_url),
+          unit:classes!competition_incidents_unit_id_fkey(name),
+          evidence_items:competition_incident_evidence(*)
+        `)
+        .eq('status', 'APPROVED')
+        .eq('rule.category', 'GOOD_DEED')
+        .order('occurred_at', { ascending: false });
 
-      if (!error && data) {
-        const list = typeof data === 'string' ? JSON.parse(data) : data;
-        if (Array.isArray(list)) {
-          return list.map((g: any) => ({
-            id: g.incident_id,
-            title: g.title,
-            description: g.description,
-            occurred_at: g.occurred_at,
-            student_id: g.student_id,
-            student_name: g.full_name || 'Đội viên',
-            student_code: g.student_code,
-            avatar_url: g.avatar_url,
-            unit_name: g.class_name || 'Chi đội',
-            merit_points: g.reward_points || 0,
-            evidence_items: g.evidence_items || [],
-          }));
-        }
+      if (offset > 0) {
+        query = query.range(offset, offset + limit - 1);
+      } else {
+        query = query.limit(limit);
       }
-    } catch (err) {
-      console.warn('RPC get_public_good_deeds failed, falling back to client query:', err);
-    }
 
-    return this.getGoodDeeds(limit);
+      let { data, error } = await query;
+
+      if (error) {
+        let fallbackQuery = supabase
+          .from('competition_incidents')
+          .select(`
+            *,
+            rule:competition_rules!inner(name, category, student_merit_points),
+            evidence_items:competition_incident_evidence(*)
+          `)
+          .eq('status', 'APPROVED')
+          .eq('rule.category', 'GOOD_DEED')
+          .order('occurred_at', { ascending: false });
+
+        if (offset > 0) {
+          fallbackQuery = fallbackQuery.range(offset, offset + limit - 1);
+        } else {
+          fallbackQuery = fallbackQuery.limit(limit);
+        }
+
+        const fallbackRes = await fallbackQuery;
+        if (fallbackRes.error) {
+          console.error('Error fetching public good deeds:', fallbackRes.error);
+          return [];
+        }
+        data = fallbackRes.data;
+      }
+
+      return (data || []).map((g: any) => ({
+        id: g.id,
+        title: g.title,
+        description: g.description,
+        occurred_at: g.occurred_at,
+        student_id: g.student_id,
+        student_name: g.student?.full_name || 'Đội viên',
+        student_code: g.student?.student_code,
+        avatar_url: g.student?.avatar_url,
+        unit_name: g.unit?.name || 'Chi đội',
+        merit_points: g.rule?.student_merit_points || 0,
+        evidence_items: g.evidence_items || [],
+      }));
+    } catch (err) {
+      console.error('Exception fetching public good deeds:', err);
+      return [];
+    }
   },
 
   // --- REVIEW REQUESTS ---
@@ -1578,43 +1629,39 @@ export const competitionService = {
   },
 
   async getMyActorAssignments() {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user?.id) return [];
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) return [];
 
-    const { data, error } = await supabase.rpc('get_my_competition_actor_assignments');
+      const { data, error } = await supabase.rpc('get_my_competition_actor_assignments');
 
-    if (error) {
-      console.error('[competitionService] RPC get_my_competition_actor_assignments failed:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-      });
+      if (error) {
+        // Attempt fallback direct table query for active assignments
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('competition_actor_assignments')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .lte('start_date', today);
 
-      // Attempt fallback direct table query for active assignments
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('competition_actor_assignments')
-          .select('*')
-          .eq('user_id', userData.user.id)
-          .eq('is_active', true)
-          .lte('start_date', today);
+          if (fallbackError) {
+            return [];
+          }
 
-        if (fallbackError) {
-          console.error('[competitionService] Fallback getMyActorAssignments query error:', fallbackError);
+          const validFallback = (fallbackData || []).filter((item: any) => !item.end_date || item.end_date >= today);
+          return validFallback;
+        } catch {
           return [];
         }
-
-        const validFallback = (fallbackData || []).filter((item: any) => !item.end_date || item.end_date >= today);
-        return validFallback;
-      } catch (err) {
-        console.error('[competitionService] Fallback exception in getMyActorAssignments:', err);
-        return [];
       }
-    }
 
-    return data || [];
+      return data || [];
+    } catch {
+      return [];
+    }
   },
 
   async getHomeroomIncidents(programId?: string, limit = 50, offset = 0) {
