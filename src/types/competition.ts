@@ -200,6 +200,7 @@ export interface CompetitionIncident {
   // Joined relational data
   program_name?: string;
   rule_name?: string;
+  rule?: any;
   student_name?: string;
   student_code?: string;
   unit_name?: string;
@@ -427,5 +428,58 @@ export interface CompetitionAutoPublishConfig {
   publish_times: string[];
   last_published_at?: string | null;
   next_publish_at?: string | null;
+}
+
+export interface WeeklyReportRuleStat {
+  rule_id: string;
+  rule_name: string;
+  count: number;
+  top_classes_str: string;
+}
+
+export interface FormattedStudentViolationGroup {
+  studentName: string;
+  studentCode?: string | null;
+  rules: {
+    ruleName: string;
+    count: number;
+    occurrencesStr: string;
+  }[];
+}
+
+export interface ClassReportRowSnapshot {
+  stt: number;
+  class_id: string;
+  class_name: string;
+  homeroom_teacher_name: string;
+  student_count: number;
+  student_violations_groups: FormattedStudentViolationGroup[];
+}
+
+export type ReportPeriodType = 'YEAR' | 'SEMESTER' | 'MONTH' | 'WEEK';
+
+export interface CompetitionWeeklyReport {
+  id?: string;
+  period_type?: ReportPeriodType;
+  period_label?: string;
+  period_start?: string;
+  period_end?: string;
+  semester?: number | null;
+  month?: number | null;
+  academic_year_id?: string | null;
+  academic_year_name: string;
+  week_id?: string | null;
+  week_name: string;
+  grade_level_id?: string | null;
+  grade_name: string;
+  total_violations: number;
+  violation_stats: WeeklyReportRuleStat[];
+  supervisor_notes: string;
+  class_report_rows?: ClassReportRowSnapshot[];
+  report_config?: any;
+  created_by?: string | null;
+  creator_name: string;
+  created_at?: string;
+  updated_at?: string;
 }
 

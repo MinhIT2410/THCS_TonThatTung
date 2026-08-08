@@ -8,22 +8,22 @@ import { Link, Navigate } from 'react-router-dom';
 import { 
   BarChart3, 
   ArrowLeft, 
-  FileSpreadsheet, 
-  TrendingUp, 
-  AlertTriangle, 
   Calendar,
-  Users,
   ShieldAlert,
   Loader2
 } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
 import { competitionService } from '../services/competitionService';
 import { ROUTES } from '../config/routes';
+import WeeklyIncidentsReportCard from '../components/competition/WeeklyIncidentsReportCard';
+import ViolationStatisticsCard from '../components/competition/ViolationStatisticsCard';
+import SaveExportReportCard from '../components/competition/SaveExportReportCard';
 
 export default function CompetitionReportPage() {
   const { user, isAuthenticated, loading, profileLoading, hasAnyRole } = useAuth();
   const [checkingPermission, setCheckingPermission] = useState(true);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [activeReportTab, setActiveReportTab] = useState<'weekly' | 'statistics' | 'save-export'>('weekly');
 
   useEffect(() => {
     if (loading || profileLoading) return;
@@ -171,66 +171,50 @@ export default function CompetitionReportPage() {
         </div>
       </div>
 
-      {/* Overview Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold">Ghi nhận trong tuần</span>
-            <FileSpreadsheet className="w-4 h-4 text-blue-500" />
-          </div>
-          <div className="font-display text-2xl font-bold text-slate-900 dark:text-white">--</div>
-          <p className="text-[11px] text-slate-400">Đang cập nhật dữ liệu tự động</p>
-        </div>
+      {/* Segmented Tab Selector */}
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto no-scrollbar sm:grid sm:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => setActiveReportTab('weekly')}
+          className={`h-10 px-4 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
+            activeReportTab === 'weekly'
+              ? 'bg-red-600 text-white shadow-xs font-bold'
+              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/50'
+          }`}
+        >
+          GHI NHẬN TRONG TUẦN
+        </button>
 
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold">Lớp dẫn đầu thi đua</span>
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="font-display text-2xl font-bold text-slate-900 dark:text-white">--</div>
-          <p className="text-[11px] text-slate-400">Xếp hạng theo điểm tổng kết</p>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveReportTab('statistics')}
+          className={`h-10 px-4 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
+            activeReportTab === 'statistics'
+              ? 'bg-red-600 text-white shadow-xs font-bold'
+              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/50'
+          }`}
+        >
+          THỐNG KÊ LỖI VI PHẠM
+        </button>
 
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold">Nhóm lỗi phổ biến</span>
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="font-display text-2xl font-bold text-slate-900 dark:text-white">--</div>
-          <p className="text-[11px] text-slate-400">Phân loại theo quy định nề nếp</p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold">Lực lượng ghi nhận</span>
-            <Users className="w-4 h-4 text-purple-500" />
-          </div>
-          <div className="font-display text-2xl font-bold text-slate-900 dark:text-white">--</div>
-          <p className="text-[11px] text-slate-400">Giám thị & Đội Sao đỏ</p>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveReportTab('save-export')}
+          className={`h-10 px-4 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
+            activeReportTab === 'save-export'
+              ? 'bg-red-600 text-white shadow-xs font-bold'
+              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/50'
+          }`}
+        >
+          LƯU BÁO CÁO & XUẤT FILE
+        </button>
       </div>
 
-      {/* Frame placeholder section */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xs">
-        <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-200/40 dark:border-blue-900/40">
-          <BarChart3 className="w-6 h-6" />
-        </div>
-        <div className="max-w-md mx-auto space-y-1">
-          <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
-            Khung báo cáo thống kê
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Hệ thống đang sẵn sàng tổng hợp biểu đồ trực quan, phân tích xu hướng vi phạm và xuất báo cáo tuần/tháng.
-          </p>
-        </div>
-        <div className="pt-2">
-          <Link
-            to={ROUTES.COMPETITION}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors"
-          >
-            Quay lại trang thi đua
-          </Link>
-        </div>
+      {/* Active Tab Content Panel */}
+      <div>
+        {activeReportTab === 'weekly' && <WeeklyIncidentsReportCard />}
+        {activeReportTab === 'statistics' && <ViolationStatisticsCard />}
+        {activeReportTab === 'save-export' && <SaveExportReportCard />}
       </div>
     </div>
   );

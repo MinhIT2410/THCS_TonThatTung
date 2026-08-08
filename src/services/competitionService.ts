@@ -23,6 +23,8 @@ import {
   RewardRedemption,
   CompetitionAutoPublishConfig,
   CompetitionCommentTemplate,
+  CompetitionWeeklyReport,
+  WeeklyReportRuleStat,
 } from '../types/competition';
 
 export const competitionService = {
@@ -340,14 +342,32 @@ export const competitionService = {
     }
   },
 
-  async getAcademicYears(): Promise<{ id: string; name: string; is_active?: boolean; is_current?: boolean }[]> {
+  async getAcademicYears(): Promise<{ id: string; name: string; start_date?: string; end_date?: string; is_active?: boolean; is_current?: boolean }[]> {
     const { data, error } = await supabase
       .from('academic_years')
-      .select('id, name, is_active, is_current')
+      .select('id, name, start_date, end_date, is_active, is_current')
       .order('name', { ascending: false });
 
     if (error) {
       console.error('Error fetching academic years:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async getAcademicTerms(academicYearId?: string): Promise<{ id: string; academic_year_id: string; code: string; name: string; term_order: number; start_date?: string; end_date?: string; is_active?: boolean }[]> {
+    let query = supabase
+      .from('academic_terms')
+      .select('id, academic_year_id, code, name, term_order, start_date, end_date, is_active')
+      .order('term_order', { ascending: true });
+
+    if (academicYearId) {
+      query = query.eq('academic_year_id', academicYearId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error fetching academic terms:', error);
       return [];
     }
     return data || [];
@@ -602,6 +622,65 @@ export const competitionService = {
       approver_name: i.approver?.full_name,
       evidence_items: i.competition_incident_evidence || [],
     })) as CompetitionIncident[];
+  },
+
+  async getWeeklyOfficialIncidents(filters: {
+    weekStartsOn?: string;
+    weekEndsOn?: string;
+    unitId?: string;
+    unitIds?: string[];
+  }): Promise<CompetitionIncident[]> {
+    let query = supabase
+      .from('competition_incidents')
+      .select(`
+        *,
+        competition_programs(name, code),
+        competition_rules(id, name, code, category, effect_scope, student_merit_points, student_reward_points, unit_points),
+        student:profiles!competition_incidents_student_id_fkey(full_name, student_code),
+        unit:classes!competition_incidents_unit_id_fkey(name),
+        recorder:profiles!competition_incidents_recorded_by_fkey(full_name),
+        approver:profiles!competition_incidents_approved_by_fkey(full_name),
+        competition_incident_evidence(*)
+      `)
+      .eq('status', 'APPROVED')
+      .order('occurred_at', { ascending: false });
+
+    if (filters.weekStartsOn && filters.weekEndsOn) {
+      const startTs = new Date(`${filters.weekStartsOn}T00:00:00+07:00`).toISOString();
+      const endTs = new Date(`${filters.weekEndsOn}T23:59:59.999+07:00`).toISOString();
+      query = query.gte('occurred_at', startTs).lte('occurred_at', endTs);
+    }
+
+    if (filters.unitId) {
+      query = query.eq('unit_id', filters.unitId);
+    } else if (filters.unitIds && filters.unitIds.length > 0) {
+      query = query.in('unit_id', filters.unitIds);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error fetching weekly official incidents:', error);
+      throw error;
+    }
+
+    return (data || [])
+      .filter((i: any) => {
+        const cat = i.competition_rules?.category;
+        // Exclude positive categories: GOOD_DEED (Người tốt - Việc tốt) and ACHIEVEMENT (Thành tích)
+        return cat !== 'GOOD_DEED' && cat !== 'ACHIEVEMENT';
+      })
+      .map((i: any) => ({
+        ...i,
+        program_name: i.competition_programs?.name,
+        rule_name: i.competition_rules?.name,
+        rule: i.competition_rules,
+        student_name: i.student?.full_name,
+        student_code: i.student?.student_code,
+        unit_name: i.unit?.name,
+        recorder_name: i.recorder?.full_name,
+        approver_name: i.approver?.full_name,
+        evidence_items: i.competition_incident_evidence || [],
+      })) as CompetitionIncident[];
   },
 
   async getPendingIncidentsCount(): Promise<number> {
@@ -1830,6 +1909,152 @@ export const competitionService = {
       throw new Error(error.message || 'Lỗi khi xóa mẫu nhận xét.');
     }
   },
+
+  async saveWeeklyReport(report: CompetitionWeeklyReport): Promise<CompetitionWeeklyReport> {
+    const user = (await supabase.auth.getUser()).data.user;
+    
+    let creatorName = report.creator_name;
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (profile?.full_name) {
+        creatorName = profile.full_name;
+      }
+    }
+
+    const payload = {
+      period_type: report.period_type || 'WEEK',
+      period_label: report.period_label || report.week_name,
+      period_start: report.period_start || null,
+      period_end: report.period_end || null,
+      semester: report.semester ?? null,
+      month: report.month ?? null,
+      academic_year_id: report.academic_year_id || null,
+      academic_year_name: report.academic_year_name,
+      week_id: report.week_id || null,
+      week_name: report.week_name,
+      grade_level_id: report.grade_level_id || null,
+      grade_name: report.grade_name,
+      total_violations: report.total_violations,
+      violation_stats: report.violation_stats || [],
+      supervisor_notes: report.supervisor_notes || '',
+      created_by: user?.id || report.created_by || null,
+      creator_name: creatorName || 'Giám thị phụ trách',
+    };
+
+    let resultReport: CompetitionWeeklyReport | null = null;
+
+    try {
+      const { data, error } = await supabase
+        .from('competition_weekly_reports')
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database error saving weekly report:', error);
+      } else if (data) {
+        resultReport = data as CompetitionWeeklyReport;
+      }
+    } catch (dbErr) {
+      console.warn('DB table competition_weekly_reports fallback to local storage:', dbErr);
+    }
+
+    const localId = resultReport?.id || `rep-${Date.now()}`;
+    const fullReport: CompetitionWeeklyReport = resultReport || {
+      ...payload,
+      id: localId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      const existingStr = localStorage.getItem('competition_weekly_reports_cache') || '[]';
+      const existingList: CompetitionWeeklyReport[] = JSON.parse(existingStr);
+      const updatedList = [fullReport, ...existingList.filter(r => r.id !== localId)];
+      localStorage.setItem('competition_weekly_reports_cache', JSON.stringify(updatedList));
+    } catch (e) {
+      console.error('LocalStorage write error:', e);
+    }
+
+    return fullReport;
+  },
+
+  async getWeeklyReports(filters?: { academicYearId?: string; weekId?: string; gradeLevelId?: string }): Promise<CompetitionWeeklyReport[]> {
+    let dbReports: CompetitionWeeklyReport[] = [];
+
+    try {
+      let query = supabase
+        .from('competition_weekly_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.academicYearId) {
+        query = query.eq('academic_year_id', filters.academicYearId);
+      }
+      if (filters?.weekId) {
+        query = query.eq('week_id', filters.weekId);
+      }
+      if (filters?.gradeLevelId && filters.gradeLevelId !== 'ALL') {
+        query = query.eq('grade_level_id', filters.gradeLevelId);
+      }
+
+      const { data, error } = await query;
+      if (!error && data) {
+        dbReports = data as CompetitionWeeklyReport[];
+      }
+    } catch (err) {
+      console.warn('DB fetch error for weekly reports, using local storage fallback', err);
+    }
+
+    let localReports: CompetitionWeeklyReport[] = [];
+    try {
+      const existingStr = localStorage.getItem('competition_weekly_reports_cache') || '[]';
+      localReports = JSON.parse(existingStr);
+    } catch (e) {
+      localReports = [];
+    }
+
+    const map = new Map<string, CompetitionWeeklyReport>();
+    dbReports.forEach(r => { if (r.id) map.set(r.id, r); });
+    localReports.forEach(r => { if (r.id && !map.has(r.id)) map.set(r.id, r); });
+
+    let result = Array.from(map.values());
+
+    if (filters?.weekId) {
+      result = result.filter(r => r.week_id === filters.weekId || !r.week_id);
+    }
+    if (filters?.gradeLevelId && filters.gradeLevelId !== 'ALL') {
+      result = result.filter(r => r.grade_level_id === filters.gradeLevelId || !r.grade_level_id);
+    }
+
+    result.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    return result;
+  },
+
+  async deleteWeeklyReport(reportId: string): Promise<void> {
+    try {
+      await supabase
+        .from('competition_weekly_reports')
+        .delete()
+        .eq('id', reportId);
+    } catch (e) {
+      console.warn('DB delete error for report:', e);
+    }
+
+    try {
+      const existingStr = localStorage.getItem('competition_weekly_reports_cache') || '[]';
+      const existingList: CompetitionWeeklyReport[] = JSON.parse(existingStr);
+      const updatedList = existingList.filter(r => r.id !== reportId);
+      localStorage.setItem('competition_weekly_reports_cache', JSON.stringify(updatedList));
+    } catch (e) {
+      console.error('LocalStorage delete error:', e);
+    }
+  },
 };
+
 
 

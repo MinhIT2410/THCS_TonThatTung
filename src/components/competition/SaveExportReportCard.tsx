@@ -1,0 +1,1645 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { 
+  FileText, 
+  Save, 
+  Download, 
+  History, 
+  Eye, 
+  Trash2, 
+  CheckCircle2, 
+  AlertCircle, 
+  X,
+  Calendar,
+  Layers,
+  Clock,
+  AlertTriangle
+} from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { supabase } from '../../lib/supabase/client';
+import { useAuth } from '../../contexts/AuthContext';
+import { competitionService } from '../../services/competitionService';
+import { 
+  competitionReportConfigService, 
+  CompetitionReportConfig, 
+  DEFAULT_COMPETITION_REPORT_CONFIG 
+} from '../../services/competitionReportConfigService';
+import { 
+  CompetitionIncident, 
+  CompetitionWeeklyReport, 
+  WeeklyReportRuleStat,
+  ClassReportRowSnapshot,
+  FormattedStudentViolationGroup,
+  ReportPeriodType
+} from '../../types/competition';
+import LoadingState from '../common/LoadingState';
+import EmptyState from '../common/EmptyState';
+
+interface SaveExportReportCardProps {
+  allowedClassIds?: string[];
+}
+
+interface PeriodOption {
+  id: string;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+}
+
+interface ClassItem {
+  id: string;
+  name: string;
+  grade_level_id?: string | null;
+}
+
+interface GradeItem {
+  id: string;
+  name: string;
+}
+
+interface AcademicTermItem {
+  id: string;
+  academic_year_id: string;
+  code: string;
+  name: string;
+  term_order: number;
+  start_date?: string;
+  end_date?: string;
+  is_active?: boolean;
+}
+
+// Group incidents by student and rule for the class report table
+export function groupIncidentsByStudentAndRule(classIncidents: CompetitionIncident[]): FormattedStudentViolationGroup[] {
+  if (!classIncidents || classIncidents.length === 0) return [];
+
+  const studentMap = new Map<string, {
+    studentName: string;
+    studentCode?: string | null;
+    incidents: CompetitionIncident[];
+  }>();
+
+  classIncidents.forEach(inc => {
+    const sKey = inc.student_id || inc.student_name || 'COLLECTIVE_CLASS';
+    const sName = inc.student_name || (inc.student_id ? 'Học sinh' : 'Tập thể lớp');
+    const sCode = inc.student_code || null;
+
+    if (!studentMap.has(sKey)) {
+      studentMap.set(sKey, {
+        studentName: sName,
+        studentCode: sCode,
+        incidents: []
+      });
+    }
+    studentMap.get(sKey)!.incidents.push(inc);
+  });
+
+  const result: FormattedStudentViolationGroup[] = [];
+
+  studentMap.forEach(sGroup => {
+    const ruleMap = new Map<string, {
+      ruleName: string;
+      times: Date[];
+    }>();
+
+    sGroup.incidents.forEach(inc => {
+      const rKey = inc.rule_id || inc.rule_name || 'Lỗi vi phạm';
+      const rName = inc.rule_name || inc.rule?.name || inc.title || 'Lỗi vi phạm';
+
+      if (!ruleMap.has(rKey)) {
+        ruleMap.set(rKey, { ruleName: rName, times: [] });
+      }
+
+      if (inc.occurred_at) {
+        ruleMap.get(rKey)!.times.push(new Date(inc.occurred_at));
+      }
+    });
+
+    const rulesList: FormattedStudentViolationGroup['rules'] = [];
+
+    ruleMap.forEach(rGroup => {
+      rGroup.times.sort((a, b) => a.getTime() - b.getTime());
+
+      const formattedTimes = rGroup.times.map(d => {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        return `${day}/${month} ${hours}:${mins}`;
+      }).join(', ');
+
+      rulesList.push({
+        ruleName: rGroup.ruleName,
+        count: rGroup.times.length || 1,
+        occurrencesStr: formattedTimes || '---'
+      });
+    });
+
+    result.push({
+      studentName: sGroup.studentName,
+      studentCode: sGroup.studentCode,
+      rules: rulesList
+    });
+  });
+
+  return result;
+}
+
+/**
+ * Helper to get current date string (YYYY-MM-DD) in Asia/Ho_Chi_Minh timezone
+ */
+export function getTodayInVietnam(): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return formatter.format(new Date());
+}
+
+/**
+ * Helper to get current month string (YYYY-MM) in Asia/Ho_Chi_Minh timezone
+ */
+export function getCurrentMonthInVietnam(): string {
+  const today = getTodayInVietnam();
+  return today.substring(0, 7);
+}
+
+/**
+ * Helper to find default week ID according to rules:
+ * 1. Week containing today (starts_on <= today && ends_on >= today)
+ * 2. If none, most recent week that has started (starts_on <= today)
+ * 3. Fallback to first week if all weeks are in future
+ */
+export function findDefaultWeekId(weeks: PeriodOption[], todayStr: string): string {
+  if (!weeks || weeks.length === 0) return '';
+  
+  // 1. Exact week containing today
+  const currentWeek = weeks.find(w => w.starts_on <= todayStr && w.ends_on >= todayStr);
+  if (currentWeek) return currentWeek.id;
+
+  // 2. Most recent started week
+  const startedWeeks = weeks.filter(w => w.starts_on <= todayStr);
+  if (startedWeeks.length > 0) {
+    startedWeeks.sort((a, b) => b.starts_on.localeCompare(a.starts_on));
+    return startedWeeks[0].id;
+  }
+
+  // 3. Fallback to first week
+  return weeks[0].id;
+}
+
+/**
+ * Helper to find default month string (YYYY-MM) according to rules:
+ * 1. Matches current month if within range
+ * 2. Closest month within range if outside
+ */
+export function findDefaultMonth(monthOptions: { value: string }[], currentMonthStr: string): string {
+  if (!monthOptions || monthOptions.length === 0) return '';
+  
+  const found = monthOptions.find(m => m.value === currentMonthStr);
+  if (found) return found.value;
+
+  // If current month is earlier than range, pick first month
+  if (currentMonthStr < monthOptions[0].value) {
+    return monthOptions[0].value;
+  }
+
+  // If current month is later than range, pick last month
+  if (currentMonthStr > monthOptions[monthOptions.length - 1].value) {
+    return monthOptions[monthOptions.length - 1].value;
+  }
+
+  return monthOptions[0].value;
+}
+
+/**
+ * Helper to find default semester (1 or 2) if DB has configured term dates
+ */
+export function findDefaultSemester(terms: AcademicTermItem[], todayStr: string): number | null {
+  if (!terms || terms.length === 0) return null;
+
+  const currentTerm = terms.find(t => t.start_date && t.end_date && t.start_date <= todayStr && t.end_date >= todayStr);
+  if (currentTerm) {
+    return currentTerm.term_order || (currentTerm.code.includes('2') ? 2 : 1);
+  }
+
+  return null;
+}
+
+export default function SaveExportReportCard({ allowedClassIds }: SaveExportReportCardProps) {
+  const { user } = useAuth();
+
+  // CMS Template Config
+  const [reportConfig, setReportConfig] = useState<CompetitionReportConfig>(
+    competitionReportConfigService.getReportConfig()
+  );
+
+  // State management
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadingData, setLoadingData] = useState(false);
+  const [savingReport, setSavingReport] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  const [currentYearInfo, setCurrentYearInfo] = useState<{ id: string; name: string; start_date?: string; end_date?: string } | null>(null);
+  
+  // Period Filters State
+  const [periodType, setPeriodType] = useState<ReportPeriodType>('WEEK');
+  const [selectedSemester, setSelectedSemester] = useState<number>(1);
+  const [academicTerms, setAcademicTerms] = useState<AcademicTermItem[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+
+  const [weekOptions, setWeekOptions] = useState<PeriodOption[]>([]);
+  const [selectedWeekId, setSelectedWeekId] = useState<string>('');
+  
+  const [gradeLevels, setGradeLevels] = useState<GradeItem[]>([]);
+  const [selectedGradeId, setSelectedGradeId] = useState<string>('ALL'); // 'ALL' or grade_level_id
+
+  const [allClasses, setAllClasses] = useState<ClassItem[]>([]);
+  const [incidents, setIncidents] = useState<CompetitionIncident[]>([]);
+  
+  // GVCN Map and Enrollment Map
+  const [homeroomTeacherMap, setHomeroomTeacherMap] = useState<Map<string, string>>(new Map());
+  const [classEnrollmentMap, setClassEnrollmentMap] = useState<Map<string, number>>(new Map());
+
+  const [supervisorNotes, setSupervisorNotes] = useState<string>('');
+  const [currentUserFullName, setCurrentUserFullName] = useState<string>('Giám thị phụ trách');
+
+  // History & Detail Modal
+  const [savedReports, setSavedReports] = useState<CompetitionWeeklyReport[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedDetailReport, setSelectedDetailReport] = useState<CompetitionWeeklyReport | null>(null);
+  
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+
+  // Hidden print element refs for PDF generation
+  const printRef = useRef<HTMLDivElement>(null);
+  const detailPrintRef = useRef<HTMLDivElement>(null);
+
+  // Listen for CMS config changes
+  useEffect(() => {
+    async function syncConfig() {
+      const dbCfg = await competitionReportConfigService.fetchReportConfigFromDB();
+      setReportConfig(dbCfg);
+    }
+    syncConfig();
+
+    const handleConfigEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<CompetitionReportConfig>;
+      if (customEvent.detail) {
+        setReportConfig(customEvent.detail);
+      }
+    };
+
+    window.addEventListener('competition_report_config_updated', handleConfigEvent);
+    return () => {
+      window.removeEventListener('competition_report_config_updated', handleConfigEvent);
+    };
+  }, []);
+
+  // 1. Initial Setup
+  useEffect(() => {
+    async function init() {
+      try {
+        setLoadingInitial(true);
+
+        // Fetch User Profile Name
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .maybeSingle();
+          if (profile?.full_name) {
+            setCurrentUserFullName(profile.full_name);
+          }
+        }
+
+        // Academic Year
+        const academicYears = await competitionService.getAcademicYears();
+        const currentYear = academicYears.find(y => y.is_current) || academicYears.find(y => y.is_active) || academicYears[0];
+        if (currentYear) {
+          setCurrentYearInfo({
+            id: currentYear.id,
+            name: currentYear.name,
+            start_date: currentYear.start_date,
+            end_date: currentYear.end_date
+          });
+        }
+
+        // Weeks, Terms, Grades, Classes in parallel
+        const [weeksData, termsData, gradesRes, classesData, homeroomRes] = await Promise.all([
+          competitionService.getWeeks(currentYear?.id ? { academicYearId: currentYear.id } : undefined),
+          competitionService.getAcademicTerms(currentYear?.id),
+          supabase.from('grade_levels').select('id, name, display_order').order('display_order', { ascending: true }),
+          competitionService.getClasses(currentYear?.id),
+          supabase.from('homeroom_assignments').select('class_id, profiles:teacher_id(full_name)').eq('is_active', true)
+        ]);
+
+        // Process Academic Terms
+        setAcademicTerms(termsData || []);
+
+        // Process Homeroom Teachers Map
+        const hMap = new Map<string, string>();
+        (homeroomRes.data || []).forEach((item: any) => {
+          if (item.class_id && item.profiles?.full_name) {
+            hMap.set(item.class_id, item.profiles.full_name);
+          }
+        });
+        setHomeroomTeacherMap(hMap);
+
+        // Fetch Class Student Enrollments
+        if (currentYear?.id) {
+          const { data: enrollData } = await supabase
+            .from('student_enrollments')
+            .select('class_id')
+            .eq('academic_year_id', currentYear.id);
+
+          const eMap = new Map<string, number>();
+          (enrollData || []).forEach((item: any) => {
+            if (item.class_id) {
+              eMap.set(item.class_id, (eMap.get(item.class_id) || 0) + 1);
+            }
+          });
+          setClassEnrollmentMap(eMap);
+        }
+
+        // Process Weeks
+        const formattedWeeks: PeriodOption[] = (weeksData || []).map(w => ({
+          id: w.id,
+          name: `Tuần ${w.week_number}: ${w.name}`,
+          starts_on: w.starts_on,
+          ends_on: w.ends_on
+        }));
+        setWeekOptions(formattedWeeks);
+
+        if (formattedWeeks.length > 0) {
+          const today = new Date().toISOString().split('T')[0];
+          const currIdx = formattedWeeks.findIndex(w => w.starts_on <= today && w.ends_on >= today);
+          setSelectedWeekId(formattedWeeks[currIdx >= 0 ? currIdx : 0].id);
+        }
+
+        // Process Grades
+        setGradeLevels((gradesRes.data || []).map((g: any) => ({ id: g.id, name: g.name })));
+
+        // Process Classes
+        let availClasses = classesData || [];
+        if (allowedClassIds && allowedClassIds.length > 0) {
+          availClasses = availClasses.filter(c => allowedClassIds.includes(c.id));
+        }
+        setAllClasses(availClasses);
+
+        // Load Saved Reports
+        await loadSavedReports(currentYear?.id);
+
+      } catch (err) {
+        console.error('Lỗi khởi tạo Thẻ Báo cáo:', err);
+      } finally {
+        setLoadingInitial(false);
+      }
+    }
+
+    init();
+  }, [allowedClassIds, user]);
+
+  // Load Month Options based on Current Academic Year
+  const monthOptions = useMemo(() => {
+    if (!currentYearInfo) return [];
+
+    let startY = 2025;
+    let startM = 8; // August default start
+    let endY = 2026;
+    let endM = 6; // June default end
+
+    if (currentYearInfo.start_date && currentYearInfo.end_date) {
+      const sParts = currentYearInfo.start_date.split('-');
+      const eParts = currentYearInfo.end_date.split('-');
+      if (sParts.length === 3 && eParts.length === 3) {
+        startY = parseInt(sParts[0], 10);
+        startM = parseInt(sParts[1], 10);
+        endY = parseInt(eParts[0], 10);
+        endM = parseInt(eParts[1], 10);
+      }
+    } else {
+      const match = currentYearInfo.name.match(/(\d{4})[^\d]+(\d{4})/);
+      if (match) {
+        startY = parseInt(match[1], 10) || 2025;
+        endY = parseInt(match[2], 10) || (startY + 1);
+        startM = 8;
+        endM = 6;
+      }
+    }
+
+    const list: { value: string; label: string; year: number; month: number; start_date: string; end_date: string }[] = [];
+    let currY = startY;
+    let currM = startM;
+
+    while (currY < endY || (currY === endY && currM <= endM)) {
+      const mStr = String(currM).padStart(2, '0');
+      const value = `${currY}-${mStr}`;
+      
+      const lastDayNum = new Date(currY, currM, 0).getDate();
+      const lastDayStr = String(lastDayNum).padStart(2, '0');
+
+      list.push({
+        value,
+        label: `Tháng ${currM}/${currY}`,
+        year: currY,
+        month: currM,
+        start_date: `${currY}-${mStr}-01`,
+        end_date: `${currY}-${mStr}-${lastDayStr}`
+      });
+
+      currM++;
+      if (currM > 12) {
+        currM = 1;
+        currY++;
+      }
+    }
+
+    return list;
+  }, [currentYearInfo]);
+
+  // Set default month when monthOptions changes
+  useEffect(() => {
+    if (monthOptions.length > 0 && !selectedMonth) {
+      const today = new Date();
+      const todayVal = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      const foundCurrent = monthOptions.find(m => m.value === todayVal);
+      if (foundCurrent) {
+        setSelectedMonth(foundCurrent.value);
+      } else {
+        setSelectedMonth(monthOptions[0].value);
+      }
+    }
+  }, [monthOptions, selectedMonth]);
+
+  // Function to load saved report history
+  const loadSavedReports = async (yearId?: string) => {
+    try {
+      setLoadingHistory(true);
+      const reports = await competitionService.getWeeklyReports({
+        academicYearId: yearId || currentYearInfo?.id
+      });
+      setSavedReports(reports || []);
+    } catch (e) {
+      console.error('Lỗi khi tải lịch sử báo cáo:', e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Selected Week Object
+  const selectedWeekObj = useMemo(() => weekOptions.find(w => w.id === selectedWeekId), [weekOptions, selectedWeekId]);
+
+  // Compute Current Period Info dynamically
+  const currentPeriodInfo = useMemo(() => {
+    const yearName = currentYearInfo?.name || '2025-2026';
+
+    const formatDateVN = (dStr: string) => {
+      if (!dStr) return '';
+      const parts = dStr.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return dStr;
+    };
+
+    if (periodType === 'YEAR') {
+      let start_date = currentYearInfo?.start_date || '';
+      let end_date = currentYearInfo?.end_date || '';
+
+      if (!start_date && weekOptions.length > 0) {
+        const sortedStarts = [...weekOptions].map(w => w.starts_on).filter(Boolean).sort();
+        if (sortedStarts.length > 0) start_date = sortedStarts[0];
+      }
+      if (!end_date && weekOptions.length > 0) {
+        const sortedEnds = [...weekOptions].map(w => w.ends_on).filter(Boolean).sort();
+        if (sortedEnds.length > 0) end_date = sortedEnds[sortedEnds.length - 1];
+      }
+
+      return {
+        period_type: 'YEAR' as ReportPeriodType,
+        period_label: `Năm học ${yearName}`,
+        period_start: start_date,
+        period_end: end_date,
+        hasValidDates: Boolean(start_date && end_date),
+        missingReason: (!start_date || !end_date) ? 'Chưa có cấu hình ngày bắt đầu/kết thúc năm học trong cơ sở dữ liệu.' : null
+      };
+    }
+
+    if (periodType === 'SEMESTER') {
+      const semesterName = selectedSemester === 1 ? 'Học kỳ I' : 'Học kỳ II';
+      const term = academicTerms.find(t => t.term_order === selectedSemester || t.code === `HK${selectedSemester}`);
+      const start_date = term?.start_date || '';
+      const end_date = term?.end_date || '';
+
+      return {
+        period_type: 'SEMESTER' as ReportPeriodType,
+        period_label: `${semesterName} - Năm học ${yearName}`,
+        period_start: start_date,
+        period_end: end_date,
+        hasValidDates: Boolean(start_date && end_date),
+        missingReason: (!start_date || !end_date) ? `Chưa có cấu hình ngày cho ${semesterName} trong cơ sở dữ liệu.` : null,
+        semester: selectedSemester
+      };
+    }
+
+    if (periodType === 'MONTH') {
+      const foundMonth = monthOptions.find(m => m.value === selectedMonth);
+      if (!foundMonth) {
+        return {
+          period_type: 'MONTH' as ReportPeriodType,
+          period_label: 'Tháng chưa chọn',
+          period_start: '',
+          period_end: '',
+          hasValidDates: false,
+          missingReason: 'Chưa chọn tháng báo cáo.',
+          month: null
+        };
+      }
+      return {
+        period_type: 'MONTH' as ReportPeriodType,
+        period_label: `Tháng ${foundMonth.month}/${foundMonth.year}`,
+        period_start: foundMonth.start_date,
+        period_end: foundMonth.end_date,
+        hasValidDates: true,
+        missingReason: null,
+        month: foundMonth.month
+      };
+    }
+
+    // Default: WEEK
+    if (!selectedWeekObj) {
+      return {
+        period_type: 'WEEK' as ReportPeriodType,
+        period_label: 'Chưa chọn tuần',
+        period_start: '',
+        period_end: '',
+        hasValidDates: false,
+        missingReason: 'Chưa chọn tuần thi đua.',
+        week_id: null
+      };
+    }
+
+    return {
+      period_type: 'WEEK' as ReportPeriodType,
+      period_label: `${selectedWeekObj.name}: ${formatDateVN(selectedWeekObj.starts_on)} - ${formatDateVN(selectedWeekObj.ends_on)}`,
+      period_start: selectedWeekObj.starts_on,
+      period_end: selectedWeekObj.ends_on,
+      hasValidDates: true,
+      missingReason: null,
+      week_id: selectedWeekObj.id
+    };
+  }, [periodType, selectedSemester, selectedMonth, selectedWeekObj, currentYearInfo, academicTerms, monthOptions, weekOptions]);
+
+  // Selected Grade Object
+  const selectedGradeObj = useMemo(() => {
+    if (selectedGradeId === 'ALL') return { id: 'ALL', name: 'Tất cả khối' };
+    const found = gradeLevels.find(g => g.id === selectedGradeId);
+    if (found) return found;
+    return { id: selectedGradeId, name: `Khối ${selectedGradeId}` };
+  }, [gradeLevels, selectedGradeId]);
+
+  // Filtered Classes for selected Grade
+  const filteredClasses = useMemo(() => {
+    let list = allClasses;
+    if (selectedGradeId !== 'ALL') {
+      list = allClasses.filter(c => {
+        if (c.grade_level_id === selectedGradeId) return true;
+        const gradeNum = selectedGradeId.replace(/\D/g, '');
+        if (gradeNum && c.name.match(/^(\d+)/)?.[1] === gradeNum) return true;
+        return false;
+      });
+    }
+
+    // Sort naturally by class name
+    return [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [allClasses, selectedGradeId]);
+
+  const classMap = useMemo(() => {
+    const map = new Map<string, ClassItem>();
+    allClasses.forEach(c => map.set(c.id, c));
+    return map;
+  }, [allClasses]);
+
+  // 2. Fetch Live Incidents when period range or grade changes
+  useEffect(() => {
+    if (loadingInitial || !currentPeriodInfo.hasValidDates) {
+      if (!currentPeriodInfo.hasValidDates) {
+        setIncidents([]);
+      }
+      return;
+    }
+
+    async function fetchLiveIncidents() {
+      try {
+        setLoadingData(true);
+
+        let targetUnitIds: string[] | undefined = undefined;
+        if (selectedGradeId !== 'ALL') {
+          targetUnitIds = filteredClasses.map(c => c.id);
+          if (targetUnitIds.length === 0) {
+            setIncidents([]);
+            setLoadingData(false);
+            return;
+          }
+        } else if (allowedClassIds && allowedClassIds.length > 0) {
+          targetUnitIds = allowedClassIds;
+        }
+
+        const res = await competitionService.getWeeklyOfficialIncidents({
+          weekStartsOn: currentPeriodInfo.period_start,
+          weekEndsOn: currentPeriodInfo.period_end,
+          unitIds: targetUnitIds
+        });
+
+        setIncidents(res || []);
+      } catch (e) {
+        console.error('Lỗi khi tải danh sách vi phạm:', e);
+        setIncidents([]);
+      } finally {
+        setLoadingData(false);
+      }
+    }
+
+    fetchLiveIncidents();
+  }, [currentPeriodInfo, selectedGradeId, filteredClasses, allowedClassIds, loadingInitial]);
+
+  // Live Class Report Rows
+  const classReportRows = useMemo<ClassReportRowSnapshot[]>(() => {
+    return filteredClasses.map((classItem, idx) => {
+      const classIncidents = incidents.filter(i => i.unit_id === classItem.id);
+      const studentViolationGroups = groupIncidentsByStudentAndRule(classIncidents);
+      const homeroomTeacher = homeroomTeacherMap.get(classItem.id) || '---';
+      const studentCount = classEnrollmentMap.get(classItem.id) || 0;
+
+      return {
+        stt: idx + 1,
+        class_id: classItem.id,
+        class_name: classItem.name,
+        homeroom_teacher_name: homeroomTeacher,
+        student_count: studentCount,
+        student_violations_groups: studentViolationGroups
+      };
+    });
+  }, [filteredClasses, incidents, homeroomTeacherMap, classEnrollmentMap]);
+
+  // Aggregation of Live Rule Statistics
+  const liveStats = useMemo<WeeklyReportRuleStat[]>(() => {
+    const rulesMap = new Map<string, {
+      ruleId: string;
+      ruleName: string;
+      count: number;
+      classCounts: Map<string, number>;
+    }>();
+
+    incidents.forEach(inc => {
+      const ruleId = inc.rule_id || inc.rule?.id || inc.title || 'unknown';
+      const ruleName = inc.rule_name || inc.rule?.name || inc.title || 'Lỗi không xác định';
+
+      if (!rulesMap.has(ruleId)) {
+        rulesMap.set(ruleId, {
+          ruleId,
+          ruleName,
+          count: 0,
+          classCounts: new Map()
+        });
+      }
+
+      const item = rulesMap.get(ruleId)!;
+      item.count += 1;
+
+      if (inc.unit_id) {
+        item.classCounts.set(inc.unit_id, (item.classCounts.get(inc.unit_id) || 0) + 1);
+      }
+    });
+
+    const result: WeeklyReportRuleStat[] = [];
+    rulesMap.forEach(item => {
+      const classEntries: { className: string; count: number }[] = [];
+      item.classCounts.forEach((cnt, unitId) => {
+        if (selectedGradeId !== 'ALL') {
+          if (!filteredClasses.some(c => c.id === unitId)) return;
+        }
+        const cls = classMap.get(unitId);
+        classEntries.push({ className: cls?.name || 'Lớp', count: cnt });
+      });
+
+      classEntries.sort((a, b) => b.count - a.count || a.className.localeCompare(b.className));
+      const top3 = classEntries.slice(0, 3);
+      const topClassesStr = top3.length > 0
+        ? top3.map(c => `${c.className} (${c.count} lần)`).join(', ')
+        : '—';
+
+      result.push({
+        rule_id: item.ruleId,
+        rule_name: item.ruleName,
+        count: item.count,
+        top_classes_str: topClassesStr
+      });
+    });
+
+    result.sort((a, b) => b.count - a.count || a.rule_name.localeCompare(b.rule_name));
+    return result;
+  }, [incidents, classMap, filteredClasses, selectedGradeId]);
+
+  const totalViolationsCount = useMemo(() => {
+    return incidents.length;
+  }, [incidents]);
+
+  // Construct current Live Snapshot Object
+  const currentSnapshotObject = useMemo<CompetitionWeeklyReport>(() => {
+    return {
+      period_type: currentPeriodInfo.period_type,
+      period_label: currentPeriodInfo.period_label,
+      period_start: currentPeriodInfo.period_start,
+      period_end: currentPeriodInfo.period_end,
+      semester: currentPeriodInfo.semester || null,
+      month: currentPeriodInfo.month || null,
+      academic_year_id: currentYearInfo?.id,
+      academic_year_name: currentYearInfo?.name || '2025-2026',
+      week_id: currentPeriodInfo.week_id || null,
+      week_name: currentPeriodInfo.period_label,
+      grade_level_id: selectedGradeId === 'ALL' ? null : selectedGradeId,
+      grade_name: selectedGradeObj.name,
+      total_violations: totalViolationsCount,
+      violation_stats: liveStats,
+      class_report_rows: classReportRows,
+      report_config: reportConfig,
+      supervisor_notes: supervisorNotes,
+      created_by: user?.id,
+      creator_name: currentUserFullName,
+      created_at: new Date().toISOString()
+    };
+  }, [
+    currentPeriodInfo,
+    currentYearInfo, 
+    selectedGradeId, 
+    selectedGradeObj, 
+    totalViolationsCount, 
+    liveStats, 
+    classReportRows, 
+    reportConfig, 
+    supervisorNotes, 
+    user, 
+    currentUserFullName
+  ]);
+
+  // SAVE REPORT ACTION
+  const handleSaveReport = async () => {
+    if (!currentPeriodInfo.hasValidDates) {
+      setErrorToast(currentPeriodInfo.missingReason || 'Không thể lưu báo cáo do thiếu thông tin ngày của kỳ.');
+      setTimeout(() => setErrorToast(null), 4000);
+      return;
+    }
+
+    try {
+      setSavingReport(true);
+      setErrorToast(null);
+
+      await competitionService.saveWeeklyReport(currentSnapshotObject);
+      
+      setSuccessToast(`Đã lưu biên bản báo cáo cho ${currentSnapshotObject.period_label} - ${currentSnapshotObject.grade_name}!`);
+      setTimeout(() => setSuccessToast(null), 4000);
+
+      // Refresh History
+      await loadSavedReports();
+    } catch (err: any) {
+      console.error('Lỗi khi lưu báo cáo:', err);
+      setErrorToast(err.message || 'Lỗi khi lưu báo cáo.');
+      setTimeout(() => setErrorToast(null), 4000);
+    } finally {
+      setSavingReport(false);
+    }
+  };
+
+  // EXPORT PDF ACTION
+  const generatePdfFromElement = async (targetElement: HTMLElement | null, fileName: string) => {
+    if (!targetElement) return;
+
+    try {
+      setExportingPdf(true);
+
+      const canvas = await html2canvas(targetElement, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(fileName);
+
+      setSuccessToast('Đã xuất file PDF báo cáo thành công!');
+      setTimeout(() => setSuccessToast(null), 3000);
+    } catch (e: any) {
+      console.error('Lỗi khi xuất PDF:', e);
+      setErrorToast('Không thể tạo file PDF. Vui lòng thử lại.');
+      setTimeout(() => setErrorToast(null), 4000);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleExportLivePdf = () => {
+    if (!currentPeriodInfo.hasValidDates) {
+      setErrorToast(currentPeriodInfo.missingReason || 'Không thể xuất PDF do thiếu thời gian kỳ.');
+      setTimeout(() => setErrorToast(null), 4000);
+      return;
+    }
+    const safePeriodStr = (currentPeriodInfo.period_label || 'Bao_cao').replace(/[^a-zA-Z0-9]/g, '_');
+    const safeGradeStr = selectedGradeObj.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `Bien_ban_${safePeriodStr}_${safeGradeStr}.pdf`;
+    generatePdfFromElement(printRef.current, fileName);
+  };
+
+  const handleExportHistoryPdf = (rep: CompetitionWeeklyReport) => {
+    setSelectedDetailReport(rep);
+    setTimeout(() => {
+      const safePeriodStr = (rep.period_label || rep.week_name || 'Bao_cao').replace(/[^a-zA-Z0-9]/g, '_');
+      const safeGradeStr = (rep.grade_name || 'Khoi').replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `Bien_ban_Luu_tru_${safePeriodStr}_${safeGradeStr}.pdf`;
+      generatePdfFromElement(detailPrintRef.current, fileName);
+    }, 150);
+  };
+
+  // DELETE REPORT ACTION
+  const handleDeleteReport = async (repId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bản ghi báo cáo đã lưu này?')) return;
+
+    try {
+      await competitionService.deleteWeeklyReport(repId);
+      setSavedReports(prev => prev.filter(r => r.id !== repId));
+      if (selectedDetailReport?.id === repId) {
+        setSelectedDetailReport(null);
+      }
+      setSuccessToast('Đã xóa báo cáo khỏi lịch sử.');
+      setTimeout(() => setSuccessToast(null), 3000);
+    } catch (e) {
+      console.error('Lỗi xóa báo cáo:', e);
+      setErrorToast('Không thể xóa báo cáo.');
+      setTimeout(() => setErrorToast(null), 3000);
+    }
+  };
+
+  // Helper badge for period types in history list
+  const getPeriodTypeBadge = (type?: ReportPeriodType) => {
+    switch (type) {
+      case 'YEAR':
+        return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">Năm học</span>;
+      case 'SEMESTER':
+        return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">Học kỳ</span>;
+      case 'MONTH':
+        return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">Tháng</span>;
+      case 'WEEK':
+      default:
+        return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">Tuần</span>;
+    }
+  };
+
+  if (loadingInitial) {
+    return (
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <LoadingState message="Đang khởi tạo module Báo cáo & Xuất file..." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-6 font-sans">
+      {/* CARD HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200/50 dark:border-amber-900/40">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+              LƯU BÁO CÁO & XUẤT FILE
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Lập biên bản tổng kết vi phạm thi đua theo Tuần, Tháng, Học kỳ hoặc Năm học, lưu snapshot cố định và xuất PDF
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* NOTIFICATION TOASTS */}
+      {successToast && (
+        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{successToast}</span>
+        </div>
+      )}
+      {errorToast && (
+        <div className="p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-semibold text-rose-800 dark:text-rose-300 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          <span>{errorToast}</span>
+        </div>
+      )}
+
+      {/* FILTER BAR SECTION */}
+      <div className="space-y-4 bg-slate-50/80 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-800">
+        
+        {/* ROW 1: LOẠI KỲ SELECTOR (SEGMENTED CONTROL) */}
+        <div className="space-y-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span>1. Chọn loại kỳ báo cáo</span>
+          </label>
+
+          <div className="inline-flex p-1 bg-slate-200/80 dark:bg-slate-900 rounded-xl gap-1 w-full sm:w-auto max-w-md">
+            <button
+              type="button"
+              onClick={() => setPeriodType('WEEK')}
+              className={`flex-1 sm:flex-none px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                periodType === 'WEEK'
+                  ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Tuần
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriodType('MONTH')}
+              className={`flex-1 sm:flex-none px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                periodType === 'MONTH'
+                  ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Tháng
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriodType('SEMESTER')}
+              className={`flex-1 sm:flex-none px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                periodType === 'SEMESTER'
+                  ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Học kỳ
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriodType('YEAR')}
+              className={`flex-1 sm:flex-none px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                periodType === 'YEAR'
+                  ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Năm học
+            </button>
+          </div>
+        </div>
+
+        {/* ROW 2: SUB-PICKER & GRADE SELECTOR */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          {/* DYNAMIC SUB-PICKER BASED ON PERIOD TYPE */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              2. Chi tiết kỳ ({periodType === 'WEEK' ? 'Tuần' : periodType === 'MONTH' ? 'Tháng' : periodType === 'SEMESTER' ? 'Học kỳ' : 'Năm học'})
+            </label>
+
+            {/* CASE 1: TUẦN */}
+            {periodType === 'WEEK' && (
+              <select
+                value={selectedWeekId}
+                onChange={(e) => setSelectedWeekId(e.target.value)}
+                className="w-full h-10 px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-medium"
+              >
+                {weekOptions.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* CASE 2: THÁNG */}
+            {periodType === 'MONTH' && (
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full h-10 px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-medium"
+              >
+                {monthOptions.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label} ({m.start_date.split('-').reverse().join('/')} - {m.end_date.split('-').reverse().join('/')})
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* CASE 3: HỌC KỲ */}
+            {periodType === 'SEMESTER' && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSemester(1)}
+                    className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                      selectedSemester === 1
+                        ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-500 text-amber-700 dark:text-amber-300'
+                        : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    Học kỳ I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSemester(2)}
+                    className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                      selectedSemester === 2
+                        ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-500 text-amber-700 dark:text-amber-300'
+                        : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    Học kỳ II
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* CASE 4: NĂM HỌC */}
+            {periodType === 'YEAR' && (
+              <div className="h-10 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                <span>Năm học {currentYearInfo?.name || '2025-2026'}</span>
+                <span className="text-xs font-normal text-slate-500">
+                  Toàn bộ năm học
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* GRADE SELECTOR */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              3. Chọn Khối
+            </label>
+            <select
+              value={selectedGradeId}
+              onChange={(e) => setSelectedGradeId(e.target.value)}
+              className="w-full h-10 px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-medium"
+            >
+              <option value="ALL">Tất cả khối</option>
+              {gradeLevels.length > 0 ? (
+                gradeLevels.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name.startsWith('Khối') ? g.name : `Khối ${g.name}`}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="6">Khối 6</option>
+                  <option value="7">Khối 7</option>
+                  <option value="8">Khối 8</option>
+                  <option value="9">Khối 9</option>
+                </>
+              )}
+            </select>
+          </div>
+        </div>
+
+        {/* WARNING IF DATES ARE MISSING IN DB */}
+        {!currentPeriodInfo.hasValidDates && (
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2 font-medium">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>{currentPeriodInfo.missingReason || 'Chưa có cấu hình ngày cho kỳ đã chọn.'}</span>
+          </div>
+        )}
+      </div>
+
+      {/* REPORT PREVIEW SECTION */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+          <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+            <Eye className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span>Xem trước Biên bản Báo cáo (Live Preview)</span>
+          </h3>
+          <div className="flex items-center gap-2">
+            {/* ACTION 1: LƯU BÁO CÁO */}
+            <button
+              type="button"
+              onClick={handleSaveReport}
+              disabled={savingReport || loadingData || !currentPeriodInfo.hasValidDates}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>{savingReport ? 'Đang lưu...' : 'Lưu báo cáo'}</span>
+            </button>
+
+            {/* ACTION 2: XUẤT PDF */}
+            <button
+              type="button"
+              onClick={handleExportLivePdf}
+              disabled={exportingPdf || loadingData || !currentPeriodInfo.hasValidDates}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              <span>{exportingPdf ? 'Đang xuất PDF...' : 'Xuất PDF'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* PRINTABLE PREVIEW CONTAINER */}
+        <div className="p-4 sm:p-6 bg-slate-50/60 dark:bg-slate-950/40 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+          {loadingData ? (
+            <LoadingState message="Đang tổng hợp dữ liệu biên bản..." />
+          ) : !currentPeriodInfo.hasValidDates ? (
+            <div className="p-8 text-center text-slate-500 space-y-2">
+              <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto" />
+              <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">Chưa thể hiển thị xem trước</p>
+              <p className="text-xs">{currentPeriodInfo.missingReason}</p>
+            </div>
+          ) : (
+            <div 
+              ref={printRef}
+              className="bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-xs border border-slate-200 space-y-6 max-w-4xl mx-auto font-sans"
+            >
+              {/* DOCUMENT HEADER */}
+              <div className="border-b-2 border-slate-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs">
+                <div className="text-center">
+                  <p className="font-bold uppercase tracking-wide text-slate-600">
+                    {reportConfig.parent_organization || 'PHÒNG GIÁO DỤC VÀ ĐÀO TẠO'}
+                  </p>
+                  <p className="font-bold text-slate-900 text-sm uppercase">
+                    {reportConfig.unit_name || 'BAN THI ĐƯA - ĐỘI GIÁM THỊ'}
+                  </p>
+                </div>
+                <div className="text-left sm:text-right text-slate-600 space-y-0.5">
+                  <p>Năm học: <strong className="text-slate-900">{currentYearInfo?.name || '2025-2026'}</strong></p>
+                  <p>Thời điểm lập: <strong>{new Date().toLocaleDateString('vi-VN')} {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</strong></p>
+                </div>
+              </div>
+
+              {/* REPORT TITLE */}
+              <div className="text-center space-y-1 py-2">
+                <h1 className="font-bold text-lg sm:text-xl text-slate-900 uppercase tracking-tight">
+                  {reportConfig.report_title || 'BIÊN BẢN TỔNG KẾT VI PHẠM THI ĐƯA'}
+                </h1>
+                <p className="text-xs font-semibold text-slate-600">
+                  {currentPeriodInfo.period_label} — {selectedGradeObj.name}
+                </p>
+              </div>
+
+              {/* METADATA SUMMARY BAR */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
+                <div>
+                  <span className="text-slate-500">Người lập báo cáo:</span>{' '}
+                  <strong className="text-slate-900">{currentUserFullName}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Phạm vi theo dõi:</span>{' '}
+                  <strong className="text-slate-900">{selectedGradeObj.name}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Tổng số lượt vi phạm:</span>{' '}
+                  <span className="inline-block px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">
+                    {totalViolationsCount} lượt
+                  </span>
+                </div>
+              </div>
+
+              {/* VIOLATIONS TABLE (STRUCTURED BY CLASS) */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-xs uppercase text-slate-700 tracking-wider">
+                  {reportConfig.table_section_title || 'I. BẢNG THỐNG KÊ CHI TIẾT LỖI VI PHẠM THEO LỚP'}
+                </h4>
+
+                <div className="overflow-x-auto border border-slate-300 rounded-lg">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+                        <th className="p-2.5 text-center w-10 border-r border-slate-300">STT</th>
+                        <th className="p-2.5 w-16 border-r border-slate-300">LỚP</th>
+                        <th className="p-2.5 w-40 border-r border-slate-300">GVCN</th>
+                        <th className="p-2.5 text-center w-16 border-r border-slate-300">SĨ SỐ</th>
+                        <th className="p-2.5">HS VI PHẠM / LỖI / SỐ LẦN / THỜI GIAN</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 text-slate-800">
+                      {classReportRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-slate-500 italic">
+                            Không có dữ liệu lớp học phù hợp.
+                          </td>
+                        </tr>
+                      ) : (
+                        classReportRows.map((row) => (
+                          <tr key={row.class_id} className="hover:bg-slate-50/80 align-top">
+                            <td className="p-2.5 text-center font-bold text-slate-500 border-r border-slate-200">
+                              {row.stt}
+                            </td>
+                            <td className="p-2.5 font-bold text-slate-900 border-r border-slate-200">
+                              {row.class_name}
+                            </td>
+                            <td className="p-2.5 text-slate-700 font-medium border-r border-slate-200">
+                              {row.homeroom_teacher_name}
+                            </td>
+                            <td className="p-2.5 text-center text-slate-700 border-r border-slate-200 font-medium">
+                              {row.student_count}
+                            </td>
+                            <td className="p-2.5 leading-relaxed">
+                              {row.student_violations_groups.length === 0 ? (
+                                <span className="text-slate-400 italic">Không có vi phạm</span>
+                              ) : (
+                                <div className="space-y-2">
+                                  {row.student_violations_groups.map((sGroup, sIdx) => (
+                                    <div key={sIdx} className="space-y-0.5">
+                                      <div className="font-bold text-slate-900">
+                                        {sGroup.studentName}
+                                        {sGroup.studentCode ? <span className="font-normal text-slate-500 ml-1">({sGroup.studentCode})</span> : null}
+                                      </div>
+                                      <ul className="pl-3 space-y-0.5 list-disc text-slate-700 font-normal">
+                                        {sGroup.rules.map((r, rIdx) => (
+                                          <li key={rIdx}>
+                                            <span className="font-semibold text-slate-800">{r.ruleName}:</span>{' '}
+                                            <span className="font-bold text-rose-700">{r.count} lần</span> —{' '}
+                                            <span className="font-mono text-[11px] text-slate-600">{r.occurrencesStr}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* SUPERVISOR NOTES / COMMENTS */}
+              <div className="space-y-2 pt-2">
+                <h4 className="font-bold text-xs uppercase text-slate-700 tracking-wider">
+                  {reportConfig.summary_section_title || 'II. NHẬN XÉT & TỔNG KẾT CỦA GIÁM THỊ'}
+                </h4>
+                <textarea
+                  value={supervisorNotes}
+                  onChange={(e) => setSupervisorNotes(e.target.value)}
+                  placeholder={reportConfig.summary_placeholder || 'Nhập đánh giá nề nếp, tuyên dương/nhắc nhở cụ thể cho các lớp trong kỳ...'}
+                  rows={3}
+                  className="w-full p-3 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-900 font-medium"
+                />
+              </div>
+
+              {/* SIGNATURE SECTION */}
+              <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-200 text-xs text-center">
+                <div className="space-y-12">
+                  <div>
+                    <p className="font-bold uppercase text-slate-700">
+                      {reportConfig.approver_title || 'BAN GIÁM HIỆU / XÁC NHẬN'}
+                    </p>
+                    <p className="text-[11px] text-slate-400">(Ký và ghi rõ họ tên)</p>
+                  </div>
+                  <p className="text-slate-300 italic">................................................</p>
+                </div>
+                <div className="space-y-12">
+                  <div>
+                    <p className="font-bold uppercase text-slate-700">
+                      {reportConfig.reporter_title || 'NGƯỜI LẬP BÁO CÁO'}
+                    </p>
+                    <p className="text-[11px] text-slate-400">(Ký và ghi rõ họ tên)</p>
+                  </div>
+                  <p className="font-bold text-slate-900">{currentUserFullName}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* SAVED REPORT HISTORY SECTION */}
+      <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+            <History className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span>Lịch sử Báo cáo đã lưu (Snapshot)</span>
+          </h3>
+          <span className="text-xs text-slate-500 font-medium">
+            {savedReports.length} bản ghi
+          </span>
+        </div>
+
+        {loadingHistory ? (
+          <LoadingState message="Đang tải lịch sử báo cáo..." />
+        ) : savedReports.length === 0 ? (
+          <EmptyState 
+            message="Chưa có báo cáo nào được lưu" 
+            description="Hãy chọn loại kỳ, phạm vi và bấm 'Lưu báo cáo' ở trên để lưu snapshot cố định." 
+          />
+        ) : (
+          <div className="w-full overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs bg-white dark:bg-slate-900">
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                  <th className="px-4 py-3 w-12 text-center">STT</th>
+                  <th className="px-4 py-3">Loại kỳ</th>
+                  <th className="px-4 py-3">Tên kỳ báo cáo</th>
+                  <th className="px-4 py-3">Khối</th>
+                  <th className="px-4 py-3 text-center">Tổng vi phạm</th>
+                  <th className="px-4 py-3">Người lập</th>
+                  <th className="px-4 py-3">Thời điểm tạo</th>
+                  <th className="px-4 py-3 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+                {savedReports.map((rep, idx) => (
+                  <tr key={rep.id || idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="px-4 py-3 text-center text-slate-400 font-semibold">{idx + 1}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {getPeriodTypeBadge(rep.period_type)}
+                    </td>
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
+                      {rep.period_label || rep.week_name}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{rep.grade_name}</td>
+                    <td className="px-4 py-3 text-center font-bold text-rose-600">{rep.total_violations} lượt</td>
+                    <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{rep.creator_name}</td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {rep.created_at ? new Date(rep.created_at).toLocaleString('vi-VN') : '---'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDetailReport(rep)}
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Xem chi tiết snapshot"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Xem</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleExportHistoryPdf(rep)}
+                          className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Xuất lại PDF từ snapshot đã lưu"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Xuất PDF</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => rep.id && handleDeleteReport(rep.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title="Xóa báo cáo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* DETAIL SNAPSHOT MODAL */}
+      {selectedDetailReport && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Chi tiết Báo cáo Snapshot ({selectedDetailReport.period_label || selectedDetailReport.week_name} - {selectedDetailReport.grade_name})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDetailReport(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div 
+                ref={detailPrintRef}
+                className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 space-y-6 text-xs font-sans"
+              >
+                {/* Header from Snapshot or Fallback */}
+                <div className="border-b-2 border-slate-800 pb-3 flex justify-between items-center text-xs">
+                  <div className="text-center">
+                    <p className="font-bold uppercase text-slate-600">
+                      {selectedDetailReport.report_config?.parent_organization || reportConfig.parent_organization || 'PHÒNG GIÁO DỤC VÀ ĐÀO TẠO'}
+                    </p>
+                    <p className="font-bold text-slate-900 uppercase">
+                      {selectedDetailReport.report_config?.unit_name || reportConfig.unit_name || 'BAN THI ĐƯA - ĐỘI GIÁM THỊ'}
+                    </p>
+                  </div>
+                  <div className="text-right text-slate-600 space-y-0.5">
+                    <p>Năm học: <strong className="text-slate-900">{selectedDetailReport.academic_year_name}</strong></p>
+                    <p>Ngày lưu: <strong>{selectedDetailReport.created_at ? new Date(selectedDetailReport.created_at).toLocaleString('vi-VN') : '---'}</strong></p>
+                  </div>
+                </div>
+
+                <div className="text-center space-y-1">
+                  <h2 className="font-bold text-lg text-slate-900 uppercase">
+                    {selectedDetailReport.report_config?.report_title || reportConfig.report_title || 'BIÊN BẢN TỔNG KẾT VI PHẠM THI ĐƯA (SNAPSHOT LƯU TRỮ)'}
+                  </h2>
+                  <p className="font-semibold text-slate-600">
+                    {selectedDetailReport.period_label || selectedDetailReport.week_name} — {selectedDetailReport.grade_name}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded border border-slate-200">
+                  <div>
+                    <span className="text-slate-500">Người tạo:</span>{' '}
+                    <strong className="text-slate-900">{selectedDetailReport.creator_name}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Phạm vi:</span>{' '}
+                    <strong className="text-slate-900">{selectedDetailReport.grade_name}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Tổng vi phạm:</span>{' '}
+                    <span className="font-bold text-rose-600">{selectedDetailReport.total_violations} lượt</span>
+                  </div>
+                </div>
+
+                {/* TABLE IN SNAPSHOT */}
+                <div className="space-y-2">
+                  <h4 className="font-bold uppercase text-slate-700">
+                    {selectedDetailReport.report_config?.table_section_title || reportConfig.table_section_title || 'I. THỐNG KÊ LỖI VI PHẠM THEO LỚP'}
+                  </h4>
+
+                  {selectedDetailReport.class_report_rows && selectedDetailReport.class_report_rows.length > 0 ? (
+                    <div className="overflow-x-auto border border-slate-300 rounded-lg">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+                            <th className="p-2.5 text-center w-10 border-r border-slate-300">STT</th>
+                            <th className="p-2.5 w-16 border-r border-slate-300">LỚP</th>
+                            <th className="p-2.5 w-40 border-r border-slate-300">GVCN</th>
+                            <th className="p-2.5 text-center w-16 border-r border-slate-300">SĨ SỐ</th>
+                            <th className="p-2.5">HS VI PHẠM / LỖI / SỐ LẦN / THỜI GIAN</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 text-slate-800">
+                          {selectedDetailReport.class_report_rows.map((row) => (
+                            <tr key={row.class_id} className="align-top">
+                              <td className="p-2.5 text-center font-bold text-slate-500 border-r border-slate-200">
+                                {row.stt}
+                              </td>
+                              <td className="p-2.5 font-bold text-slate-900 border-r border-slate-200">
+                                {row.class_name}
+                              </td>
+                              <td className="p-2.5 text-slate-700 font-medium border-r border-slate-200">
+                                {row.homeroom_teacher_name}
+                              </td>
+                              <td className="p-2.5 text-center text-slate-700 border-r border-slate-200 font-medium">
+                                {row.student_count}
+                              </td>
+                              <td className="p-2.5 leading-relaxed">
+                                {row.student_violations_groups.length === 0 ? (
+                                  <span className="text-slate-400 italic">Không có vi phạm</span>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {row.student_violations_groups.map((sGroup, sIdx) => (
+                                      <div key={sIdx} className="space-y-0.5">
+                                        <div className="font-bold text-slate-900">
+                                          {sGroup.studentName}
+                                          {sGroup.studentCode ? <span className="font-normal text-slate-500 ml-1">({sGroup.studentCode})</span> : null}
+                                        </div>
+                                        <ul className="pl-3 space-y-0.5 list-disc text-slate-700 font-normal">
+                                          {sGroup.rules.map((r, rIdx) => (
+                                            <li key={rIdx}>
+                                              <span className="font-semibold text-slate-800">{r.ruleName}:</span>{' '}
+                                              <span className="font-bold text-rose-700">{r.count} lần</span> —{' '}
+                                              <span className="font-mono text-[11px] text-slate-600">{r.occurrencesStr}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : selectedDetailReport.violation_stats && selectedDetailReport.violation_stats.length > 0 ? (
+                    <table className="w-full text-left border-collapse border border-slate-200">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                          <th className="p-2 text-center w-8">STT</th>
+                          <th className="p-2">Tên lỗi vi phạm</th>
+                          <th className="p-2 text-center w-20">Số lượt</th>
+                          <th className="p-2">Lớp vi phạm nhiều</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {selectedDetailReport.violation_stats.map((s, idx) => (
+                          <tr key={idx}>
+                            <td className="p-2 text-center text-slate-400">{idx + 1}</td>
+                            <td className="p-2 font-bold text-slate-900">{s.rule_name}</td>
+                            <td className="p-2 text-center font-bold text-rose-600">{s.count}</td>
+                            <td className="p-2 text-slate-700">{s.top_classes_str}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="text-slate-500 italic p-3 bg-slate-50 rounded border text-center">Không có vi phạm nào.</p>
+                  )}
+                </div>
+
+                <div className="space-y-1 pt-2">
+                  <h4 className="font-bold uppercase text-slate-700">
+                    {selectedDetailReport.report_config?.summary_section_title || reportConfig.summary_section_title || 'II. NHẬN XÉT CỦA GIÁM THỊ'}
+                  </h4>
+                  <div className="p-3 bg-slate-50 rounded border border-slate-200 text-slate-800 whitespace-pre-wrap min-h-[60px]">
+                    {selectedDetailReport.supervisor_notes || 'Không có nhận xét bổ sung.'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-200 text-xs text-center">
+                  <div className="space-y-8">
+                    <div>
+                      <p className="font-bold uppercase text-slate-700">
+                        {selectedDetailReport.report_config?.approver_title || reportConfig.approver_title || 'BAN GIÁM HIỆU / XÁC NHẬN'}
+                      </p>
+                      <p className="text-[11px] text-slate-400">(Ký và ghi rõ họ tên)</p>
+                    </div>
+                  </div>
+                  <div className="space-y-8">
+                    <div>
+                      <p className="font-bold uppercase text-slate-700">
+                        {selectedDetailReport.report_config?.reporter_title || reportConfig.reporter_title || 'NGƯỜI LẬP BÁO CÁO'}
+                      </p>
+                      <p className="text-[11px] text-slate-400">(Ký và ghi rõ họ tên)</p>
+                    </div>
+                    <p className="font-bold text-slate-900">{selectedDetailReport.creator_name}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedDetailReport(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportHistoryPdf(selectedDetailReport)}
+                disabled={exportingPdf}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                <span>Xuất PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
