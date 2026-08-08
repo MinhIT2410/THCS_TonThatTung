@@ -10,9 +10,10 @@ export function useCanEditCms() {
   const { roles, isActive } = useAuth();
 
   const isSuperAdmin = roles.some((r: any) => r.code === 'SUPER_ADMIN');
-  const isContentEditor = roles.some((r: any) => r.code === 'CONTENT_EDITOR');
+  const isPrincipal = roles.some((r: any) => r.code === 'PRINCIPAL');
+  const isVicePrincipal = roles.some((r: any) => r.code === 'VICE_PRINCIPAL');
 
-  const canEditByRole = isActive && (isSuperAdmin || isContentEditor);
+  const canEditByRole = isActive && (isSuperAdmin || isPrincipal || isVicePrincipal);
 
   const canEditCms = canEditByRole || (env.isDev && env.enableCmsEditing);
 
@@ -20,7 +21,7 @@ export function useCanEditCms() {
     canEditCms,
     canEdit: canEditCms,
     isAdmin: isSuperAdmin,
-    isEditor: isSuperAdmin || isContentEditor,
-    role: isSuperAdmin ? 'SUPER_ADMIN' : (isContentEditor ? 'CONTENT_EDITOR' : null),
+    isEditor: isSuperAdmin || isPrincipal || isVicePrincipal,
+    role: isSuperAdmin ? 'SUPER_ADMIN' : (isPrincipal ? 'PRINCIPAL' : (isVicePrincipal ? 'VICE_PRINCIPAL' : null)),
   };
 }

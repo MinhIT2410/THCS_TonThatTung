@@ -17,8 +17,8 @@ import { StudentAccountHandoverModal } from '../../features/users/components/Stu
 export default function AdminUsersPage() {
   const { profile: currentUserProfile, refreshProfile, hasRole } = useAuth();
   const isAdmin = hasRole('SUPER_ADMIN');
-  const canCreateUser = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('VICE_PRINCIPAL') || hasRole('STAFF') || hasRole('TEACHER');
-  const canHandoverAccounts = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('TEACHER');
+  const canCreateUser = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('VICE_PRINCIPAL');
+  const canHandoverAccounts = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('VICE_PRINCIPAL');
 
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

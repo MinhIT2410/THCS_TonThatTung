@@ -16,15 +16,15 @@ interface AdminSidebarProps {
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) => {
   const { hasRole } = useAuth();
-  const isSuperAdmin = hasRole('SUPER_ADMIN');
-  const canManageUsers = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('VICE_PRINCIPAL') || hasRole('STAFF') || hasRole('TEACHER');
+  const isSuperAdminOrPrincipal = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL');
+  const canManageUsers = hasRole('SUPER_ADMIN') || hasRole('PRINCIPAL') || hasRole('VICE_PRINCIPAL');
 
   const filteredMenuItems = ADMIN_MENU_ITEMS.filter((item) => {
     if (item.href === '/quan-tri/nguoi-dung') {
       return canManageUsers;
     }
     if (item.href === '/quan-tri/cai-dat') {
-      return isSuperAdmin;
+      return isSuperAdminOrPrincipal;
     }
     return true;
   });

@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && isAuthenticated && profile) {
-      if (hasAnyRole(['SUPER_ADMIN', 'CONTENT_EDITOR'])) {
+      if (hasAnyRole(['SUPER_ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL'])) {
         navigate(ROUTES.ADMIN, { replace: true });
       } else {
         navigate(ROUTES.HOME, { replace: true });

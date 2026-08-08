@@ -53,9 +53,9 @@ export default function AdminAboutPage() {
   const navigate = useNavigate();
   const { user, roles, isActive } = useAuth();
 
-  // Check role authorization: SUPER_ADMIN, PRINCIPAL, CONTENT_EDITOR
+  // Check role authorization: SUPER_ADMIN, PRINCIPAL, VICE_PRINCIPAL
   const isAuthorized = isActive && roles.some((r: any) =>
-    ['SUPER_ADMIN', 'PRINCIPAL', 'CONTENT_EDITOR'].includes(r.code)
+    ['SUPER_ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL'].includes(r.code)
   );
 
   // States

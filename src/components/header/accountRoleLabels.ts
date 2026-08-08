@@ -79,6 +79,6 @@ export function canAccessAdmin(roles: string[] | { code: string }[] | any[] | nu
     return '';
   }).filter(Boolean);
 
-  const allowedRoles = ['SUPER_ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'CONTENT_EDITOR', 'STAFF', 'TEACHER'];
+  const allowedRoles = ['SUPER_ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL'];
   return codes.some(code => allowedRoles.includes(code));
 }
