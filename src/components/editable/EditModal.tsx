@@ -119,6 +119,7 @@ export default function EditModal({
 
   // Merge default fields and overridden fields to pre-populate form
   const initialData = {
+    slogan: overrideData?.slogan ?? defaultData?.slogan ?? '',
     title: overrideData?.title ?? defaultData?.title ?? '',
     subtitle: overrideData?.subtitle ?? defaultData?.subtitle ?? '',
     description: overrideData?.description ?? defaultData?.description ?? '',
@@ -464,6 +465,20 @@ export default function EditModal({
 
           {/* Form Fields: customized specifically for the Hero component */}
           <div className="space-y-4">
+            {/* Slogan field */}
+            <div className="space-y-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Câu khẩu hiệu / Trích dẫn (Slogan)
+              </label>
+              <input
+                type="text"
+                value={formData.slogan ?? ''}
+                onChange={e => handleInputChange('slogan', e.target.value)}
+                className="w-full text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 font-medium"
+                placeholder="Tuổi nhỏ làm việc nhỏ, tùy theo sức của mình..."
+              />
+            </div>
+
             {/* Title field */}
             <div className="space-y-1">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">

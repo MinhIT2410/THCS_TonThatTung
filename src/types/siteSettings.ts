@@ -15,6 +15,7 @@ export interface SiteSettings {
   footer_title: string | null;
   footer_description: string | null;
   contact_intro: string | null;
+  home_hero_slogan: string | null;
   home_hero_title: string | null;
   home_hero_subtitle: string | null;
   home_hero_description: string | null;

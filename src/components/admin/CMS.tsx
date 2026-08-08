@@ -1737,6 +1737,16 @@ export default function CMS({
                   <div className="rounded-3xl border border-slate-200/80 p-6 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
                     <h3 className="font-display font-bold text-sm text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">6. Cấu hình Banner Trang chủ (Hero Section)</h3>
                     <div className="space-y-1.5">
+                      <label className="block font-bold">Khẩu hiệu / Câu trích dẫn (home_hero_slogan):</label>
+                      <input
+                        type="text"
+                        value={settingsFormData.home_hero_slogan || ''}
+                        onChange={(e) => setSettingsFormData({ ...settingsFormData, home_hero_slogan: e.target.value })}
+                        placeholder="Tuổi nhỏ làm việc nhỏ, tùy theo sức của mình..."
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 bg-white dark:bg-slate-950 dark:border-slate-800 focus:border-blue-500 focus:outline-none text-xs font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
                       <label className="block font-bold">Tiêu đề Banner Trang chủ (home_hero_title):</label>
                       <textarea
                         rows={2}

@@ -175,7 +175,13 @@ export default function Hero({
                   className="font-script text-2xl md:text-3xl text-yellow-300 font-bold tracking-wide mb-3 pl-1 block drop-shadow-sm select-none"
                   style={textShadowStyle}
                 >
-                  "Tuổi nhỏ làm việc nhỏ, tùy theo sức của mình"
+                  {(() => {
+                    const sloganText = finalHeroData.slogan || "Tuổi nhỏ làm việc nhỏ, tùy theo sức của mình";
+                    if (sloganText.startsWith('"') || sloganText.startsWith('“')) {
+                      return sloganText;
+                    }
+                    return `"${sloganText}"`;
+                  })()}
                 </motion.div>
 
                 <motion.h1 

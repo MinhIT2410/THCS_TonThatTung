@@ -24,6 +24,7 @@ export const fallbackSiteSettings: SiteSettings = {
   footer_title: "LIÊN ĐỘI TRƯỜNG THCS TÔN THẤT TÙNG",
   footer_description: SITE_CONFIG.description || "Trang tin tức, hoạt động, phong trào thi đua măng non và kho văn bản hướng dẫn nghiệp vụ công tác Đội tại trường THCS Tôn Thất Tùng.",
   contact_intro: "Mọi ý kiến đóng góp, phản hồi xin vui lòng liên hệ Ban Giám hiệu hoặc Ban Chỉ huy Liên đội qua thông tin bên dưới hoặc gửi tin nhắn trực tiếp.",
+  home_hero_slogan: "Tuổi nhỏ làm việc nhỏ, tùy theo sức của mình",
   home_hero_title: "CỔNG THÔNG TIN ĐIỆN TỬ LIÊN ĐỘI",
   home_hero_subtitle: "Nơi rèn luyện, học tập và phát triển tinh thần thiếu nhi tích cực",
   home_hero_description: "Cập nhật nhanh chóng thông tin chỉ đạo, hoạt động Đội tiêu biểu, tài liệu học tập Đội viên hữu ích, phong trào thi đua thiếu nhi và album ảnh sự kiện hấp dẫn.",
