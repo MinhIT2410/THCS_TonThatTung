@@ -446,7 +446,7 @@ export default function StudentCompetitionPage() {
             }`}
           >
             <ShoppingBag className="w-3.5 h-3.5" />
-            <span>Cửa hàng phần thưởng</span>
+            <span>Đổi thưởng</span>
           </button>
 
           <button
@@ -518,75 +518,34 @@ export default function StudentCompetitionPage() {
                 </div>
               </div>
             </div>
-
-            {/* Public Good Deeds Showcase Section */}
-            <div className="bg-white rounded-3xl border border-emerald-100 p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <HeartHandshake className="w-5 h-5 text-emerald-600" />
-                  Bảng Vinh Danh "Người Tốt - Việc Tốt"
-                </h3>
-                <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                  Gương sáng Đội viên
-                </span>
-              </div>
-
-              {goodDeeds.length === 0 ? (
-                <div className="py-8 text-center text-slate-400 text-xs">Chưa có gương việc tốt nào được ghi nhận.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {goodDeeds.map((deed) => (
-                    <div
-                      key={deed.id}
-                      className="p-4 bg-gradient-to-br from-emerald-50/50 to-teal-50/30 rounded-2xl border border-emerald-100/80 flex flex-col justify-between space-y-3"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="font-bold text-slate-900 text-sm">{deed.student_name}</div>
-                          <span className="text-[11px] text-emerald-700 font-bold bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                            +{deed.merit_points} đ
-                          </span>
-                        </div>
-                        <div className="text-xs text-slate-500 font-medium mt-0.5">Chi đội: {deed.unit_name}</div>
-                        <h4 className="font-bold text-emerald-950 text-sm mt-2">{deed.title}</h4>
-                        {deed.description && (
-                          <p className="text-xs text-slate-600 mt-1 line-clamp-2">{deed.description}</p>
-                        )}
-                      </div>
-
-                      <div className="text-[11px] text-slate-400 flex items-center gap-1 border-t border-emerald-100/60 pt-2">
-                        <Clock className="w-3 h-3" />
-                        {new Date(deed.occurred_at).toLocaleDateString('vi-VN')}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
         {/* TAB 2: LEDGER & INCIDENTS */}
         {activeTab === 'ledger' && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-amber-600" />
-                  Nhật Ký Sự Việc & Giao Dịch Sổ Điểm
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-6 shadow-xs space-y-5 font-sans">
+            {/* Header Info Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="space-y-1">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-amber-500 shrink-0" />
+                  <span>Sổ điểm & nhật ký sự việc</span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-xs font-extrabold">
+                    {filteredTransactions.length}
+                  </span>
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Minh bạch toàn bộ điểm thi đua, điểm thưởng và điểm cống hiến tập thể.
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Minh bạch toàn bộ biến động điểm thi đua, điểm thưởng và điểm cống hiến tập thể.
                 </p>
               </div>
 
               {/* Filter Ledger */}
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                <Filter className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 <select
                   value={ledgerFilter}
                   onChange={(e) => setLedgerFilter(e.target.value)}
-                  className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:border-amber-500"
+                  className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:border-amber-500 dark:focus:border-amber-500 transition-colors"
                 >
                   <option value="ALL">Tất cả sổ điểm</option>
                   <option value="STUDENT_MERIT">A. Điểm Thi đua</option>
@@ -596,62 +555,118 @@ export default function StudentCompetitionPage() {
               </div>
             </div>
 
-            {/* Transactions List */}
+            {/* Main Table / List Area */}
             {filteredTransactions.length === 0 ? (
-              <div className="py-12 text-center text-slate-400 text-xs">Chưa có giao dịch điểm nào.</div>
+              <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <FileText className="w-12 h-12 text-amber-500 mx-auto opacity-80" />
+                <h4 className="text-base font-bold text-slate-800 dark:text-slate-200">
+                  Hiện tại chưa ghi nhận Điểm/ Sự việc nào!
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                  {ledgerFilter === 'ALL'
+                    ? 'Lịch sử sự việc và biến động sổ điểm thi đua của đội viên hiện đang trống.'
+                    : 'Không tìm thấy giao dịch điểm trong phân loại sổ điểm đã chọn.'}
+                </p>
+              </div>
             ) : (
-              <div className="space-y-3">
-                {filteredTransactions.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-amber-200 transition"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                            tx.ledger_type === 'STUDENT_MERIT'
-                              ? 'bg-amber-100 text-amber-800'
-                              : tx.ledger_type === 'STUDENT_REWARD'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-emerald-100 text-emerald-800'
-                          }`}
-                        >
-                          {tx.ledger_type === 'STUDENT_MERIT'
-                            ? 'Thi đua'
-                            : tx.ledger_type === 'STUDENT_REWARD'
-                            ? 'Đổi quà'
-                            : 'Cống hiến lớp'}
-                        </span>
-                        <span className="text-xs text-slate-400 font-mono">
-                          {new Date(tx.effective_at).toLocaleString('vi-VN')}
-                        </span>
-                      </div>
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[760px]">
+                    <thead>
+                      <tr className="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        <th className="py-3 px-3.5 w-[140px]">Thời gian</th>
+                        <th className="py-3 px-3.5 w-[150px]">Loại sổ điểm</th>
+                        <th className="py-3 px-3.5 min-w-[220px]">Nội dung sự việc / Quy tắc</th>
+                        <th className="py-3 px-3.5 w-[130px] text-center">Biến động</th>
+                        <th className="py-3 px-3.5 w-[130px] text-center">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                      {filteredTransactions.map((tx) => {
+                        const effectiveDate = new Date(tx.effective_at);
+                        const timeStr = effectiveDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                        const dateStr = effectiveDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-                      <h4 className="font-bold text-slate-900 text-sm">{tx.incident_title || 'Giao dịch điểm'}</h4>
-                      {tx.rule_name && <p className="text-xs text-slate-500">Quy tắc: {tx.rule_name}</p>}
-                    </div>
+                        const ledgerBadge =
+                          tx.ledger_type === 'STUDENT_MERIT' ? (
+                            <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800">
+                              A. Thi đua
+                            </span>
+                          ) : tx.ledger_type === 'STUDENT_REWARD' ? (
+                            <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800">
+                              B. Đổi quà
+                            </span>
+                          ) : (
+                            <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
+                              C. Cống hiến lớp
+                            </span>
+                          );
 
-                    <div className="flex items-center gap-3 justify-between sm:justify-end">
-                      <span
-                        className={`text-base font-extrabold px-3 py-1 rounded-xl border ${
-                          tx.points >= 0
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}
-                      >
-                        {tx.points >= 0 ? `+${tx.points}` : tx.points} điểm
-                      </span>
+                        return (
+                          <tr
+                            key={tx.id}
+                            className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                          >
+                            {/* 1. Thời gian */}
+                            <td className="py-3.5 px-3.5 align-top">
+                              <div className="space-y-0.5">
+                                <div className="font-bold text-slate-900 dark:text-white">
+                                  {timeStr}
+                                </div>
+                                <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                  {dateStr}
+                                </div>
+                              </div>
+                            </td>
 
-                      <button
-                        onClick={() => handleOpenReviewModal(tx.incident_title || 'Giao dịch điểm', tx.incident_id, tx.id)}
-                        className="px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition flex items-center gap-1 shrink-0"
-                      >
-                        <HelpCircle className="w-3.5 h-3.5" /> Xem lại
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                            {/* 2. Loại sổ điểm */}
+                            <td className="py-3.5 px-3.5 align-top">
+                              {ledgerBadge}
+                            </td>
+
+                            {/* 3. Nội dung / Quy tắc */}
+                            <td className="py-3.5 px-3.5 align-top">
+                              <div className="space-y-1">
+                                <div className="font-bold text-slate-900 dark:text-white leading-snug">
+                                  {tx.incident_title || 'Giao dịch điểm'}
+                                </div>
+                                {tx.rule_name && (
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                    Quy tắc: <span className="text-slate-700 dark:text-slate-300 font-medium">{tx.rule_name}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* 4. Biến động */}
+                            <td className="py-3.5 px-3.5 align-top text-center">
+                              <span
+                                className={`inline-flex items-center justify-center px-2.5 py-1 rounded-xl text-xs font-mono font-extrabold border ${
+                                  tx.points >= 0
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                                }`}
+                              >
+                                {tx.points >= 0 ? `+${tx.points}` : tx.points} điểm
+                              </span>
+                            </td>
+
+                            {/* 5. Thao tác */}
+                            <td className="py-3.5 px-3.5 align-top text-center">
+                              <button
+                                onClick={() => handleOpenReviewModal(tx.incident_title || 'Giao dịch điểm', tx.incident_id, tx.id)}
+                                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 rounded-xl transition shrink-0"
+                              >
+                                <HelpCircle className="w-3.5 h-3.5" />
+                                <span>Xem lại</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
