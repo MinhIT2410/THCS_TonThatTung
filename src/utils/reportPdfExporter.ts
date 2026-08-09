@@ -97,6 +97,174 @@ export function buildReportPdfFileName(report: CompetitionWeeklyReport, isSnapsh
 }
 
 /**
+ * Converts OKLCH color strings or OKLCH expressions inside CSS strings into rgb(...) / rgba(...) format.
+ */
+export function oklchToRgb(oklchStr: string): string {
+  // Try browser Canvas2D context conversion
+  try {
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = 'rgba(0,0,0,0)';
+        ctx.fillStyle = oklchStr;
+        const computed = ctx.fillStyle;
+        if (computed && !computed.includes('oklch') && computed !== 'transparent' && computed !== 'rgba(0, 0, 0, 0)') {
+          return computed;
+        }
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  return parseOklchMath(oklchStr);
+}
+
+function parseOklchMath(oklchStr: string): string {
+  const match = oklchStr.match(/oklch\(([^)]+)\)/i);
+  if (!match) return oklchStr;
+
+  const raw = match[1].trim();
+  const parts = raw.split('/');
+  const colorPart = parts[0].trim();
+  const alphaPart = parts[1] ? parts[1].trim() : null;
+
+  const comps = colorPart.split(/\s+/).filter(Boolean);
+  if (comps.length < 3) return 'rgb(0,0,0)';
+
+  const L = parseCompValue(comps[0], true);
+  const C = parseCompValue(comps[1], false);
+  const H = parseCompValue(comps[2], false);
+
+  let alpha = 1;
+  if (alphaPart) {
+    if (alphaPart.endsWith('%')) {
+      alpha = parseFloat(alphaPart) / 100;
+    } else {
+      alpha = parseFloat(alphaPart);
+    }
+    if (isNaN(alpha)) alpha = 1;
+  }
+
+  // OKLCH -> OKLAB
+  const hRad = (H * Math.PI) / 180;
+  const a = C * Math.cos(hRad);
+  const b = C * Math.sin(hRad);
+
+  // OKLAB -> LMS
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+
+  const l = l_ * l_ * l_;
+  const m = m_ * m_ * m_;
+  const s = s_ * s_ * s_;
+
+  // LMS -> Linear sRGB
+  const rLin = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const gLin = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const bLin = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+
+  const toSRGB = (c: number) => {
+    const clamped = Math.max(0, c);
+    const gamma = clamped > 0.0031308 ? 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055 : 12.92 * clamped;
+    return Math.min(255, Math.max(0, Math.round(gamma * 255)));
+  };
+
+  const r = toSRGB(rLin);
+  const g = toSRGB(gLin);
+  const bComp = toSRGB(bLin);
+
+  if (alpha < 0.999) {
+    return `rgba(${r}, ${g}, ${bComp}, ${Number(alpha.toFixed(3))})`;
+  }
+  return `rgb(${r}, ${g}, ${bComp})`;
+}
+
+function parseCompValue(valStr: string, isLightness: boolean): number {
+  if (!valStr || valStr === 'none') return 0;
+  if (valStr.endsWith('%')) {
+    const val = parseFloat(valStr) / 100;
+    return isLightness ? val : val;
+  }
+  const val = parseFloat(valStr);
+  return isNaN(val) ? 0 : val;
+}
+
+export function replaceOklchInString(str: string): string {
+  if (!str || typeof str !== 'string' || !str.includes('oklch')) {
+    return str;
+  }
+  return str.replace(/oklch\(([^)]+)\)/gi, (match) => {
+    return oklchToRgb(match);
+  });
+}
+
+/**
+ * Sanitizes all OKLCH colors in the cloned document for html2canvas compatibility.
+ * Operates purely on the clone in memory during export.
+ */
+function sanitizeClonedDocColors(clonedDoc: Document, clonedElement: HTMLElement): void {
+  // 1. Sanitize <style> tags in cloned document
+  const styleTags = Array.from(clonedDoc.querySelectorAll('style'));
+  styleTags.forEach((styleTag) => {
+    if (styleTag.textContent && styleTag.textContent.includes('oklch')) {
+      styleTag.textContent = replaceOklchInString(styleTag.textContent);
+    }
+  });
+
+  // 2. Sanitize all elements in cloned document
+  const colorProps = [
+    'color',
+    'backgroundColor',
+    'borderColor',
+    'borderTopColor',
+    'borderRightColor',
+    'borderBottomColor',
+    'borderLeftColor',
+    'outlineColor',
+    'textDecorationColor',
+    'fill',
+    'stroke',
+    'boxShadow'
+  ] as const;
+
+  const win = clonedDoc.defaultView || window;
+  const allElements = Array.from(clonedDoc.querySelectorAll<HTMLElement>('*'));
+  allElements.push(clonedElement);
+
+  allElements.forEach((el) => {
+    // Check and sanitize inline style attribute if present
+    const styleAttr = el.getAttribute('style');
+    if (styleAttr && styleAttr.includes('oklch')) {
+      el.setAttribute('style', replaceOklchInString(styleAttr));
+    }
+
+    // Inspect computed style and convert/apply explicitly to inline style
+    try {
+      const computed = win.getComputedStyle(el);
+      colorProps.forEach((prop) => {
+        const val = computed.getPropertyValue(prop) || (computed as any)[prop];
+        if (val && typeof val === 'string') {
+          if (val.includes('oklch')) {
+            const sanitized = replaceOklchInString(val);
+            (el.style as any)[prop] = sanitized;
+          } else if (val.startsWith('rgb')) {
+            // Requirement 10: Use getComputedStyle rgb values directly on clone
+            (el.style as any)[prop] = val;
+          }
+        }
+      });
+    } catch {
+      // ignore computed style errors for pseudo-elements
+    }
+  });
+}
+
+/**
  * Unified PDF export function:
  * 1. Captures the exact DOM node of ReportDocument using html2canvas.
  * 2. Formats to standard A4 portrait (210mm x 297mm) with ~10mm margins.
@@ -156,6 +324,9 @@ export async function exportReportToPdf(
       scrollWrappers.forEach((wrapper) => {
         (wrapper as HTMLElement).style.overflow = 'visible';
       });
+
+      // Sanitize OKLCH colors on cloned DOM
+      sanitizeClonedDocColors(clonedDoc, element);
     }
   });
 
