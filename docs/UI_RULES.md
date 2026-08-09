@@ -167,3 +167,9 @@ Tất cả nút bấm phải có chiều cao rõ ràng, không viết padding t�
    Bắt buộc dùng Tailwind Utility Classes.
 8. **Không tự ý thêm thư viện UI mới:**  
    Chỉ sử dụng Tailwind CSS và Lucide React hiện có.
+9. **Quy tắc Bảo tồn Trạng thái Giao diện (State Persistence):**  
+   “Không được reset tab, subtab, filter hoặc view state hiện tại chỉ vì browser window/tab mất focus, visibility thay đổi hoặc dữ liệu được refetch. Khi người dùng quay lại tab trình duyệt, giao diện phải giữ nguyên ngữ cảnh đang sử dụng. Nếu project đã có persistence pattern hiện hữu thì phải tái sử dụng pattern đó, không tạo cơ chế mới cục bộ.”
+10. **Bảo toàn UI State khi Refetch dữ liệu:**  
+   “Refetch dữ liệu khi focus/visibilitychange được phép, nhưng refetch không được ghi đè state UI đang được người dùng lựa chọn.”
+11. Bảo toàn Component Tree khi Refetch quyền/xác thực:
+  “Khi dữ liệu profile/quyền đã có sẵn và hệ thống chỉ đang refetch hoặc refresh phiên đăng nhập ở nền, không được thay toàn bộ giao diện hiện tại bằng loading spinner khiến component bị unmount. Loading toàn màn hình chỉ dùng cho lần tải đầu tiên khi chưa có dữ liệu cần thiết. Background refetch phải giữ nguyên component tree và chỉ cập nhật dữ liệu khi hoàn tất.”

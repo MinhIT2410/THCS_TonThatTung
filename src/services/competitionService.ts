@@ -1940,6 +1940,8 @@ export const competitionService = {
       grade_name: report.grade_name,
       total_violations: report.total_violations,
       violation_stats: report.violation_stats || [],
+      class_report_rows: report.class_report_rows || [],
+      report_config: report.report_config || {},
       supervisor_notes: report.supervisor_notes || '',
       created_by: user?.id || report.created_by || null,
       creator_name: creatorName || 'Giám thị phụ trách',

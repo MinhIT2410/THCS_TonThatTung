@@ -39,6 +39,7 @@ import {
 } from '../../types/competition';
 import LoadingState from '../common/LoadingState';
 import EmptyState from '../common/EmptyState';
+import { ReportDocument } from './ReportDocument';
 
 interface SaveExportReportCardProps {
   allowedClassIds?: string[];
@@ -1183,162 +1184,14 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
               <p className="text-xs">{currentPeriodInfo.missingReason}</p>
             </div>
           ) : (
-            <div 
+            <ReportDocument 
               ref={printRef}
-              className="bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-xs border border-slate-200 space-y-6 max-w-4xl mx-auto font-sans"
-            >
-              {/* DOCUMENT HEADER */}
-              <div className="border-b-2 border-slate-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs">
-                <div className="text-center">
-                  <p className="font-bold uppercase tracking-wide text-slate-600">
-                    {reportConfig.parent_organization || 'PHÒNG GIÁO DỤC VÀ ĐÀO TẠO'}
-                  </p>
-                  <p className="font-bold text-slate-900 text-sm uppercase">
-                    {reportConfig.unit_name || 'BAN THI ĐƯA - ĐỘI GIÁM THỊ'}
-                  </p>
-                </div>
-                <div className="text-left sm:text-right text-slate-600 space-y-0.5">
-                  <p>Năm học: <strong className="text-slate-900">{currentYearInfo?.name || '2025-2026'}</strong></p>
-                  <p>Thời điểm lập: <strong>{new Date().toLocaleDateString('vi-VN')} {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</strong></p>
-                </div>
-              </div>
-
-              {/* REPORT TITLE */}
-              <div className="text-center space-y-1 py-2">
-                <h1 className="font-bold text-lg sm:text-xl text-slate-900 uppercase tracking-tight">
-                  {reportConfig.report_title || 'BIÊN BẢN TỔNG KẾT VI PHẠM THI ĐƯA'}
-                </h1>
-                <p className="text-xs font-semibold text-slate-600">
-                  {currentPeriodInfo.period_label} — {selectedGradeObj.name}
-                </p>
-              </div>
-
-              {/* METADATA SUMMARY BAR */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
-                <div>
-                  <span className="text-slate-500">Người lập báo cáo:</span>{' '}
-                  <strong className="text-slate-900">{currentUserFullName}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500">Phạm vi theo dõi:</span>{' '}
-                  <strong className="text-slate-900">{selectedGradeObj.name}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500">Tổng số lượt vi phạm:</span>{' '}
-                  <span className="inline-block px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">
-                    {totalViolationsCount} lượt
-                  </span>
-                </div>
-              </div>
-
-              {/* VIOLATIONS TABLE (STRUCTURED BY CLASS) */}
-              <div className="space-y-2">
-                <h4 className="font-bold text-xs uppercase text-slate-700 tracking-wider">
-                  {reportConfig.table_section_title || 'I. BẢNG THỐNG KÊ CHI TIẾT LỖI VI PHẠM THEO LỚP'}
-                </h4>
-
-                <div className="overflow-x-auto border border-slate-300 rounded-lg">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
-                        <th className="p-2.5 text-center w-10 border-r border-slate-300">STT</th>
-                        <th className="p-2.5 w-16 border-r border-slate-300">LỚP</th>
-                        <th className="p-2.5 w-40 border-r border-slate-300">GVCN</th>
-                        <th className="p-2.5 text-center w-16 border-r border-slate-300">SĨ SỐ</th>
-                        <th className="p-2.5">HS VI PHẠM / LỖI / SỐ LẦN / THỜI GIAN</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 text-slate-800">
-                      {classReportRows.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="p-4 text-center text-slate-500 italic">
-                            Không có dữ liệu lớp học phù hợp.
-                          </td>
-                        </tr>
-                      ) : (
-                        classReportRows.map((row) => (
-                          <tr key={row.class_id} className="hover:bg-slate-50/80 align-top">
-                            <td className="p-2.5 text-center font-bold text-slate-500 border-r border-slate-200">
-                              {row.stt}
-                            </td>
-                            <td className="p-2.5 font-bold text-slate-900 border-r border-slate-200">
-                              {row.class_name}
-                            </td>
-                            <td className="p-2.5 text-slate-700 font-medium border-r border-slate-200">
-                              {row.homeroom_teacher_name}
-                            </td>
-                            <td className="p-2.5 text-center text-slate-700 border-r border-slate-200 font-medium">
-                              {row.student_count}
-                            </td>
-                            <td className="p-2.5 leading-relaxed">
-                              {row.student_violations_groups.length === 0 ? (
-                                <span className="text-slate-400 italic">Không có vi phạm</span>
-                              ) : (
-                                <div className="space-y-2">
-                                  {row.student_violations_groups.map((sGroup, sIdx) => (
-                                    <div key={sIdx} className="space-y-0.5">
-                                      <div className="font-bold text-slate-900">
-                                        {sGroup.studentName}
-                                        {sGroup.studentCode ? <span className="font-normal text-slate-500 ml-1">({sGroup.studentCode})</span> : null}
-                                      </div>
-                                      <ul className="pl-3 space-y-0.5 list-disc text-slate-700 font-normal">
-                                        {sGroup.rules.map((r, rIdx) => (
-                                          <li key={rIdx}>
-                                            <span className="font-semibold text-slate-800">{r.ruleName}:</span>{' '}
-                                            <span className="font-bold text-rose-700">{r.count} lần</span> —{' '}
-                                            <span className="font-mono text-[11px] text-slate-600">{r.occurrencesStr}</span>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* SUPERVISOR NOTES / COMMENTS */}
-              <div className="space-y-2 pt-2">
-                <h4 className="font-bold text-xs uppercase text-slate-700 tracking-wider">
-                  {reportConfig.summary_section_title || 'II. NHẬN XÉT & TỔNG KẾT CỦA GIÁM THỊ'}
-                </h4>
-                <textarea
-                  value={supervisorNotes}
-                  onChange={(e) => setSupervisorNotes(e.target.value)}
-                  placeholder={reportConfig.summary_placeholder || 'Nhập đánh giá nề nếp, tuyên dương/nhắc nhở cụ thể cho các lớp trong kỳ...'}
-                  rows={3}
-                  className="w-full p-3 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-900 font-medium"
-                />
-              </div>
-
-              {/* SIGNATURE SECTION */}
-              <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-200 text-xs text-center">
-                <div className="space-y-12">
-                  <div>
-                    <p className="font-bold uppercase text-slate-700">
-                      {reportConfig.approver_title || 'BAN GIÁM HIỆU / XÁC NHẬN'}
-                    </p>
-                    <p className="text-[11px] text-slate-400">(Ký và ghi rõ họ tên)</p>
-                  </div>
-                  <p className="text-slate-300 italic">................................................</p>
-                </div>
-                <div className="space-y-12">
-                  <div>
-                    <p className="font-bold uppercase text-slate-700">
-                      {reportConfig.reporter_title || 'NGƯỜI LẬP BÁO CÁO'}
-                    </p>
-                    <p className="text-[11px] text-slate-400">(Ký và ghi rõ họ tên)</p>
-                  </div>
-                  <p className="font-bold text-slate-900">{currentUserFullName}</p>
-                </div>
-              </div>
-            </div>
+              report={currentSnapshotObject}
+              reportConfig={reportConfig}
+              editableNotes={true}
+              notesValue={supervisorNotes}
+              onNotesChange={setSupervisorNotes}
+            />
           )}
         </div>
       </div>
@@ -1433,10 +1286,10 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
 
       {/* DETAIL SNAPSHOT MODAL */}
       {selectedDetailReport && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-amber-600" />
                 <h3 className="font-bold text-base text-slate-900 dark:text-white">
@@ -1452,174 +1305,17 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
               </button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto space-y-6">
-              <div 
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              <ReportDocument 
                 ref={detailPrintRef}
-                className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 space-y-6 text-xs font-sans"
-              >
-                {/* Header from Snapshot or Fallback */}
-                <div className="border-b-2 border-slate-800 pb-3 flex justify-between items-center text-xs">
-                  <div className="text-center">
-                    <p className="font-bold uppercase text-slate-600">
-                      {selectedDetailReport.report_config?.parent_organization || reportConfig.parent_organization || 'PHÒNG GIÁO DỤC VÀ ĐÀO TẠO'}
-                    </p>
-                    <p className="font-bold text-slate-900 uppercase">
-                      {selectedDetailReport.report_config?.unit_name || reportConfig.unit_name || 'BAN THI ĐƯA - ĐỘI GIÁM THỊ'}
-                    </p>
-                  </div>
-                  <div className="text-right text-slate-600 space-y-0.5">
-                    <p>Năm học: <strong className="text-slate-900">{selectedDetailReport.academic_year_name}</strong></p>
-                    <p>Ngày lưu: <strong>{selectedDetailReport.created_at ? new Date(selectedDetailReport.created_at).toLocaleString('vi-VN') : '---'}</strong></p>
-                  </div>
-                </div>
-
-                <div className="text-center space-y-1">
-                  <h2 className="font-bold text-lg text-slate-900 uppercase">
-                    {selectedDetailReport.report_config?.report_title || reportConfig.report_title || 'BIÊN BẢN TỔNG KẾT VI PHẠM THI ĐƯA (SNAPSHOT LƯU TRỮ)'}
-                  </h2>
-                  <p className="font-semibold text-slate-600">
-                    {selectedDetailReport.period_label || selectedDetailReport.week_name} — {selectedDetailReport.grade_name}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded border border-slate-200">
-                  <div>
-                    <span className="text-slate-500">Người tạo:</span>{' '}
-                    <strong className="text-slate-900">{selectedDetailReport.creator_name}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Phạm vi:</span>{' '}
-                    <strong className="text-slate-900">{selectedDetailReport.grade_name}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Tổng vi phạm:</span>{' '}
-                    <span className="font-bold text-rose-600">{selectedDetailReport.total_violations} lượt</span>
-                  </div>
-                </div>
-
-                {/* TABLE IN SNAPSHOT */}
-                <div className="space-y-2">
-                  <h4 className="font-bold uppercase text-slate-700">
-                    {selectedDetailReport.report_config?.table_section_title || reportConfig.table_section_title || 'I. THỐNG KÊ LỖI VI PHẠM THEO LỚP'}
-                  </h4>
-
-                  {selectedDetailReport.class_report_rows && selectedDetailReport.class_report_rows.length > 0 ? (
-                    <div className="overflow-x-auto border border-slate-300 rounded-lg">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
-                            <th className="p-2.5 text-center w-10 border-r border-slate-300">STT</th>
-                            <th className="p-2.5 w-16 border-r border-slate-300">LỚP</th>
-                            <th className="p-2.5 w-40 border-r border-slate-300">GVCN</th>
-                            <th className="p-2.5 text-center w-16 border-r border-slate-300">SĨ SỐ</th>
-                            <th className="p-2.5">HS VI PHẠM / LỖI / SỐ LẦN / THỜI GIAN</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 text-slate-800">
-                          {selectedDetailReport.class_report_rows.map((row) => (
-                            <tr key={row.class_id} className="align-top">
-                              <td className="p-2.5 text-center font-bold text-slate-500 border-r border-slate-200">
-                                {row.stt}
-                              </td>
-                              <td className="p-2.5 font-bold text-slate-900 border-r border-slate-200">
-                                {row.class_name}
-                              </td>
-                              <td className="p-2.5 text-slate-700 font-medium border-r border-slate-200">
-                                {row.homeroom_teacher_name}
-                              </td>
-                              <td className="p-2.5 text-center text-slate-700 border-r border-slate-200 font-medium">
-                                {row.student_count}
-                              </td>
-                              <td className="p-2.5 leading-relaxed">
-                                {row.student_violations_groups.length === 0 ? (
-                                  <span className="text-slate-400 italic">Không có vi phạm</span>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {row.student_violations_groups.map((sGroup, sIdx) => (
-                                      <div key={sIdx} className="space-y-0.5">
-                                        <div className="font-bold text-slate-900">
-                                          {sGroup.studentName}
-                                          {sGroup.studentCode ? <span className="font-normal text-slate-500 ml-1">({sGroup.studentCode})</span> : null}
-                                        </div>
-                                        <ul className="pl-3 space-y-0.5 list-disc text-slate-700 font-normal">
-                                          {sGroup.rules.map((r, rIdx) => (
-                                            <li key={rIdx}>
-                                              <span className="font-semibold text-slate-800">{r.ruleName}:</span>{' '}
-                                              <span className="font-bold text-rose-700">{r.count} lần</span> —{' '}
-                                              <span className="font-mono text-[11px] text-slate-600">{r.occurrencesStr}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : selectedDetailReport.violation_stats && selectedDetailReport.violation_stats.length > 0 ? (
-                    <table className="w-full text-left border-collapse border border-slate-200">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                          <th className="p-2 text-center w-8">STT</th>
-                          <th className="p-2">Tên lỗi vi phạm</th>
-                          <th className="p-2 text-center w-20">Số lượt</th>
-                          <th className="p-2">Lớp vi phạm nhiều</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {selectedDetailReport.violation_stats.map((s, idx) => (
-                          <tr key={idx}>
-                            <td className="p-2 text-center text-slate-400">{idx + 1}</td>
-                            <td className="p-2 font-bold text-slate-900">{s.rule_name}</td>
-                            <td className="p-2 text-center font-bold text-rose-600">{s.count}</td>
-                            <td className="p-2 text-slate-700">{s.top_classes_str}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="text-slate-500 italic p-3 bg-slate-50 rounded border text-center">Không có vi phạm nào.</p>
-                  )}
-                </div>
-
-                <div className="space-y-1 pt-2">
-                  <h4 className="font-bold uppercase text-slate-700">
-                    {selectedDetailReport.report_config?.summary_section_title || reportConfig.summary_section_title || 'II. NHẬN XÉT CỦA GIÁM THỊ'}
-                  </h4>
-                  <div className="p-3 bg-slate-50 rounded border border-slate-200 text-slate-800 whitespace-pre-wrap min-h-[60px]">
-                    {selectedDetailReport.supervisor_notes || 'Không có nhận xét bổ sung.'}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-200 text-xs text-center">
-                  <div className="space-y-8">
-                    <div>
-                      <p className="font-bold uppercase text-slate-700">
-                        {selectedDetailReport.report_config?.approver_title || reportConfig.approver_title || 'BAN GIÁM HIỆU / XÁC NHẬN'}
-                      </p>
-                      <p className="text-[11px] text-slate-400">(Ký và ghi rõ họ tên)</p>
-                    </div>
-                  </div>
-                  <div className="space-y-8">
-                    <div>
-                      <p className="font-bold uppercase text-slate-700">
-                        {selectedDetailReport.report_config?.reporter_title || reportConfig.reporter_title || 'NGƯỜI LẬP BÁO CÁO'}
-                      </p>
-                      <p className="text-[11px] text-slate-400">(Ký và ghi rõ họ tên)</p>
-                    </div>
-                    <p className="font-bold text-slate-900">{selectedDetailReport.creator_name}</p>
-                  </div>
-                </div>
-              </div>
+                report={selectedDetailReport}
+                isSnapshot={true}
+              />
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setSelectedDetailReport(null)}

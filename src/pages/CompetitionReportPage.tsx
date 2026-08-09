@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { 
   BarChart3, 
   ArrowLeft, 
@@ -20,13 +20,31 @@ import ViolationStatisticsCard from '../components/competition/ViolationStatisti
 import SaveExportReportCard from '../components/competition/SaveExportReportCard';
 
 export default function CompetitionReportPage() {
-  const { user, isAuthenticated, loading, profileLoading, hasAnyRole } = useAuth();
+  const { user, profile, isAuthenticated, loading, profileLoading, hasAnyRole } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
   const [checkingPermission, setCheckingPermission] = useState(true);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [activeReportTab, setActiveReportTab] = useState<'weekly' | 'statistics' | 'save-export'>('weekly');
+
+  const initialTab = (tabParam === 'statistics' || tabParam === 'save-export' || tabParam === 'weekly') ? tabParam : 'weekly';
+  const [activeReportTab, setActiveReportTab] = useState<'weekly' | 'statistics' | 'save-export'>(initialTab);
 
   useEffect(() => {
-    if (loading || profileLoading) return;
+    if (tabParam && ['weekly', 'statistics', 'save-export'].includes(tabParam)) {
+      if (tabParam !== activeReportTab) {
+        setActiveReportTab(tabParam as 'weekly' | 'statistics' | 'save-export');
+      }
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tab: 'weekly' | 'statistics' | 'save-export') => {
+    setActiveReportTab(tab);
+    setSearchParams({ tab });
+  };
+
+  useEffect(() => {
+    if (loading || (isAuthenticated && !profile && profileLoading)) return;
 
     if (!isAuthenticated || !user) {
       setHasPermission(false);
@@ -36,7 +54,9 @@ export default function CompetitionReportPage() {
 
     async function checkReportPermission() {
       try {
-        setCheckingPermission(true);
+        if (hasPermission === null) {
+          setCheckingPermission(true);
+        }
 
         // 1. Direct roles
         const isAuthorizedByRole = hasAnyRole([
@@ -85,8 +105,8 @@ export default function CompetitionReportPage() {
     checkReportPermission();
   }, [user, isAuthenticated, loading, profileLoading, hasAnyRole]);
 
-  // Loading state
-  if (loading || profileLoading || (isAuthenticated && checkingPermission)) {
+  // Loading state: Only show initial spinner if profile is not loaded or permission hasn't been determined yet
+  if (loading || (isAuthenticated && !profile && profileLoading) || (hasPermission === null && checkingPermission)) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3 font-sans">
         <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -175,7 +195,7 @@ export default function CompetitionReportPage() {
       <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto no-scrollbar sm:grid sm:grid-cols-3">
         <button
           type="button"
-          onClick={() => setActiveReportTab('weekly')}
+          onClick={() => handleTabChange('weekly')}
           className={`h-10 px-4 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
             activeReportTab === 'weekly'
               ? 'bg-red-600 text-white shadow-xs font-bold'
@@ -187,7 +207,7 @@ export default function CompetitionReportPage() {
 
         <button
           type="button"
-          onClick={() => setActiveReportTab('statistics')}
+          onClick={() => handleTabChange('statistics')}
           className={`h-10 px-4 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
             activeReportTab === 'statistics'
               ? 'bg-red-600 text-white shadow-xs font-bold'
@@ -199,7 +219,7 @@ export default function CompetitionReportPage() {
 
         <button
           type="button"
-          onClick={() => setActiveReportTab('save-export')}
+          onClick={() => handleTabChange('save-export')}
           className={`h-10 px-4 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
             activeReportTab === 'save-export'
               ? 'bg-red-600 text-white shadow-xs font-bold'

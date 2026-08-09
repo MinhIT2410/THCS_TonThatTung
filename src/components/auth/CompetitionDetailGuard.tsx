@@ -21,9 +21,9 @@ interface CompetitionDetailGuardProps {
 }
 
 export const CompetitionDetailGuard: React.FC<CompetitionDetailGuardProps> = ({ children }) => {
-  const { isAuthenticated, loading, profileLoading, hasAnyRole } = useAuth();
+  const { isAuthenticated, profile, loading, profileLoading, hasAnyRole } = useAuth();
 
-  if (loading || profileLoading) {
+  if (loading || (isAuthenticated && !profile && profileLoading)) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center font-sans text-xs">
         <div className="flex flex-col items-center space-y-2">

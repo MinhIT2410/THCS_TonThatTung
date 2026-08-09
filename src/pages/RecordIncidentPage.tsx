@@ -13,22 +13,25 @@ import { ROUTES } from '../config/routes';
 import CompetitionIncidentForm from '../components/competition/CompetitionIncidentForm';
 
 export default function RecordIncidentPage() {
-  const { user, isAuthenticated, loading, profileLoading, hasAnyRole } = useAuth();
+  const { user, profile, isAuthenticated, loading, profileLoading, hasAnyRole } = useAuth();
   const [checkingPermission, setCheckingPermission] = useState(true);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
   useEffect(() => {
     // Wait until auth state is resolved
-    if (loading || profileLoading) return;
+    if (loading || (isAuthenticated && !profile && profileLoading)) return;
 
     if (!isAuthenticated || !user) {
+      setHasPermission(false);
       setCheckingPermission(false);
       return;
     }
 
     async function checkPermission() {
       try {
-        setCheckingPermission(true);
+        if (hasPermission === null) {
+          setCheckingPermission(true);
+        }
 
         // 1. Roles check: Admin/Principal/Vice Principal/Content Editor/Competition Record
         const hasDirectRole = hasAnyRole([
@@ -85,7 +88,7 @@ export default function RecordIncidentPage() {
   }, [user, isAuthenticated, loading, profileLoading, hasAnyRole]);
 
   // If initial auth is loading or permission checking in progress
-  if (loading || profileLoading || (isAuthenticated && checkingPermission)) {
+  if (loading || (isAuthenticated && !profile && profileLoading) || (hasPermission === null && checkingPermission)) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3">
         <Loader2 className="w-8 h-8 text-red-600 animate-spin" />

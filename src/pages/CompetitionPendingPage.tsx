@@ -17,12 +17,12 @@ import { ROUTES } from '../config/routes';
 import PendingIncidentsTab from '../components/admin/competition/PendingIncidentsTab';
 
 export default function CompetitionPendingPage() {
-  const { user, isAuthenticated, loading, profileLoading, hasAnyRole } = useAuth();
+  const { user, profile, isAuthenticated, loading, profileLoading, hasAnyRole } = useAuth();
   const [checkingPermission, setCheckingPermission] = useState(true);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (loading || profileLoading) return;
+    if (loading || (isAuthenticated && !profile && profileLoading)) return;
 
     if (!isAuthenticated || !user) {
       setHasPermission(false);
@@ -32,7 +32,9 @@ export default function CompetitionPendingPage() {
 
     async function checkApprovalPermission() {
       try {
-        setCheckingPermission(true);
+        if (hasPermission === null) {
+          setCheckingPermission(true);
+        }
 
         // 1. Check direct role rights
         const isAuthorizedByRole = hasAnyRole([
@@ -83,7 +85,7 @@ export default function CompetitionPendingPage() {
   }, [user, isAuthenticated, loading, profileLoading, hasAnyRole]);
 
   // If loading auth or checking permissions
-  if (loading || profileLoading || (isAuthenticated && checkingPermission)) {
+  if (loading || (isAuthenticated && !profile && profileLoading) || (hasPermission === null && checkingPermission)) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3">
         <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
