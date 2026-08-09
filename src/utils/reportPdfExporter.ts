@@ -55,13 +55,41 @@ function formatDateDDMMYYYY(dateStr?: string): string {
 }
 
 /**
+ * Normalizes and removes duplicated prefixes like "Tuần 1: Tuần 1: ..." in period labels.
+ */
+export function cleanPeriodLabel(str?: string): string {
+  if (!str) return '';
+  let cleaned = str;
+  cleaned = cleaned.replace(/(Tuần\s*\d+)\s*:\s*\1\s*:/gi, '$1:');
+  cleaned = cleaned.replace(/(Tuần\s*\d+)\s*:\s*\1\b/gi, '$1');
+  return cleaned.trim();
+}
+
+/**
+ * Helper to extract clean week name part e.g. "Tuan-1" from report fields.
+ */
+function extractWeekNamePart(report: CompetitionWeeklyReport): string {
+  if ((report as any).week_number) {
+    return `Tuan-${(report as any).week_number}`;
+  }
+  const raw = cleanPeriodLabel(report.week_name || report.period_label || '');
+  const match = raw.match(/Tuần\s*(\d+)/i);
+  if (match) {
+    return `Tuan-${match[1]}`;
+  }
+  const stripped = raw.split(':')[0].replace(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}.*/, '');
+  const sanitized = sanitizeFileNamePart(stripped);
+  return sanitized || 'Tuan';
+}
+
+/**
  * Builds a standardized, clean, Vietnamese-friendly filename for competition reports.
  * 
  * Examples:
- * - Weekly: Bien-ban-thi-dua_Tuan-1_Tat-ca-khoi_03-08-2026_09-08-2026.pdf
- * - Monthly: Bien-ban-thi-dua_Thang-08-2026_Khoi-6.pdf
- * - Semester: Bien-ban-thi-dua_Hoc-ky-I_2025-2026_Tat-ca-khoi.pdf
- * - Year: Bien-ban-thi-dua_Nam-hoc-2025-2026_Tat-ca-khoi.pdf
+ * - Weekly: Bien-ban-thi-dua_Luu-tru_Khoi-6_Tuan-1_03-08-2026-09-08-2026.pdf
+ * - Monthly: Bien-ban-thi-dua_Khoi-6_Thang-08-2026.pdf
+ * - Semester: Bien-ban-thi-dua_Khoi-6_Hoc-ky-I_2025-2026.pdf
+ * - Year: Bien-ban-thi-dua_Khoi-6_Nam-hoc-2025-2026.pdf
  */
 export function buildReportPdfFileName(report: CompetitionWeeklyReport, isSnapshot = false): string {
   const gradePart = sanitizeFileNamePart(report.grade_name || 'Tat-ca-khoi');
@@ -69,27 +97,27 @@ export function buildReportPdfFileName(report: CompetitionWeeklyReport, isSnapsh
   let periodPart = '';
 
   if (periodType === 'WEEK') {
-    const weekName = sanitizeFileNamePart(report.week_name || report.period_label || 'Tuan');
+    const weekPart = extractWeekNamePart(report);
     const startDate = formatDateDDMMYYYY(report.period_start);
     const endDate = formatDateDDMMYYYY(report.period_end);
     if (startDate && endDate) {
-      periodPart = `${weekName}_${gradePart}_${startDate}_${endDate}`;
+      periodPart = `${gradePart}_${weekPart}_${startDate}-${endDate}`;
     } else {
-      periodPart = `${weekName}_${gradePart}`;
+      periodPart = `${gradePart}_${weekPart}`;
     }
   } else if (periodType === 'MONTH') {
-    const monthLabel = sanitizeFileNamePart(report.period_label || 'Thang');
-    periodPart = `${monthLabel}_${gradePart}`;
+    const monthLabel = sanitizeFileNamePart(cleanPeriodLabel(report.period_label) || 'Thang');
+    periodPart = `${gradePart}_${monthLabel}`;
   } else if (periodType === 'SEMESTER') {
-    const semLabel = sanitizeFileNamePart(report.period_label || 'Hoc-ky-I');
+    const semLabel = sanitizeFileNamePart(cleanPeriodLabel(report.period_label) || 'Hoc-ky-I');
     const yearLabel = sanitizeFileNamePart(report.academic_year_name || '2025-2026');
-    periodPart = `${semLabel}_${yearLabel}_${gradePart}`;
+    periodPart = `${gradePart}_${semLabel}_${yearLabel}`;
   } else if (periodType === 'YEAR') {
-    const yearLabel = sanitizeFileNamePart(report.academic_year_name || report.period_label || '2025-2026');
-    periodPart = `Nam-hoc-${yearLabel}_${gradePart}`;
+    const yearLabel = sanitizeFileNamePart(report.academic_year_name || cleanPeriodLabel(report.period_label) || '2025-2026');
+    periodPart = `${gradePart}_Nam-hoc-${yearLabel}`;
   } else {
-    const customLabel = sanitizeFileNamePart(report.period_label || report.week_name || 'Bao-cao');
-    periodPart = `${customLabel}_${gradePart}`;
+    const customLabel = sanitizeFileNamePart(cleanPeriodLabel(report.period_label || report.week_name) || 'Bao-cao');
+    periodPart = `${gradePart}_${customLabel}`;
   }
 
   const prefix = isSnapshot ? 'Bien-ban-thi-dua_Luu-tru' : 'Bien-ban-thi-dua';

@@ -12,6 +12,7 @@ import {
   CompetitionReportConfig, 
   DEFAULT_COMPETITION_REPORT_CONFIG 
 } from '../../services/competitionReportConfigService';
+import { cleanPeriodLabel } from '../../utils/reportPdfExporter';
 
 export interface ReportDocumentProps {
   report: CompetitionWeeklyReport;
@@ -77,7 +78,7 @@ export const ReportDocument = forwardRef<HTMLDivElement, ReportDocumentProps>(({
           {config.report_title}
         </h1>
         <p className="text-xs font-semibold text-slate-600">
-          {report.period_label || report.week_name} — {report.grade_name}
+          {cleanPeriodLabel(report.period_label || report.week_name)} — {report.grade_name}
         </p>
       </div>
 

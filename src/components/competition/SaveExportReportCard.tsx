@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
 import { useAuth } from '../../contexts/AuthContext';
-import { exportReportToPdf } from '../../utils/reportPdfExporter';
+import { exportReportToPdf, cleanPeriodLabel } from '../../utils/reportPdfExporter';
 import { competitionService } from '../../services/competitionService';
 import { 
   competitionReportConfigService, 
@@ -375,12 +375,17 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
         }
 
         // Process Weeks
-        const formattedWeeks: PeriodOption[] = (weeksData || []).map(w => ({
-          id: w.id,
-          name: `Tuần ${w.week_number}: ${w.name}`,
-          starts_on: w.starts_on,
-          ends_on: w.ends_on
-        }));
+        const formattedWeeks: PeriodOption[] = (weeksData || []).map(w => {
+          const weekLabel = w.name
+            ? (w.name.toLowerCase().includes('tuần') ? w.name : `Tuần ${w.week_number || ''}: ${w.name}`.trim())
+            : `Tuần ${w.week_number || ''}`;
+          return {
+            id: w.id,
+            name: weekLabel,
+            starts_on: w.starts_on,
+            ends_on: w.ends_on
+          };
+        });
         setWeekOptions(formattedWeeks);
 
         if (formattedWeeks.length > 0) {
@@ -1250,7 +1255,7 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
                       {getPeriodTypeBadge(rep.period_type)}
                     </td>
                     <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
-                      {rep.period_label || rep.week_name}
+                      {cleanPeriodLabel(rep.period_label || rep.week_name)}
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{rep.grade_name}</td>
                     <td className="px-4 py-3 text-center font-bold text-rose-600">{rep.total_violations} lượt</td>
@@ -1305,7 +1310,7 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-amber-600" />
                 <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                  Chi tiết Báo cáo Snapshot ({selectedDetailReport.period_label || selectedDetailReport.week_name} - {selectedDetailReport.grade_name})
+                  Báo cáo {selectedDetailReport.grade_name} ({cleanPeriodLabel(selectedDetailReport.period_label || selectedDetailReport.week_name)})
                 </h3>
               </div>
               <button
