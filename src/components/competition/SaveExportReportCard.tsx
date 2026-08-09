@@ -283,6 +283,10 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
   const printRef = useRef<HTMLDivElement>(null);
   const detailPrintRef = useRef<HTMLDivElement>(null);
 
+  // Dedicated off-screen container ref for stable history PDF export
+  const [historyReportToExport, setHistoryReportToExport] = useState<CompetitionWeeklyReport | null>(null);
+  const hiddenPrintRef = useRef<HTMLDivElement>(null);
+
   // Listen for CMS config changes
   useEffect(() => {
     async function syncConfig() {
@@ -821,7 +825,12 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
 
   // EXPORT PDF ACTION
   const generatePdfFromElement = async (targetElement: HTMLElement | null, fileName: string) => {
-    if (!targetElement) return;
+    if (!targetElement) {
+      console.error('[Export PDF Error] targetElement is null or undefined');
+      setErrorToast('Không tìm thấy nội dung báo cáo để xuất PDF.');
+      setTimeout(() => setErrorToast(null), 4000);
+      return;
+    }
 
     try {
       setExportingPdf(true);
@@ -829,31 +838,88 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
       const canvas = await html2canvas(targetElement, {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: targetElement.scrollWidth || 800,
+        windowHeight: targetElement.scrollHeight,
+        onclone: (clonedDoc, element) => {
+          // Force solid background and dark text for clean document layout
+          element.style.backgroundColor = '#ffffff';
+          element.style.color = '#0f172a';
+          element.style.width = '800px';
+          element.style.maxWidth = 'none';
+          element.style.margin = '0';
+          element.style.padding = '24px';
+
+          // Replace textareas with div elements to render user-edited content cleanly
+          const textareas = element.querySelectorAll('textarea');
+          textareas.forEach((ta) => {
+            const div = clonedDoc.createElement('div');
+            div.className = ta.className;
+            div.style.whiteSpace = 'pre-wrap';
+            div.style.minHeight = '60px';
+            div.innerText = (ta as HTMLTextAreaElement).value || (ta as HTMLTextAreaElement).placeholder || 'Không có nhận xét bổ sung.';
+            if (ta.parentNode) {
+              ta.parentNode.replaceChild(div, ta);
+            }
+          });
+
+          // Unclip table horizontal scroll wrappers so full table width is rendered
+          const scrollWrappers = element.querySelectorAll('.overflow-x-auto');
+          scrollWrappers.forEach((wrapper) => {
+            (wrapper as HTMLElement).style.overflow = 'visible';
+          });
+        }
       });
 
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
 
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
+      // A4 dimensions: 210mm x 297mm
+      // Margins: 10mm top, 10mm bottom, 10mm left, 10mm right -> Printable area: 190mm x 277mm
+      const margin = 10;
+      const pdfPrintWidth = 190;
+      const pdfPrintHeight = 277;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      const sliceCanvasHeight = Math.floor((canvas.width * pdfPrintHeight) / pdfPrintWidth);
+      let currentY = 0;
+      let pageIndex = 0;
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      while (currentY < canvas.height) {
+        const currentSliceHeight = Math.min(sliceCanvasHeight, canvas.height - currentY);
+
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = currentSliceHeight;
+
+        const ctx = pageCanvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0, currentY, canvas.width, currentSliceHeight,
+            0, 0, canvas.width, currentSliceHeight
+          );
+        }
+
+        const pageImgData = pageCanvas.toDataURL('image/png');
+        const pagePdfHeight = (currentSliceHeight * pdfPrintWidth) / canvas.width;
+
+        if (pageIndex > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(pageImgData, 'PNG', margin, margin, pdfPrintWidth, pagePdfHeight);
+
+        currentY += sliceCanvasHeight;
+        pageIndex++;
       }
 
       pdf.save(fileName);
@@ -861,7 +927,7 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
       setSuccessToast('Đã xuất file PDF báo cáo thành công!');
       setTimeout(() => setSuccessToast(null), 3000);
     } catch (e: any) {
-      console.error('Lỗi khi xuất PDF:', e);
+      console.error('[Export PDF Error] Failure during PDF generation:', e);
       setErrorToast('Không thể tạo file PDF. Vui lòng thử lại.');
       setTimeout(() => setErrorToast(null), 4000);
     } finally {
@@ -875,21 +941,72 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
       setTimeout(() => setErrorToast(null), 4000);
       return;
     }
-    const safePeriodStr = (currentPeriodInfo.period_label || 'Bao_cao').replace(/[^a-zA-Z0-9]/g, '_');
-    const safeGradeStr = selectedGradeObj.name.replace(/[^a-zA-Z0-9]/g, '_');
-    const fileName = `Bien_ban_${safePeriodStr}_${safeGradeStr}.pdf`;
+
+    if (!printRef.current) {
+      console.error('[Export Live PDF Error] printRef.current is null');
+      setErrorToast('Không tìm thấy vùng dữ liệu báo cáo xem trước.');
+      setTimeout(() => setErrorToast(null), 4000);
+      return;
+    }
+
+    const periodLabel = currentPeriodInfo.period_label || 'Bao_cao';
+    const gradeName = selectedGradeObj.name || 'Tat_ca_khoi';
+    const dateStr = new Date().toISOString().split('T')[0];
+    const cleanPeriod = periodLabel.replace(/[\/\s]+/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '');
+    const cleanGrade = gradeName.replace(/[\/\s]+/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '');
+    const fileName = `Bao-cao-thi-dua_${cleanPeriod}_${cleanGrade}_${dateStr}.pdf`;
+
     generatePdfFromElement(printRef.current, fileName);
   };
 
   const handleExportHistoryPdf = (rep: CompetitionWeeklyReport) => {
-    setSelectedDetailReport(rep);
-    setTimeout(() => {
-      const safePeriodStr = (rep.period_label || rep.week_name || 'Bao_cao').replace(/[^a-zA-Z0-9]/g, '_');
-      const safeGradeStr = (rep.grade_name || 'Khoi').replace(/[^a-zA-Z0-9]/g, '_');
-      const fileName = `Bien_ban_Luu_tru_${safePeriodStr}_${safeGradeStr}.pdf`;
-      generatePdfFromElement(detailPrintRef.current, fileName);
-    }, 150);
+    setHistoryReportToExport(rep);
   };
+
+  useEffect(() => {
+    if (!historyReportToExport) return;
+
+    let isMounted = true;
+
+    const runExport = async () => {
+      // Small delay to allow off-screen element to render completely
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      if (!isMounted) return;
+
+      if (!hiddenPrintRef.current) {
+        console.error('[Export History PDF Error] hiddenPrintRef.current is null');
+        setErrorToast('Không tìm thấy vùng dữ liệu mẫu báo cáo đã lưu.');
+        setTimeout(() => setErrorToast(null), 4000);
+        setHistoryReportToExport(null);
+        return;
+      }
+
+      const periodLabel = historyReportToExport.period_label || historyReportToExport.week_name || 'Bao_cao';
+      const gradeName = historyReportToExport.grade_name || 'Tat_ca_khoi';
+      const dateStr = historyReportToExport.created_at
+        ? new Date(historyReportToExport.created_at).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0];
+
+      const cleanPeriod = periodLabel.replace(/[\/\s]+/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '');
+      const cleanGrade = gradeName.replace(/[\/\s]+/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '');
+      const fileName = `Bao-cao-thi-dua_Luu-tru_${cleanPeriod}_${cleanGrade}_${dateStr}.pdf`;
+
+      try {
+        await generatePdfFromElement(hiddenPrintRef.current, fileName);
+      } finally {
+        if (isMounted) {
+          setHistoryReportToExport(null);
+        }
+      }
+    };
+
+    runExport();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [historyReportToExport]);
 
   // DELETE REPORT ACTION
   const handleDeleteReport = async (repId: string) => {
@@ -1336,6 +1453,20 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
           </div>
         </div>
       )}
+
+      {/* OFF-SCREEN CONTAINER FOR STABLE HISTORY PDF EXPORT */}
+      <div 
+        aria-hidden="true"
+        className="fixed -left-[9999px] top-0 w-[800px] bg-white pointer-events-none opacity-0"
+      >
+        {historyReportToExport && (
+          <ReportDocument 
+            ref={hiddenPrintRef}
+            report={historyReportToExport}
+            isSnapshot={true}
+          />
+        )}
+      </div>
     </div>
   );
 }
