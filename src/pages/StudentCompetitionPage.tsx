@@ -25,6 +25,7 @@ import {
   FileText,
   ChevronRight,
   Filter,
+  Search,
 } from 'lucide-react';
 import { competitionService } from '../services/competitionService';
 import {
@@ -85,8 +86,50 @@ export default function StudentCompetitionPage() {
   const [reviewReason, setReviewReason] = useState<string>('');
   const [reviewEvidenceUrl, setReviewEvidenceUrl] = useState<string>('');
 
-  const [searchParams] = useSearchParams();
+  // Student search modal states
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  const [studentSearchResults, setStudentSearchResults] = useState<any[]>([]);
+  const [isSearchingStudents, setIsSearchingStudents] = useState(false);
+
+  const [searchParams, setSearchParams] = useSearchParams();
   const paramStudentId = searchParams.get('studentId') || searchParams.get('id') || undefined;
+
+  useEffect(() => {
+    if (!studentSearchTerm || studentSearchTerm.trim().length < 2) {
+      setStudentSearchResults([]);
+      setIsSearchingStudents(false);
+      return;
+    }
+
+    let isMounted = true;
+    const timer = setTimeout(async () => {
+      try {
+        setIsSearchingStudents(true);
+        const results = await competitionService.searchStudents(studentSearchTerm);
+        if (isMounted) {
+          setStudentSearchResults(results || []);
+        }
+      } catch (err) {
+        console.error('Lỗi tra cứu đội viên:', err);
+        if (isMounted) setStudentSearchResults([]);
+      } finally {
+        if (isMounted) setIsSearchingStudents(false);
+      }
+    }, 300);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [studentSearchTerm]);
+
+  const handleSelectStudentFromSearch = (studentId: string) => {
+    setSearchParams({ studentId });
+    setShowSearchModal(false);
+    setStudentSearchTerm('');
+    setStudentSearchResults([]);
+  };
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -284,7 +327,16 @@ export default function StudentCompetitionPage() {
                   : 'Không tìm thấy hồ sơ thi đua phù hợp trong hệ thống.'}
               </p>
             </div>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+              {isTeacherOrAbove && (
+                <button
+                  onClick={() => setShowSearchModal(true)}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors shadow-xs"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Tra cứu Đội viên</span>
+                </button>
+              )}
               <Link
                 to={ROUTES.COMPETITION}
                 className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors"
@@ -336,13 +388,25 @@ export default function StudentCompetitionPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={loadData}
-                  className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-xl transition backdrop-blur-md border border-white/30 flex items-center gap-1.5 self-start md:self-auto"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                  Cập nhật dữ liệu
-                </button>
+                <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+                  {isTeacherOrAbove && (
+                    <button
+                      onClick={() => setShowSearchModal(true)}
+                      className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-xl transition backdrop-blur-md border border-white/30 flex items-center gap-1.5"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      <span>Tìm kiếm</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => loadData()}
+                    className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-xl transition backdrop-blur-md border border-white/30 flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                    <span>Cập nhật dữ liệu</span>
+                  </button>
+                </div>
               </div>
 
               {/* 3 Mandated Separated Values Bar - Compact 1-line view on desktop */}
@@ -1017,6 +1081,140 @@ export default function StudentCompetitionPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tra Cứu Đội Viên */}
+      {showSearchModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col font-sans">
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
+                  <Search className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                    Tra cứu hồ sơ Đội viên
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Tìm kiếm theo tên hoặc mã số đội viên để xem hồ sơ
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSearchModal(false);
+                  setStudentSearchTerm('');
+                  setStudentSearchResults([]);
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Nhập tên hoặc mã đội viên (vd: Nguyễn Văn A, DV01)..."
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                  className="w-full h-10 pl-10 pr-9 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                />
+                {studentSearchTerm && (
+                  <button
+                    onClick={() => setStudentSearchTerm('')}
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Results */}
+              {isSearchingStudents ? (
+                <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400 space-y-2">
+                  <RefreshCw className="w-5 h-5 animate-spin mx-auto text-amber-500" />
+                  <p>Đang tìm kiếm đội viên...</p>
+                </div>
+              ) : studentSearchTerm.trim().length > 0 && studentSearchTerm.trim().length < 2 ? (
+                <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-4">
+                  Vui lòng nhập ít nhất 2 ký tự để bắt đầu tìm kiếm.
+                </p>
+              ) : studentSearchResults.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Kết quả tìm kiếm ({studentSearchResults.length}):
+                  </p>
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                    {studentSearchResults.map((student) => (
+                      <button
+                        key={student.id}
+                        onClick={() => handleSelectStudentFromSearch(student.id)}
+                        className="w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors flex items-center justify-between gap-3 group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold flex items-center justify-center shrink-0 text-xs overflow-hidden border border-amber-200 dark:border-amber-800">
+                            {student.avatar_url ? (
+                              <img src={student.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              (student.full_name || 'ĐV').substring(0, 2).toUpperCase()
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                              {student.full_name}
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                              Mã ĐV: <span className="font-mono text-slate-700 dark:text-slate-300">{student.student_code || '---'}</span>
+                              {student.class_name && (
+                                <span className="ml-2 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                                  Lớp {student.class_name}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 shrink-0 group-hover:underline flex items-center gap-1">
+                          Xem hồ sơ <ChevronRight className="w-3.5 h-3.5" />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : studentSearchTerm.trim().length >= 2 ? (
+                <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                  <p className="font-semibold text-slate-700 dark:text-slate-300">Không tìm thấy đội viên phù hợp</p>
+                  <p>Thử tìm theo từ khóa tên hoặc mã số đội viên khác.</p>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
+                  Nhập tên hoặc mã đội viên để tìm kiếm.
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSearchModal(false);
+                  setStudentSearchTerm('');
+                  setStudentSearchResults([]);
+                }}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

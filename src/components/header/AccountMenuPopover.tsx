@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User as UserIcon, Home, Shield, LogOut, Key, Settings, CheckCircle2, XCircle } from 'lucide-react';
+import { User as UserIcon, UserCircle, Shield, LogOut, Key, Settings, CheckCircle2, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../../features/auth/AuthContext';
 import { getRoleLabel, getRoleColorClass, canAccessAdmin } from './accountRoleLabels';
@@ -193,16 +193,16 @@ export const AccountMenuPopover: React.FC<AccountMenuPopoverProps> = ({
 
       {/* B. Action Items Section */}
       <div className="pt-2.5 space-y-1">
-        {/* Home (Trang chủ) */}
+        {/* Profile (Hồ sơ cá nhân) */}
         <button
           ref={(el) => { if (el) menuItemsRef.current[0] = el; }}
           role="menuitem"
           onKeyDown={(e) => handleMenuKeyDown(e, 0)}
-          onClick={() => handleAction(() => navigate(ROUTES.HOME))}
+          onClick={() => handleAction(() => navigate(ROUTES.COMPETITION_STUDENT))}
           className="flex w-full items-center space-x-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 hover:text-blue-600 dark:hover:text-blue-400 focus:bg-blue-50/50 dark:focus:bg-blue-950/30 focus:text-blue-600 dark:focus:text-blue-400 outline-none transition-colors"
         >
-          <Home className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
-          <span>Trang chủ</span>
+          <UserCircle className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
+          <span>Hồ sơ cá nhân</span>
         </button>
 
         {/* Admin Area (Khu vực quản trị) - conditional */}
