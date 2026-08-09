@@ -141,16 +141,25 @@ interface TopStudent {
 
 export default function CompetitionOverviewPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, hasAnyRole } = useAuth();
+  const { isAuthenticated, hasAnyRole, hasRole, role, roles } = useAuth();
 
-  const canViewDetails = isAuthenticated && hasAnyRole([
-    'SUPER_ADMIN',
-    'PRINCIPAL',
-    'VICE_PRINCIPAL',
-    'CONTENT_EDITOR',
-    'STAFF',
-    'TEACHER',
-  ]);
+  const isStudentRole = Boolean(
+    isAuthenticated &&
+    (hasRole('STUDENT') || role === 'STUDENT' || (Array.isArray(roles) && roles.includes('STUDENT')) || hasAnyRole(['STUDENT']))
+  );
+
+  const canViewDetails = Boolean(
+    isAuthenticated &&
+    !isStudentRole &&
+    hasAnyRole([
+      'SUPER_ADMIN',
+      'PRINCIPAL',
+      'VICE_PRINCIPAL',
+      'CONTENT_EDITOR',
+      'STAFF',
+      'TEACHER',
+    ])
+  );
 
   const [privacyToast, setPrivacyToast] = useState<string | null>(null);
   const [loadingUnits, setLoadingUnits] = useState(true);
@@ -257,12 +266,19 @@ export default function CompetitionOverviewPage() {
     }
   }
 
+  const canInteractStudentItem = isStudentRole || canViewDetails;
+
   const handleStudentClick = (student: TopStudent) => {
-    if (!canViewDetails) return;
-    if (student.id) {
-      navigate(`${ROUTES.COMPETITION_STUDENT}?studentId=${student.id}`);
-    } else {
+    if (isStudentRole) {
       navigate(ROUTES.COMPETITION_STUDENT);
+      return;
+    }
+    if (canViewDetails) {
+      if (student.id) {
+        navigate(`${ROUTES.COMPETITION_STUDENT}?studentId=${student.id}`);
+      } else {
+        navigate(ROUTES.COMPETITION_STUDENT);
+      }
     }
   };
 
@@ -438,7 +454,15 @@ export default function CompetitionOverviewPage() {
             </p>
           </div>
 
-          {canViewDetails && (
+          {isStudentRole ? (
+            <Link
+              to={ROUTES.COMPETITION_STUDENT}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-xs transition-colors shrink-0"
+            >
+              <span>Hồ sơ của tôi</span>
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          ) : canViewDetails ? (
             <Link
               to={ROUTES.COMPETITION_STUDENT}
               className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-xs transition-colors shrink-0"
@@ -446,7 +470,7 @@ export default function CompetitionOverviewPage() {
               <span>Xem hồ sơ thi đua</span>
               <ChevronRight className="w-4 h-4" />
             </Link>
-          )}
+          ) : null}
         </div>
 
         {/* Top 5 Students List Container */}
@@ -475,7 +499,7 @@ export default function CompetitionOverviewPage() {
                     key={st.id}
                     onClick={() => handleStudentClick(st)}
                     className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                      canViewDetails ? 'group cursor-pointer' : ''
+                      canInteractStudentItem ? 'group cursor-pointer' : ''
                     } ${
                       isTop1
                         ? 'bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-transparent border-amber-300/80 dark:border-amber-800/60'
@@ -499,7 +523,7 @@ export default function CompetitionOverviewPage() {
 
                       <div className="min-w-0">
                         <div className={`font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2 truncate ${
-                          canViewDetails ? 'group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors' : ''
+                          canInteractStudentItem ? 'group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors' : ''
                         }`}>
                           <span className="truncate">{st.full_name}</span>
                           {isTop1 && (
@@ -523,7 +547,7 @@ export default function CompetitionOverviewPage() {
                           điểm thưởng
                         </span>
                       </div>
-                      {canViewDetails && (
+                      {canInteractStudentItem && (
                         <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
                       )}
                     </div>
