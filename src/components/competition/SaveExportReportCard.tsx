@@ -19,10 +19,9 @@ import {
   Clock,
   AlertTriangle
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { supabase } from '../../lib/supabase/client';
 import { useAuth } from '../../contexts/AuthContext';
+import { exportReportToPdf } from '../../utils/reportPdfExporter';
 import { competitionService } from '../../services/competitionService';
 import { 
   competitionReportConfigService, 
@@ -823,119 +822,8 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
     }
   };
 
-  // EXPORT PDF ACTION
-  const generatePdfFromElement = async (targetElement: HTMLElement | null, fileName: string) => {
-    if (!targetElement) {
-      console.error('[Export PDF Error] targetElement is null or undefined');
-      setErrorToast('Không tìm thấy nội dung báo cáo để xuất PDF.');
-      setTimeout(() => setErrorToast(null), 4000);
-      return;
-    }
-
-    try {
-      setExportingPdf(true);
-
-      const canvas = await html2canvas(targetElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: targetElement.scrollWidth || 800,
-        windowHeight: targetElement.scrollHeight,
-        onclone: (clonedDoc, element) => {
-          // Force solid background and dark text for clean document layout
-          element.style.backgroundColor = '#ffffff';
-          element.style.color = '#0f172a';
-          element.style.width = '800px';
-          element.style.maxWidth = 'none';
-          element.style.margin = '0';
-          element.style.padding = '24px';
-
-          // Replace textareas with div elements to render user-edited content cleanly
-          const textareas = element.querySelectorAll('textarea');
-          textareas.forEach((ta) => {
-            const div = clonedDoc.createElement('div');
-            div.className = ta.className;
-            div.style.whiteSpace = 'pre-wrap';
-            div.style.minHeight = '60px';
-            div.innerText = (ta as HTMLTextAreaElement).value || (ta as HTMLTextAreaElement).placeholder || 'Không có nhận xét bổ sung.';
-            if (ta.parentNode) {
-              ta.parentNode.replaceChild(div, ta);
-            }
-          });
-
-          // Unclip table horizontal scroll wrappers so full table width is rendered
-          const scrollWrappers = element.querySelectorAll('.overflow-x-auto');
-          scrollWrappers.forEach((wrapper) => {
-            (wrapper as HTMLElement).style.overflow = 'visible';
-          });
-        }
-      });
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      // A4 dimensions: 210mm x 297mm
-      // Margins: 10mm top, 10mm bottom, 10mm left, 10mm right -> Printable area: 190mm x 277mm
-      const margin = 10;
-      const pdfPrintWidth = 190;
-      const pdfPrintHeight = 277;
-
-      const sliceCanvasHeight = Math.floor((canvas.width * pdfPrintHeight) / pdfPrintWidth);
-      let currentY = 0;
-      let pageIndex = 0;
-
-      while (currentY < canvas.height) {
-        const currentSliceHeight = Math.min(sliceCanvasHeight, canvas.height - currentY);
-
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = currentSliceHeight;
-
-        const ctx = pageCanvas.getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-          ctx.drawImage(
-            canvas,
-            0, currentY, canvas.width, currentSliceHeight,
-            0, 0, canvas.width, currentSliceHeight
-          );
-        }
-
-        const pageImgData = pageCanvas.toDataURL('image/png');
-        const pagePdfHeight = (currentSliceHeight * pdfPrintWidth) / canvas.width;
-
-        if (pageIndex > 0) {
-          pdf.addPage();
-        }
-
-        pdf.addImage(pageImgData, 'PNG', margin, margin, pdfPrintWidth, pagePdfHeight);
-
-        currentY += sliceCanvasHeight;
-        pageIndex++;
-      }
-
-      pdf.save(fileName);
-
-      setSuccessToast('Đã xuất file PDF báo cáo thành công!');
-      setTimeout(() => setSuccessToast(null), 3000);
-    } catch (e: any) {
-      console.error('[Export PDF Error] Failure during PDF generation:', e);
-      setErrorToast('Không thể tạo file PDF. Vui lòng thử lại.');
-      setTimeout(() => setErrorToast(null), 4000);
-    } finally {
-      setExportingPdf(false);
-    }
-  };
-
-  const handleExportLivePdf = () => {
+  // EXPORT LIVE REPORT PDF
+  const handleExportLivePdf = async () => {
     if (!currentPeriodInfo.hasValidDates) {
       setErrorToast(currentPeriodInfo.missingReason || 'Không thể xuất PDF do thiếu thời gian kỳ.');
       setTimeout(() => setErrorToast(null), 4000);
@@ -949,16 +837,21 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
       return;
     }
 
-    const periodLabel = currentPeriodInfo.period_label || 'Bao_cao';
-    const gradeName = selectedGradeObj.name || 'Tat_ca_khoi';
-    const dateStr = new Date().toISOString().split('T')[0];
-    const cleanPeriod = periodLabel.replace(/[\/\s]+/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '');
-    const cleanGrade = gradeName.replace(/[\/\s]+/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '');
-    const fileName = `Bao-cao-thi-dua_${cleanPeriod}_${cleanGrade}_${dateStr}.pdf`;
-
-    generatePdfFromElement(printRef.current, fileName);
+    try {
+      setExportingPdf(true);
+      await exportReportToPdf(printRef.current, currentSnapshotObject, false);
+      setSuccessToast('Đã xuất file PDF báo cáo thành công!');
+      setTimeout(() => setSuccessToast(null), 3000);
+    } catch (err: any) {
+      console.error('[Export Live PDF Error]', err);
+      setErrorToast(err.message || 'Không thể tạo file PDF. Vui lòng thử lại.');
+      setTimeout(() => setErrorToast(null), 4000);
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
+  // EXPORT HISTORY / SNAPSHOT PDF
   const handleExportHistoryPdf = (rep: CompetitionWeeklyReport) => {
     setHistoryReportToExport(rep);
   };
@@ -970,7 +863,7 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
 
     const runExport = async () => {
       // Small delay to allow off-screen element to render completely
-      await new Promise((resolve) => setTimeout(resolve, 80));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       if (!isMounted) return;
 
@@ -982,20 +875,22 @@ export default function SaveExportReportCard({ allowedClassIds }: SaveExportRepo
         return;
       }
 
-      const periodLabel = historyReportToExport.period_label || historyReportToExport.week_name || 'Bao_cao';
-      const gradeName = historyReportToExport.grade_name || 'Tat_ca_khoi';
-      const dateStr = historyReportToExport.created_at
-        ? new Date(historyReportToExport.created_at).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0];
-
-      const cleanPeriod = periodLabel.replace(/[\/\s]+/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '');
-      const cleanGrade = gradeName.replace(/[\/\s]+/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '');
-      const fileName = `Bao-cao-thi-dua_Luu-tru_${cleanPeriod}_${cleanGrade}_${dateStr}.pdf`;
-
       try {
-        await generatePdfFromElement(hiddenPrintRef.current, fileName);
+        setExportingPdf(true);
+        await exportReportToPdf(hiddenPrintRef.current, historyReportToExport, true);
+        if (isMounted) {
+          setSuccessToast('Đã xuất file PDF báo cáo lưu trữ thành công!');
+          setTimeout(() => setSuccessToast(null), 3000);
+        }
+      } catch (err: any) {
+        console.error('[Export History PDF Error]', err);
+        if (isMounted) {
+          setErrorToast(err.message || 'Không thể tạo file PDF từ lịch sử. Vui lòng thử lại.');
+          setTimeout(() => setErrorToast(null), 4000);
+        }
       } finally {
         if (isMounted) {
+          setExportingPdf(false);
           setHistoryReportToExport(null);
         }
       }
