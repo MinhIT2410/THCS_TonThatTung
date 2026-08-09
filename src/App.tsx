@@ -327,7 +327,7 @@ function AppContent() {
           <Route
             path={ROUTES.COMPETITION_STUDENT}
             element={
-              <CompetitionDetailGuard>
+              <CompetitionDetailGuard allowStudent>
                 <StudentCompetitionPage />
               </CompetitionDetailGuard>
             }

@@ -18,9 +18,10 @@ const TEACHER_AND_ABOVE_ROLES = [
 
 interface CompetitionDetailGuardProps {
   children: React.ReactNode;
+  allowStudent?: boolean;
 }
 
-export const CompetitionDetailGuard: React.FC<CompetitionDetailGuardProps> = ({ children }) => {
+export const CompetitionDetailGuard: React.FC<CompetitionDetailGuardProps> = ({ children, allowStudent = false }) => {
   const { isAuthenticated, profile, loading, profileLoading, hasAnyRole } = useAuth();
 
   if (loading || (isAuthenticated && !profile && profileLoading)) {
@@ -34,7 +35,11 @@ export const CompetitionDetailGuard: React.FC<CompetitionDetailGuardProps> = ({ 
     );
   }
 
-  const isAllowed = isAuthenticated && hasAnyRole(TEACHER_AND_ABOVE_ROLES);
+  const allowedRoles = allowStudent
+    ? [...TEACHER_AND_ABOVE_ROLES, 'STUDENT']
+    : TEACHER_AND_ABOVE_ROLES;
+
+  const isAllowed = isAuthenticated && hasAnyRole(allowedRoles);
 
   if (!isAllowed) {
     return <AccessDenied message="Bạn không có quyền xem nội dung này" />;

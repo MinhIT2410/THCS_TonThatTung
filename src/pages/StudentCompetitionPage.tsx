@@ -44,12 +44,17 @@ import EmptyState from '../components/common/EmptyState';
 type StudentTab = 'overview' | 'ledger' | 'shop' | 'redemptions' | 'reviews';
 
 export default function StudentCompetitionPage() {
-  const { user, isAuthenticated, loading: authLoading, profileLoading, hasRole, role, roles } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, profileLoading, hasRole, role, roles, hasAnyRole } = useAuth();
 
   const isUserAuthenticated = Boolean(user && isAuthenticated);
   const isStudentRole = Boolean(
     isUserAuthenticated &&
     (hasRole('STUDENT') || role === 'STUDENT' || (Array.isArray(roles) && roles.includes('STUDENT')))
+  );
+
+  const isTeacherOrAbove = Boolean(
+    isUserAuthenticated &&
+    hasAnyRole(['SUPER_ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'CONTENT_EDITOR', 'STAFF', 'TEACHER'])
   );
 
   const [activeTab, setActiveTab] = useState<StudentTab>('overview');
@@ -85,11 +90,15 @@ export default function StudentCompetitionPage() {
 
   const [submitting, setSubmitting] = useState(false);
 
-  const loadData = async (targetStudentId?: string) => {
-    if (!isUserAuthenticated && !targetStudentId) return;
+  const loadData = async (overrideStudentId?: string) => {
+    if (!isUserAuthenticated) return;
     try {
       setLoading(true);
       setError(null);
+
+      const targetStudentId = isStudentRole
+        ? undefined
+        : (overrideStudentId !== undefined ? overrideStudentId : paramStudentId);
 
       const [profData, txsData, incsData, deedsData, rewardsData, redemptionsData, reviewsData] =
         await Promise.all([
@@ -119,15 +128,13 @@ export default function StudentCompetitionPage() {
 
   useEffect(() => {
     if (!authLoading && !profileLoading) {
-      if (paramStudentId) {
-        loadData(paramStudentId);
-      } else if (isUserAuthenticated && isStudentRole) {
+      if (isStudentRole || isTeacherOrAbove) {
         loadData();
       } else {
         setLoading(false);
       }
     }
-  }, [authLoading, profileLoading, isUserAuthenticated, isStudentRole, paramStudentId]);
+  }, [authLoading, profileLoading, isUserAuthenticated, isStudentRole, isTeacherOrAbove, paramStudentId]);
 
   const handleOpenRedeemModal = (item: RewardItem) => {
     setSelectedReward(item);
@@ -246,19 +253,44 @@ export default function StudentCompetitionPage() {
               </Link>
             </div>
           </div>
-        ) : !isStudentRole ? (
-          /* Authenticated Non-Student State */
+        ) : (!isStudentRole && !isTeacherOrAbove) ? (
+          /* Authenticated User Without Allowed Roles */
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center space-y-3 max-w-lg mx-auto shadow-xs my-6">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 mx-auto flex items-center justify-center">
               <ShieldAlert className="w-6 h-6" />
             </div>
             <div className="space-y-1.5">
               <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                Tài khoản này không có hồ sơ đội viên.
+                Tài khoản chưa được cấp quyền truy cập.
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Hồ sơ thi đua cá nhân chỉ dành cho tài khoản Học sinh / Đội viên.
+                Khu vực hồ sơ thi đua cá nhân dành cho Học sinh / Đội viên và Giáo viên / Ban quản trị.
               </p>
+            </div>
+          </div>
+        ) : (!profile && !loading) ? (
+          /* Profile Not Loaded or Not Found State */
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center space-y-3 max-w-lg mx-auto shadow-xs my-6">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 mx-auto flex items-center justify-center">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                Chưa có dữ liệu hồ sơ đội viên
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {isTeacherOrAbove && !paramStudentId
+                  ? 'Vui lòng chọn hoặc tra cứu đội viên từ Bảng thi đua tổng quan để xem hồ sơ chi tiết.'
+                  : 'Không tìm thấy hồ sơ thi đua phù hợp trong hệ thống.'}
+              </p>
+            </div>
+            <div className="pt-2">
+              <Link
+                to={ROUTES.COMPETITION}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors"
+              >
+                ← Quay lại Tổng quan Thi đua
+              </Link>
             </div>
           </div>
         ) : (
