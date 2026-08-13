@@ -624,6 +624,58 @@ export const competitionService = {
     })) as CompetitionIncident[];
   },
 
+  async getPendingIncidentsForApproval(): Promise<CompetitionIncident[]> {
+    const { data: idRows, error: idError } = await supabase.rpc(
+      'get_pending_competition_incident_ids_for_approval'
+    );
+
+    if (idError) {
+      console.error('Error fetching approvable pending incident ids:', idError);
+      throw idError;
+    }
+
+    const ids = (idRows || [])
+      .map((row: any) => row.id)
+      .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
+
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('competition_incidents')
+      .select(`
+        *,
+        competition_programs(name, code),
+        competition_rules(name, code, category, effect_scope, student_merit_points, student_reward_points, unit_points, requires_approval, allowed_recorder_types, allowed_approver_types),
+        student:profiles!competition_incidents_student_id_fkey(full_name, student_code),
+        unit:classes!competition_incidents_unit_id_fkey(name),
+        recorder:profiles!competition_incidents_recorded_by_fkey(full_name),
+        approver:profiles!competition_incidents_approved_by_fkey(full_name),
+        competition_incident_evidence(*)
+      `)
+      .in('id', ids)
+      .order('occurred_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching approvable pending incidents:', error);
+      throw error;
+    }
+
+    return (data || []).map((i: any) => ({
+      ...i,
+      program_name: i.competition_programs?.name,
+      rule_name: i.competition_rules?.name,
+      rule: i.competition_rules,
+      student_name: i.student?.full_name,
+      student_code: i.student?.student_code,
+      unit_name: i.unit?.name,
+      recorder_name: i.recorder?.full_name,
+      approver_name: i.approver?.full_name,
+      evidence_items: i.competition_incident_evidence || [],
+    })) as CompetitionIncident[];
+  },
+
   async getWeeklyOfficialIncidents(filters: {
     weekStartsOn?: string;
     weekEndsOn?: string;
@@ -684,16 +736,16 @@ export const competitionService = {
   },
 
   async getPendingIncidentsCount(): Promise<number> {
-    const { count, error } = await supabase
-      .from('competition_incidents')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'PENDING');
+    const { data, error } = await supabase.rpc(
+      'get_pending_competition_incident_ids_for_approval'
+    );
 
     if (error) {
-      console.error('Error fetching pending incidents count:', error);
+      console.error('Error fetching approvable pending incidents count:', error);
       return 0;
     }
-    return count || 0;
+
+    return (data || []).length;
   },
 
   // --- CLASSES / UNITS ---
@@ -2057,6 +2109,3 @@ export const competitionService = {
     }
   },
 };
-
-
-

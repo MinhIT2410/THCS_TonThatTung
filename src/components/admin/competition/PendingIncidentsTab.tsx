@@ -3,399 +3,648 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
-  User, 
-  Users, 
-  ExternalLink,
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Plus,
+  Edit3,
+  Trash2,
+  Search,
   RefreshCw,
+  AlertCircle,
   X,
-  ChevronLeft,
-  ChevronRight,
-  Maximize2
+  Check,
+  MessageSquare,
+  Filter,
 } from 'lucide-react';
 import { competitionService } from '../../../services/competitionService';
-import { CompetitionIncident } from '../../../types/competition';
+import {
+  CompetitionCommentTemplate,
+  CommentType,
+  COMMENT_TYPE_LABELS,
+} from '../../../types/competition';
 
-export default function PendingIncidentsTab() {
-  const [incidents, setIncidents] = useState<CompetitionIncident[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function CommentTemplatesTab() {
+  const [canManage, setCanManage] = useState<boolean>(false);
+  const [checkingPermission, setCheckingPermission] = useState<boolean>(true);
 
-  // Reject modal state
-  const [rejectModalIncident, setRejectModalIncident] = useState<CompetitionIncident | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
+  // Data state
+  const [templates, setTemplates] = useState<CompetitionCommentTemplate[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Image lightbox preview state
-  const [previewImages, setPreviewImages] = useState<string[] | null>(null);
-  const [previewIndex, setPreviewIndex] = useState(0);
+  // Filters & Search
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
 
-  // Message alert
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // Modal State for Create / Edit
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingTemplate, setEditingTemplate] = useState<Partial<CompetitionCommentTemplate> | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const fetchPendingIncidents = async () => {
+  // Delete Confirmation Modal State
+  const [deletingTemplate, setDeletingTemplate] = useState<CompetitionCommentTemplate | null>(null);
+
+  // Shared UI States
+  const [saving, setSaving] = useState<boolean>(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Check management permissions
+  useEffect(() => {
+    async function initPermissions() {
+      setCheckingPermission(true);
+      try {
+        const isAllowed = await competitionService.canManageCompetition();
+        setCanManage(isAllowed);
+      } catch (err) {
+        console.error('Error checking competition permissions:', err);
+        setCanManage(false);
+      } finally {
+        setCheckingPermission(false);
+      }
+    }
+    initPermissions();
+  }, []);
+
+  // Fetch templates
+  const fetchTemplates = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const list = await competitionService.getIncidents({ status: 'PENDING' });
-      setIncidents(list);
+      const data = await competitionService.getCommentTemplates();
+      setTemplates(data);
     } catch (err: any) {
-      console.error('Error fetching pending incidents:', err);
-      setAlert({ type: 'error', text: err.message || 'Không thể tải danh sách chờ duyệt.' });
+      console.error('Error loading comment templates:', err);
+      showToast('error', err.message || 'Lỗi khi tải danh sách mẫu nhận xét');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPendingIncidents();
+    fetchTemplates();
   }, []);
 
-  const handleApprove = async (incident: CompetitionIncident) => {
+  const showToast = (type: 'success' | 'error', text: string) => {
+    setToast({ type, text });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // Format code helper: transforms raw user string to uppercase alphanumeric with underscore
+  const formatCodeInput = (val: string): string => {
+    return val
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]/g, '_')
+      .replace(/_+/g, '_');
+  };
+
+  // Filtered & Sorted list
+  const filteredTemplates = useMemo(() => {
+    return templates
+      .filter((item) => {
+        const matchesType = typeFilter === 'ALL' || item.comment_type === typeFilter;
+        const q = searchQuery.trim().toLowerCase();
+        const matchesSearch =
+          !q ||
+          item.code.toLowerCase().includes(q) ||
+          item.title.toLowerCase().includes(q) ||
+          item.content.toLowerCase().includes(q);
+        return matchesType && matchesSearch;
+      })
+      .sort((a, b) => {
+        if (a.display_order !== b.display_order) {
+          return a.display_order - b.display_order;
+        }
+        return a.title.localeCompare(b.title, 'vi');
+      });
+  }, [templates, typeFilter, searchQuery]);
+
+  // Open modal for new item
+  const openModalForCreate = () => {
+    const nextOrder = templates.length > 0 ? Math.max(...templates.map((t) => t.display_order || 0)) + 10 : 10;
+    setEditingTemplate({
+      code: '',
+      title: '',
+      content: '',
+      comment_type: 'PRAISE',
+      display_order: nextOrder,
+    });
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  // Open modal for editing
+  const openModalForEdit = (template: CompetitionCommentTemplate) => {
+    setEditingTemplate({ ...template });
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  // Close modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingTemplate(null);
+    setFormError(null);
+  };
+
+  // Handle Save
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTemplate) return;
+
+    setFormError(null);
+
+    const code = (editingTemplate.code || '').trim().toUpperCase();
+    const title = (editingTemplate.title || '').trim();
+    const content = (editingTemplate.content || '').trim();
+    const commentType = editingTemplate.comment_type;
+    const displayOrder = Number(editingTemplate.display_order);
+
+    // Validation checks
+    if (!code) {
+      setFormError('Mã nhận xét là bắt buộc.');
+      return;
+    }
+    if (!/^[A-Z0-9_]+$/.test(code)) {
+      setFormError('Mã nhận xét chỉ được chứa các ký tự in hoa (A-Z), số (0-9) và dấu gạch dưới (_).');
+      return;
+    }
+    if (!title) {
+      setFormError('Tiêu đề nhận xét là bắt buộc.');
+      return;
+    }
+    if (!content) {
+      setFormError('Nội dung nhận xét là bắt buộc.');
+      return;
+    }
+    if (!commentType || !['PRAISE', 'VIOLATION', 'NEUTRAL'].includes(commentType)) {
+      setFormError('Vui lòng chọn loại nhận xét hợp lệ.');
+      return;
+    }
+    if (isNaN(displayOrder) || displayOrder < 0) {
+      setFormError('Thứ tự hiển thị phải là số nguyên không âm.');
+      return;
+    }
+
+    setSaving(true);
     try {
-      setActionLoading(true);
-      setAlert(null);
-      await competitionService.approveIncident(incident.id);
-      setAlert({ type: 'success', text: `Đã duyệt sự việc "${incident.title}" thành công!` });
-      await fetchPendingIncidents();
+      if (editingTemplate.id) {
+        // Update
+        await competitionService.updateCommentTemplate(editingTemplate.id, {
+          code,
+          title,
+          content,
+          comment_type: commentType,
+          display_order: Math.floor(displayOrder),
+        });
+        showToast('success', 'Cập nhật mẫu nhận xét thành công.');
+      } else {
+        // Create
+        await competitionService.createCommentTemplate({
+          code,
+          title,
+          content,
+          comment_type: commentType,
+          display_order: Math.floor(displayOrder),
+        });
+        showToast('success', 'Thêm mới mẫu nhận xét thành công.');
+      }
+      closeModal();
+      await fetchTemplates();
     } catch (err: any) {
-      console.error('Approve error:', err);
-      setAlert({ type: 'error', text: err.message || 'Lỗi khi duyệt sự việc.' });
+      console.error('Error saving comment template:', err);
+      setFormError(err.message || 'Không thể lưu mẫu nhận xét. Vui lòng thử lại.');
     } finally {
-      setActionLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleRejectSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rejectModalIncident || !rejectionReason.trim()) return;
+  // Handle Delete
+  const handleDelete = async () => {
+    if (!deletingTemplate) return;
 
+    setSaving(true);
     try {
-      setActionLoading(true);
-      setAlert(null);
-      await competitionService.rejectIncident(rejectModalIncident.id, rejectionReason.trim());
-      setAlert({ type: 'success', text: `Đã từ chối ghi nhận sự việc "${rejectModalIncident.title}".` });
-      setRejectModalIncident(null);
-      setRejectionReason('');
-      await fetchPendingIncidents();
+      await competitionService.deleteCommentTemplate(deletingTemplate.id);
+      showToast('success', `Đã xóa mẫu nhận xét "${deletingTemplate.title}".`);
+      setDeletingTemplate(null);
+      await fetchTemplates();
     } catch (err: any) {
-      console.error('Reject error:', err);
-      setAlert({ type: 'error', text: err.message || 'Lỗi khi từ chối sự việc.' });
+      console.error('Error deleting comment template:', err);
+      showToast('error', err.message || 'Không thể xóa mẫu nhận xét.');
     } finally {
-      setActionLoading(false);
+      setSaving(false);
+    }
+  };
+
+  const getBadgeStyle = (type: CommentType) => {
+    switch (type) {
+      case 'PRAISE':
+        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+      case 'VIOLATION':
+        return 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800';
+      case 'NEUTRAL':
+      default:
+        return 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800';
     }
   };
 
   return (
-    <div className="space-y-5 font-sans">
-      {/* Header Info Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
-        <div className="space-y-1">
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Clock className="w-5 h-5 text-amber-500 shrink-0" />
-            <span>Danh sách chờ quyệt</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-xs font-extrabold">
-              {incidents.length}
-            </span>
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Xem và xét duyệt các sự việc vi phạm/khen thưởng trước khi ghi nhận điểm chính thức.
-          </p>
-        </div>
-
-        <button
-          onClick={fetchPendingIncidents}
-          disabled={loading}
-          className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 transition-colors shrink-0 self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-600' : ''}`} />
-          <span>Làm mới</span>
-        </button>
-      </div>
-
-      {/* Alert Banner */}
-      {alert && (
+    <div className="space-y-6">
+      {/* Toast alert */}
+      {toast && (
         <div
-          className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs font-medium ${
-            alert.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
-              : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
+          className={`p-4 rounded-xl border flex items-center justify-between shadow-sm animate-in fade-in duration-200 ${
+            toast.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+              : 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
           }`}
         >
-          <span>{alert.text}</span>
-          <button onClick={() => setAlert(null)} className="underline opacity-80 hover:opacity-100 font-bold ml-3">
-            Đóng
+          <div className="flex items-center gap-2.5">
+            {toast.type === 'success' ? (
+              <Check className="w-5 h-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400" />
+            )}
+            <p className="text-xs font-semibold">{toast.text}</p>
+          </div>
+          <button
+            onClick={() => setToast(null)}
+            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Main Table Area */}
-      {loading ? (
-        <div className="p-12 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 animate-pulse">
-          Đang tải danh sách sự việc chờ duyệt...
+      {/* Header & Controls Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Quản lý mẫu nhận xét
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Danh sách mẫu nhận xét dùng cho đánh giá thi đua chi đội.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={fetchTemplates}
+              disabled={loading}
+              className="p-2.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+              title="Làm mới dữ liệu"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+
+            {canManage && (
+              <button
+                type="button"
+                onClick={openModalForCreate}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors shadow-md shadow-red-600/20 flex items-center gap-2 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Thêm nhận xét</span>
+              </button>
+            )}
+          </div>
         </div>
-      ) : incidents.length === 0 ? (
-        <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-          <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto opacity-80" />
-          <h4 className="text-base font-bold text-slate-800 dark:text-slate-200">
-            Không có sự việc nào chờ duyệt
-          </h4>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Tất cả sự việc thi đua đã được ghi nhận và xử lý đầy đủ.
-          </p>
+
+        {/* Filters and Search Bar */}
+        <div className="flex flex-col md:flex-row gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm kiếm theo mã, tiêu đề, nội dung..."
+              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-red-500 dark:focus:border-red-400 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Type Filter Tabs */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl overflow-x-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setTypeFilter('ALL')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                typeFilter === 'ALL'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Tất cả
+            </button>
+            <button
+              type="button"
+              onClick={() => setTypeFilter('PRAISE')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                typeFilter === 'PRAISE'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Tuyên dương
+            </button>
+            <button
+              type="button"
+              onClick={() => setTypeFilter('VIOLATION')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                typeFilter === 'VIOLATION'
+                  ? 'bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Vi phạm
+            </button>
+            <button
+              type="button"
+              onClick={() => setTypeFilter('NEUTRAL')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                typeFilter === 'NEUTRAL'
+                  ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Trung tính
+            </button>
+          </div>
         </div>
-      ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+      </div>
+
+      {/* Main Table Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-red-600 dark:text-red-400" />
+            <p className="text-xs font-medium">Đang tải danh sách mẫu nhận xét...</p>
+          </div>
+        ) : filteredTemplates.length === 0 ? (
+          <div className="p-12 text-center text-slate-500 dark:text-slate-400 space-y-3">
+            <MessageSquare className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700" />
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Không tìm thấy mẫu nhận xét nào
+            </p>
+            <p className="text-xs max-w-sm mx-auto">
+              {searchQuery || typeFilter !== 'ALL'
+                ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.'
+                : 'Nhấn nút "Thêm nhận xét" để tạo mẫu nhận xét mới.'}
+            </p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[980px]">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-3.5 w-[120px]">Thời gian</th>
-                  <th className="py-3 px-3.5 w-[190px]">Đối tượng</th>
-                  <th className="py-3 px-3.5 min-w-[220px]">Vi phạm</th>
-                  <th className="py-3 px-3.5 w-[170px]">Người ghi nhận</th>
-                  <th className="py-3 px-3.5 w-[90px] text-center">Hình ảnh</th>
-                  <th className="py-3 px-3.5 w-[95px] text-center">Duyệt</th>
-                  <th className="py-3 px-3.5 w-[100px] text-center">Từ chối</th>
+                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="py-3.5 px-4 w-20 text-center">Thứ tự</th>
+                  <th className="py-3.5 px-4 w-44">Mã</th>
+                  <th className="py-3.5 px-4 w-52">Tiêu đề</th>
+                  <th className="py-3.5 px-4 min-w-[280px]">Nội dung</th>
+                  <th className="py-3.5 px-4 w-36">Loại</th>
+                  <th className="py-3.5 px-4 w-28 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                {incidents.map(item => {
-                  const occurredDate = new Date(item.occurred_at);
-                  const timeStr = occurredDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-                  const dateStr = occurredDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+                {filteredTemplates.map((template) => (
+                  <tr
+                    key={template.id}
+                    className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                  >
+                    {/* Display Order */}
+                    <td className="py-3.5 px-4 text-center font-bold text-slate-600 dark:text-slate-400">
+                      {template.display_order}
+                    </td>
 
-                  const imageEvidences = (item.evidence_items || []).filter(e => e.file_url);
-                  const externalEvidences = (item.evidence_items || []).filter(e => e.external_url);
+                    {/* Code */}
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                        {template.code}
+                      </span>
+                    </td>
 
-                  return (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
-                    >
-                      {/* 1. Thời gian */}
-                      <td className="py-3 px-3.5 align-top">
-                        <div className="space-y-0.5">
-                          <div className="font-bold text-slate-900 dark:text-white">
-                            {timeStr}
-                          </div>
-                          <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                            {dateStr}
-                          </div>
-                          {item.program_name && (
-                            <div className="text-[10px] text-slate-400 line-clamp-1 pt-0.5">
-                              {item.program_name}
-                            </div>
-                          )}
+                    {/* Title */}
+                    <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
+                      {template.title}
+                    </td>
+
+                    {/* Content */}
+                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 leading-relaxed">
+                      {template.content}
+                    </td>
+
+                    {/* Comment Type */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${getBadgeStyle(
+                          template.comment_type
+                        )}`}
+                      >
+                        {COMMENT_TYPE_LABELS[template.comment_type] || template.comment_type}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      {canManage ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openModalForEdit(template)}
+                            className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg transition-colors"
+                            title="Sửa mẫu nhận xét"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setDeletingTemplate(template)}
+                            className="p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors"
+                            title="Xóa mẫu nhận xét"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                      </td>
-
-                      {/* 2. Đối tượng */}
-                      <td className="py-3 px-3.5 align-top">
-                        {item.student_name ? (
-                          <div className="space-y-0.5">
-                            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                              <User className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                              <span>{item.student_name}</span>
-                            </div>
-                            {item.student_code && (
-                              <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                                Mã: {item.student_code}
-                              </div>
-                            )}
-                            {item.unit_name && (
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                Lớp: <span className="font-semibold text-slate-700 dark:text-slate-300">{item.unit_name}</span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-0.5">
-                            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                              <Users className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                              <span>{item.unit_name || 'Chi đội / Tập thể'}</span>
-                            </div>
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800">
-                              Tập thể
-                            </span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* 3. Vi phạm */}
-                      <td className="py-3 px-3.5 align-top">
-                        <div className="space-y-1">
-                          <div className="font-bold text-slate-900 dark:text-white leading-snug">
-                            {item.title}
-                          </div>
-                          {item.rule_name && item.rule_name !== item.title && (
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                              Quy tắc: {item.rule_name}
-                            </div>
-                          )}
-                          {item.description && (
-                            <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 italic">
-                              "{item.description}"
-                            </p>
-                          )}
-                          {item.rule && (
-                            <div className="flex flex-wrap gap-1.5 pt-0.5">
-                              {item.rule.student_merit_points !== undefined && item.rule.student_merit_points !== 0 && (
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                  item.rule.student_merit_points > 0
-                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                                }`}>
-                                  Đội viên: {item.rule.student_merit_points > 0 ? `+${item.rule.student_merit_points}` : item.rule.student_merit_points}
-                                </span>
-                              )}
-                              {item.rule.unit_points !== undefined && item.rule.unit_points !== 0 && (
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                  item.rule.unit_points > 0
-                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
-                                    : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                                }`}>
-                                  Chi đội: {item.rule.unit_points > 0 ? `+${item.rule.unit_points}` : item.rule.unit_points}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* 4. Người ghi nhận */}
-                      <td className="py-3 px-3.5 align-top">
-                        <div className="space-y-0.5">
-                          <div className="font-semibold text-slate-800 dark:text-slate-200">
-                            {item.recorder_name || 'Hệ thống'}
-                          </div>
-                          <div className="text-[11px] text-slate-400">
-                            Khởi tạo: {new Date(item.created_at).toLocaleDateString('vi-VN')}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* 5. Hình ảnh */}
-                      <td className="py-3 px-3.5 align-top text-center">
-                        {imageEvidences.length > 0 ? (
-                          <div className="flex items-center justify-center">
-                            <button
-                              onClick={() => {
-                                setPreviewImages(imageEvidences.map(e => e.file_url!));
-                                setPreviewIndex(0);
-                              }}
-                              className="group relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xs hover:ring-2 hover:ring-amber-500/50 transition-all shrink-0 cursor-pointer"
-                              title="Bấm để xem ảnh minh chứng"
-                            >
-                              <img
-                                src={imageEvidences[0].file_url!}
-                                alt="Minh chứng"
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                              />
-                              {imageEvidences.length > 1 && (
-                                <span className="absolute bottom-0 right-0 bg-black/80 text-white text-[9px] font-extrabold px-1 py-0.5 rounded-tl">
-                                  +{imageEvidences.length - 1}
-                                </span>
-                              )}
-                            </button>
-                          </div>
-                        ) : externalEvidences.length > 0 ? (
-                          <div className="flex items-center justify-center">
-                            <a
-                              href={externalEvidences[0].external_url!}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 text-[11px]"
-                              title="Mở liên kết minh chứng"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              <span>Link</span>
-                            </a>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-center block">—</span>
-                        )}
-                      </td>
-
-                      {/* 6. Duyệt */}
-                      <td className="py-3 px-3.5 align-top text-center">
-                        <button
-                          onClick={() => handleApprove(item)}
-                          disabled={actionLoading}
-                          className="w-full px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-xs shadow-emerald-600/20 transition-all flex items-center justify-center gap-1 disabled:opacity-50"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                          <span>Duyệt</span>
-                        </button>
-                      </td>
-
-                      {/* 7. Từ chối */}
-                      <td className="py-3 px-3.5 align-top text-center">
-                        <button
-                          onClick={() => setRejectModalIncident(item)}
-                          disabled={actionLoading}
-                          className="w-full px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-xs border border-rose-200 dark:border-rose-800 transition-all flex items-center justify-center gap-1 disabled:opacity-50"
-                        >
-                          <XCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span>Từ chối</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">Chỉ xem</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Reject Modal */}
-      {rejectModalIncident && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5">
-            <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-rose-600" />
-              Từ Chối Ghi Nhận Sự Việc
-            </h4>
+      {/* CREATE / EDIT MODAL */}
+      {isModalOpen && editingTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-red-600 dark:text-red-400" />
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  {editingTemplate.id ? 'Chỉnh sửa mẫu nhận xét' : 'Thêm mẫu nhận xét mới'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                disabled={saving}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <p className="text-xs text-slate-600 dark:text-slate-300">
-              Vui lòng nhập lý do từ chối sự việc "<strong>{rejectModalIncident.title}</strong>". Lý do này sẽ được lưu vào nhật ký hệ thống.
-            </p>
+            {/* Modal Form Body */}
+            <form onSubmit={handleSave} className="p-6 space-y-4 overflow-y-auto flex-1">
+              {formError && (
+                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+              )}
 
-            <form onSubmit={handleRejectSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
-                  Lý do từ chối <span className="text-red-500">*</span>
+              {/* Code */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Mã nhận xét <span className="text-rose-500">*</span>
                 </label>
-                <textarea
-                  rows={3}
-                  value={rejectionReason}
-                  onChange={e => setRejectionReason(e.target.value)}
-                  placeholder="VD: Minh chứng không rõ ràng, thông tin vi phạm chưa chính xác..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500/20"
+                <input
+                  type="text"
+                  value={editingTemplate.code || ''}
+                  onChange={(e) =>
+                    setEditingTemplate({
+                      ...editingTemplate,
+                      code: formatCodeInput(e.target.value),
+                    })
+                  }
+                  placeholder="Ví dụ: PRAISE_GOOD_DISCIPLINE"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500 dark:focus:border-red-400 transition-colors uppercase"
+                  required
+                />
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  In hoa (A-Z), số (0-9) và dấu gạch dưới (_). Tự động chuẩn hóa.
+                </p>
+              </div>
+
+              {/* Title */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Tiêu đề <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingTemplate.title || ''}
+                  onChange={(e) =>
+                    setEditingTemplate({
+                      ...editingTemplate,
+                      title: e.target.value,
+                    })
+                  }
+                  placeholder="Ví dụ: Nề nếp tốt"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500 dark:focus:border-red-400 transition-colors font-medium"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              {/* Content */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Nội dung nhận xét <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={editingTemplate.content || ''}
+                  onChange={(e) =>
+                    setEditingTemplate({
+                      ...editingTemplate,
+                      content: e.target.value,
+                    })
+                  }
+                  placeholder="Ví dụ: Chi đội thực hiện tốt nề nếp và nội quy trong tuần."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500 dark:focus:border-red-400 transition-colors"
+                  required
+                />
+              </div>
+
+              {/* Comment Type & Display Order */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Loại nhận xét <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={editingTemplate.comment_type || 'PRAISE'}
+                    onChange={(e) =>
+                      setEditingTemplate({
+                        ...editingTemplate,
+                        comment_type: e.target.value as CommentType,
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500 dark:focus:border-red-400 transition-colors"
+                  >
+                    <option value="PRAISE">Tuyên dương</option>
+                    <option value="VIOLATION">Vi phạm</option>
+                    <option value="NEUTRAL">Trung tính</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Thứ tự hiển thị
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={editingTemplate.display_order ?? 0}
+                    onChange={(e) =>
+                      setEditingTemplate({
+                        ...editingTemplate,
+                        display_order: parseInt(e.target.value, 10) || 0,
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500 dark:focus:border-red-400 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Submit / Cancel Footer */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setRejectModalIncident(null);
-                    setRejectionReason('');
-                  }}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  onClick={closeModal}
+                  disabled={saving}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs text-slate-700 dark:text-slate-300 transition-colors"
                 >
                   Hủy
                 </button>
+
                 <button
                   type="submit"
-                  disabled={actionLoading || !rejectionReason.trim()}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 disabled:opacity-50"
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors shadow-md shadow-red-600/20 flex items-center gap-2"
                 >
-                  Xác Nhận Từ Chối
+                  {saving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{editingTemplate.id ? 'Lưu thay đổi' : 'Thêm mới'}</span>
                 </button>
               </div>
             </form>
@@ -403,51 +652,49 @@ export default function PendingIncidentsTab() {
         </div>
       )}
 
-      {/* Image Preview Lightbox Modal */}
-      {previewImages && previewImages.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-4">
-          <div className="absolute top-4 right-4 flex items-center gap-2">
-            <button
-              onClick={() => setPreviewImages(null)}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-              title="Đóng xem ảnh"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          <div className="relative max-w-4xl max-h-[80vh] flex items-center justify-center">
-            <img
-              src={previewImages[previewIndex]}
-              alt="Minh chứng chi tiết"
-              className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl"
-            />
-
-            {previewImages.length > 1 && (
-              <>
-                <button
-                  onClick={() => setPreviewIndex(prev => (prev > 0 ? prev - 1 : previewImages.length - 1))}
-                  className="absolute left-2 p-2 rounded-full bg-black/50 hover:bg-black/75 text-white transition-colors"
-                  title="Ảnh trước"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={() => setPreviewIndex(prev => (prev < previewImages.length - 1 ? prev + 1 : 0))}
-                  className="absolute right-2 p-2 rounded-full bg-black/50 hover:bg-black/75 text-white transition-colors"
-                  title="Ảnh tiếp"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </>
-            )}
-          </div>
-
-          {previewImages.length > 1 && (
-            <div className="mt-4 text-xs font-semibold text-white/80 bg-black/40 px-3 py-1 rounded-full">
-              {previewIndex + 1} / {previewImages.length}
+      {/* DELETE CONFIRMATION MODAL */}
+      {deletingTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-3 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  Xác nhận xóa mẫu nhận xét
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Bạn có chắc chắn muốn xóa mẫu nhận xét{' '}
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    "{deletingTemplate.code} - {deletingTemplate.title}"
+                  </span>
+                  ? Thao tác này sẽ xóa hoàn toàn và không thể hoàn tác.
+                </p>
+              </div>
             </div>
-          )}
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeletingTemplate(null)}
+                disabled={saving}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs text-slate-700 dark:text-slate-300 transition-colors"
+              >
+                Hủy
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={saving}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-md shadow-rose-600/20 flex items-center gap-2"
+              >
+                {saving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>Xóa mẫu nhận xét</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
