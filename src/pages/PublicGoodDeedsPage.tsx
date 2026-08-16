@@ -139,14 +139,14 @@ export default function PublicGoodDeedsPage() {
                   </div>
 
                   {deed.evidence_items && deed.evidence_items.length > 0 && (
-                    <div className="pt-2 flex items-center gap-2 overflow-x-auto">
+                    <div className="py-2.5 flex items-center justify-center gap-3 flex-wrap">
                       {deed.evidence_items.map((ev: any) =>
                         ev.file_url ? (
                           <img
                             key={ev.id}
                             src={ev.file_url}
                             alt=""
-                            className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
+                            className="w-40 h-40 sm:w-44 sm:h-44 max-w-full rounded-2xl object-cover border border-slate-200/80 dark:border-slate-700/80 shadow-xs"
                           />
                         ) : null
                       )}

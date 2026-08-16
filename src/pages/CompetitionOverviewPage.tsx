@@ -662,14 +662,14 @@ export default function CompetitionOverviewPage() {
 
                     {/* Evidence Thumbnails */}
                     {item.evidence_items && item.evidence_items.length > 0 && (
-                      <div className="pt-1 flex items-center gap-2 overflow-x-auto">
+                      <div className="py-2.5 flex items-center justify-center gap-3 flex-wrap">
                         {item.evidence_items.map((ev: any) =>
                           ev.file_url ? (
                             <img
                               key={ev.id || ev.file_url}
                               src={ev.file_url}
                               alt=""
-                              className="w-14 h-14 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                              className="w-40 h-40 sm:w-44 sm:h-44 max-w-full rounded-2xl object-cover border border-slate-200/80 dark:border-slate-700/80 shadow-xs"
                             />
                           ) : null
                         )}

@@ -15,38 +15,41 @@ import { STORAGE_KEYS } from './config/storageKeys';
 
 import Layout from './pages/Layout';
 import HomePage from './pages/HomePage';
-import AboutPage from './pages/AboutPage';
-import NewsPage from './pages/NewsPage';
-import ActivitiesPage from './pages/ActivitiesPage';
-import GalleryPage from './pages/GalleryPage';
-import DocumentsPage from './pages/DocumentsPage';
-import ContactPage from './pages/ContactPage';
-import LoginPage from './pages/LoginPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import AdminLayout from './layouts/admin/AdminLayout';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import AdminNewsPage from './pages/admin/AdminNewsPage';
-import AdminDocumentsPage from './pages/admin/AdminDocumentsPage';
-import AdminAlbumsPage from './pages/admin/AdminAlbumsPage';
-import AdminCmsPage from './pages/admin/AdminCmsPage';
-import AdminAboutPage from './pages/admin/AdminAboutPage';
-import AdminUsersPage from './pages/admin/AdminUsersPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
-import AdminMovementsPage from './pages/admin/AdminMovementsPage';
-import NewsDetailPage from './pages/NewsDetailPage';
-import AlbumDetailPage from './pages/AlbumDetailPage';
-import AboutDetailPage from './pages/AboutDetailPage';
-import MovementsPage from './pages/MovementsPage';
-import MovementDetailPage from './pages/MovementDetailPage';
-import CompetitionOverviewPage from './pages/CompetitionOverviewPage';
-import PublicUnitCompetitionPage from './pages/PublicUnitCompetitionPage';
-import StudentCompetitionPage from './pages/StudentCompetitionPage';
-import PublicGoodDeedsPage from './pages/PublicGoodDeedsPage';
-import PublicRewardShopPage from './pages/PublicRewardShopPage';
-import RecordIncidentPage from './pages/RecordIncidentPage';
-import CompetitionPendingPage from './pages/CompetitionPendingPage';
-import CompetitionReportPage from './pages/CompetitionReportPage';
-import AdminCompetitionPage from './pages/admin/AdminCompetitionPage';
+
+// Route-level code splitting:
+// Keep only the public shell + homepage in the initial bundle.
+// Heavy admin/report/Excel/PDF/chart code is downloaded only when that route is opened.
+const AboutPage = React.lazy(() => import('./pages/AboutPage'));
+const NewsPage = React.lazy(() => import('./pages/NewsPage'));
+const GalleryPage = React.lazy(() => import('./pages/GalleryPage'));
+const DocumentsPage = React.lazy(() => import('./pages/DocumentsPage'));
+const ContactPage = React.lazy(() => import('./pages/ContactPage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
+const AdminLayout = React.lazy(() => import('./layouts/admin/AdminLayout'));
+const AdminDashboardPage = React.lazy(() => import('./pages/admin/AdminDashboardPage'));
+const AdminNewsPage = React.lazy(() => import('./pages/admin/AdminNewsPage'));
+const AdminDocumentsPage = React.lazy(() => import('./pages/admin/AdminDocumentsPage'));
+const AdminAlbumsPage = React.lazy(() => import('./pages/admin/AdminAlbumsPage'));
+const AdminCmsPage = React.lazy(() => import('./pages/admin/AdminCmsPage'));
+const AdminAboutPage = React.lazy(() => import('./pages/admin/AdminAboutPage'));
+const AdminUsersPage = React.lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminSettingsPage = React.lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminMovementsPage = React.lazy(() => import('./pages/admin/AdminMovementsPage'));
+const NewsDetailPage = React.lazy(() => import('./pages/NewsDetailPage'));
+const AlbumDetailPage = React.lazy(() => import('./pages/AlbumDetailPage'));
+const AboutDetailPage = React.lazy(() => import('./pages/AboutDetailPage'));
+const MovementsPage = React.lazy(() => import('./pages/MovementsPage'));
+const MovementDetailPage = React.lazy(() => import('./pages/MovementDetailPage'));
+const CompetitionOverviewPage = React.lazy(() => import('./pages/CompetitionOverviewPage'));
+const PublicUnitCompetitionPage = React.lazy(() => import('./pages/PublicUnitCompetitionPage'));
+const StudentCompetitionPage = React.lazy(() => import('./pages/StudentCompetitionPage'));
+const PublicGoodDeedsPage = React.lazy(() => import('./pages/PublicGoodDeedsPage'));
+const PublicRewardShopPage = React.lazy(() => import('./pages/PublicRewardShopPage'));
+const RecordIncidentPage = React.lazy(() => import('./pages/RecordIncidentPage'));
+const CompetitionPendingPage = React.lazy(() => import('./pages/CompetitionPendingPage'));
+const CompetitionReportPage = React.lazy(() => import('./pages/CompetitionReportPage'));
+const AdminCompetitionPage = React.lazy(() => import('./pages/admin/AdminCompetitionPage'));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { RoleGuard } from './components/auth/RoleGuard';
 import { CompetitionDetailGuard } from './components/auth/CompetitionDetailGuard';
@@ -301,6 +304,16 @@ function AppContent() {
 
   return (
     <AppDataContext.Provider value={contextValue}>
+      <React.Suspense
+        fallback={
+          <div className="min-h-[60vh] flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+            <div className="text-center">
+              <div className="mx-auto h-8 w-8 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin" />
+              <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Đang tải trang...</p>
+            </div>
+          </div>
+        }
+      >
       <Routes>
         <Route element={<Layout />}>
           <Route path={ROUTES.HOME} element={<HomePage />} />
@@ -412,6 +425,7 @@ function AppContent() {
           />
         </Route>
       </Routes>
+      </React.Suspense>
 
       {/* Global Search Overlay Popup Modal */}
       <AnimatePresence>
@@ -557,3 +571,4 @@ function AppContent() {
     </AppDataContext.Provider>
   );
 }
+
