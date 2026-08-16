@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Award,
@@ -253,10 +253,93 @@ export default function StudentCompetitionPage() {
     }
   };
 
-  const filteredTransactions = transactions.filter((t) => {
-    if (ledgerFilter === 'ALL') return true;
-    return t.ledger_type === ledgerFilter;
-  });
+  interface GroupedLedgerEntry {
+    id: string;
+    incident_id?: string;
+    transaction_id?: string;
+    effective_at: string;
+    incident_title: string;
+    rule_name?: string;
+    impacts: {
+      ledger_type: string;
+      points: number;
+    }[];
+  }
+
+  const groupedLedgerEntries = useMemo<GroupedLedgerEntry[]>(() => {
+    if (!transactions || transactions.length === 0) return [];
+
+    const map = new Map<string, GroupedLedgerEntry>();
+    const orderedKeys: string[] = [];
+
+    transactions.forEach((tx) => {
+      if (tx.incident_id) {
+        const key = `incident_${tx.incident_id}`;
+        if (!map.has(key)) {
+          orderedKeys.push(key);
+          map.set(key, {
+            id: tx.incident_id,
+            incident_id: tx.incident_id,
+            transaction_id: tx.id,
+            effective_at: tx.incident?.occurred_at || tx.effective_at,
+            incident_title: tx.incident_title || tx.incident?.title || 'Sự việc thi đua',
+            rule_name: tx.rule_name || tx.incident?.rule?.name,
+            impacts: [
+              {
+                ledger_type: tx.ledger_type,
+                points: Number(tx.points) || 0,
+              },
+            ],
+          });
+        } else {
+          const existing = map.get(key)!;
+          const existingImpact = existing.impacts.find(
+            (imp) => imp.ledger_type === tx.ledger_type
+          );
+          if (existingImpact) {
+            existingImpact.points += Number(tx.points) || 0;
+          } else {
+            existing.impacts.push({
+              ledger_type: tx.ledger_type,
+              points: Number(tx.points) || 0,
+            });
+          }
+        }
+      } else {
+        const key = `tx_${tx.id}`;
+        orderedKeys.push(key);
+        map.set(key, {
+          id: tx.id,
+          transaction_id: tx.id,
+          effective_at: tx.effective_at,
+          incident_title:
+            tx.incident_title ||
+            tx.description ||
+            (tx.transaction_type === 'ADJUSTMENT'
+              ? 'Điều chỉnh điểm'
+              : tx.transaction_type === 'REVERSAL'
+              ? 'Hoàn tác giao dịch'
+              : 'Giao dịch điểm'),
+          rule_name: tx.rule_name,
+          impacts: [
+            {
+              ledger_type: tx.ledger_type,
+              points: Number(tx.points) || 0,
+            },
+          ],
+        });
+      }
+    });
+
+    return orderedKeys.map((k) => map.get(k)!);
+  }, [transactions]);
+
+  const filteredLedgerEntries = useMemo(() => {
+    if (ledgerFilter === 'ALL') return groupedLedgerEntries;
+    return groupedLedgerEntries.filter((entry) =>
+      entry.impacts.some((imp) => imp.ledger_type === ledgerFilter)
+    );
+  }, [groupedLedgerEntries, ledgerFilter]);
 
   return (
     <div className="min-h-screen bg-slate-50/60 pb-12 pt-4 font-sans">
@@ -595,7 +678,7 @@ export default function StudentCompetitionPage() {
                   <FileText className="w-5 h-5 text-amber-500 shrink-0" />
                   <span>Sổ điểm & nhật ký sự việc</span>
                   <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-xs font-extrabold">
-                    {filteredTransactions.length}
+                    {filteredLedgerEntries.length}
                   </span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -620,7 +703,7 @@ export default function StudentCompetitionPage() {
             </div>
 
             {/* Main Table / List Area */}
-            {filteredTransactions.length === 0 ? (
+            {filteredLedgerEntries.length === 0 ? (
               <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                 <FileText className="w-12 h-12 text-amber-500 mx-auto opacity-80" />
                 <h4 className="text-base font-bold text-slate-800 dark:text-slate-200">
@@ -639,36 +722,20 @@ export default function StudentCompetitionPage() {
                     <thead>
                       <tr className="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                         <th className="py-3 px-3.5 w-[140px]">Thời gian</th>
-                        <th className="py-3 px-3.5 w-[150px]">Loại sổ điểm</th>
-                        <th className="py-3 px-3.5 min-w-[220px]">Nội dung sự việc / Quy tắc</th>
-                        <th className="py-3 px-3.5 w-[130px] text-center">Biến động</th>
-                        <th className="py-3 px-3.5 w-[130px] text-center">Thao tác</th>
+                        <th className="py-3 px-3.5 min-w-[260px]">Ảnh hưởng điểm</th>
+                        <th className="py-3 px-3.5 min-w-[240px]">Nội dung sự việc / Quy tắc</th>
+                        <th className="py-3 px-3.5 w-[120px] text-center">Thao tác</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                      {filteredTransactions.map((tx) => {
-                        const effectiveDate = new Date(tx.effective_at);
+                      {filteredLedgerEntries.map((row) => {
+                        const effectiveDate = new Date(row.effective_at);
                         const timeStr = effectiveDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
                         const dateStr = effectiveDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-                        const ledgerBadge =
-                          tx.ledger_type === 'STUDENT_MERIT' ? (
-                            <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800">
-                              A. Thi đua
-                            </span>
-                          ) : tx.ledger_type === 'STUDENT_REWARD' ? (
-                            <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800">
-                              B. Đổi quà
-                            </span>
-                          ) : (
-                            <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
-                              C. Cống hiến lớp
-                            </span>
-                          );
-
                         return (
                           <tr
-                            key={tx.id}
+                            key={row.id}
                             className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                           >
                             {/* 1. Thời gian */}
@@ -683,42 +750,65 @@ export default function StudentCompetitionPage() {
                               </div>
                             </td>
 
-                            {/* 2. Loại sổ điểm */}
+                            {/* 2. Ảnh hưởng điểm */}
                             <td className="py-3.5 px-3.5 align-top">
-                              {ledgerBadge}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {row.impacts.map((imp, idx) => {
+                                  const isPositive = imp.points > 0;
+                                  const ptsFormatted = imp.points > 0 ? `+${imp.points}` : `${imp.points}`;
+
+                                  let label = 'A. Thi đua';
+                                  let badgeStyle =
+                                    'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200/80 dark:border-amber-800';
+                                  let ptColor = isPositive
+                                    ? 'text-emerald-700 dark:text-emerald-400'
+                                    : imp.points < 0
+                                    ? 'text-rose-700 dark:text-rose-400'
+                                    : 'text-slate-600 dark:text-slate-400';
+
+                                  if (imp.ledger_type === 'STUDENT_REWARD') {
+                                    label = 'B. Điểm thưởng';
+                                    badgeStyle =
+                                      'bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-200/80 dark:border-purple-800';
+                                  } else if (imp.ledger_type === 'UNIT_COMPETITION') {
+                                    label = 'C. Cống hiến lớp';
+                                    badgeStyle =
+                                      'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800';
+                                  }
+
+                                  return (
+                                    <span
+                                      key={idx}
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${badgeStyle}`}
+                                    >
+                                      <span>{label}</span>
+                                      <span className={`font-mono font-extrabold ${ptColor}`}>
+                                        {ptsFormatted}
+                                      </span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             </td>
 
                             {/* 3. Nội dung / Quy tắc */}
                             <td className="py-3.5 px-3.5 align-top">
                               <div className="space-y-1">
                                 <div className="font-bold text-slate-900 dark:text-white leading-snug">
-                                  {tx.incident_title || 'Giao dịch điểm'}
+                                  {row.incident_title || 'Giao dịch điểm'}
                                 </div>
-                                {tx.rule_name && (
+                                {row.rule_name && (
                                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                    Quy tắc: <span className="text-slate-700 dark:text-slate-300 font-medium">{tx.rule_name}</span>
+                                    Quy tắc: <span className="text-slate-700 dark:text-slate-300 font-medium">{row.rule_name}</span>
                                   </div>
                                 )}
                               </div>
                             </td>
 
-                            {/* 4. Biến động */}
-                            <td className="py-3.5 px-3.5 align-top text-center">
-                              <span
-                                className={`inline-flex items-center justify-center px-2.5 py-1 rounded-xl text-xs font-mono font-extrabold border ${
-                                  tx.points >= 0
-                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-                                }`}
-                              >
-                                {tx.points >= 0 ? `+${tx.points}` : tx.points} điểm
-                              </span>
-                            </td>
-
-                            {/* 5. Thao tác */}
+                            {/* 4. Thao tác */}
                             <td className="py-3.5 px-3.5 align-top text-center">
                               <button
-                                onClick={() => handleOpenReviewModal(tx.incident_title || 'Giao dịch điểm', tx.incident_id, tx.id)}
+                                onClick={() => handleOpenReviewModal(row.incident_title || 'Giao dịch điểm', row.incident_id, row.transaction_id)}
                                 className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 rounded-xl transition shrink-0"
                               >
                                 <HelpCircle className="w-3.5 h-3.5" />
